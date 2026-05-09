@@ -1,0 +1,223 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id             String         @id @default(uuid())
+  authId         String         @unique @map("auth_id")
+  name           String
+  email          String         @unique
+  role           Role           @default(FACULTY)
+  department     String
+  designation    String
+  phone          String?
+  isActive       Boolean        @default(true) @map("is_active")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  assignments    Assignment[]
+  auditLogs      AuditLog[]
+  logbookEntries LogbookEntry[]
+  notifications  Notification[]
+  submissions    Submission[]
+
+  @@map("users")
+}
+
+model Area {
+  id          String       @id @default(uuid())
+  name        String
+  description String?
+  order       Int          @default(0)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  assignments Assignment[]
+  criteria    Criterion[]
+
+  @@map("areas")
+}
+
+model Criterion {
+  id          String       @id @default(uuid())
+  areaId      String       @map("area_id")
+  name        String
+  description String?
+  order       Int          @default(0)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  assignments Assignment[]
+  area        Area         @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  indicators  Indicator[]
+
+  @@map("criteria")
+}
+
+model Indicator {
+  id           String       @id @default(uuid())
+  criterionId  String       @map("criterion_id")
+  name         String
+  requiredDocs String?      @map("required_docs")
+  ratingScale  Int          @default(5) @map("rating_scale")
+  order        Int          @default(0)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  criterion    Criterion    @relation(fields: [criterionId], references: [id], onDelete: Cascade)
+  submissions  Submission[]
+
+  @@map("indicators")
+}
+
+model Assignment {
+  id          String     @id @default(uuid())
+  userId      String     @map("user_id")
+  areaId      String     @map("area_id")
+  criterionId String?    @map("criterion_id")
+  notes       String?
+  createdAt   DateTime   @default(now()) @map("created_at")
+  area        Area       @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  criterion   Criterion? @relation(fields: [criterionId], references: [id])
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, areaId, criterionId])
+  @@map("assignments")
+}
+
+model Submission {
+  id          String              @id @default(uuid())
+  indicatorId String              @map("indicator_id")
+  userId      String              @map("user_id")
+  title       String
+  description String?
+  fileUrl     String?             @map("file_url")
+  fileName    String?             @map("file_name")
+  fileSize    Int?                @map("file_size")
+  status      SubmissionStatus    @default(DRAFT)
+  remarks     String?
+  rating      Int?
+  version     Int                 @default(1)
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+  tags        DocumentTag[]
+  versions    SubmissionVersion[]
+  indicator   Indicator           @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("submissions")
+}
+
+model SubmissionVersion {
+  id           String     @id @default(uuid())
+  submissionId String     @map("submission_id")
+  fileUrl      String     @map("file_url")
+  fileName     String     @map("file_name")
+  fileSize     Int?       @map("file_size")
+  version      Int
+  remarks      String?
+  createdAt    DateTime   @default(now()) @map("created_at")
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@map("submission_versions")
+}
+
+model Tag {
+  id        String        @id @default(uuid())
+  name      String        @unique
+  type      TagType       @default(CUSTOM)
+  color     String        @default("#3B82F6")
+  createdAt DateTime      @default(now()) @map("created_at")
+  documents DocumentTag[]
+
+  @@map("tags")
+}
+
+model DocumentTag {
+  id           String     @id @default(uuid())
+  submissionId String     @map("submission_id")
+  tagId        String     @map("tag_id")
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  tag          Tag        @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, tagId])
+  @@map("document_tags")
+}
+
+model LogbookEntry {
+  id             String        @id @default(uuid())
+  userId         String        @map("user_id")
+  type           LogbookType
+  title          String
+  date           DateTime
+  fromTo         String        @map("from_to")
+  purpose        String
+  refNo          String?       @map("ref_no")
+  fileUrl        String?       @map("file_url")
+  fileName       String?       @map("file_name")
+  status         LogbookStatus @default(PENDING)
+  adminRemarks   String?       @map("admin_remarks")
+  acknowledgedAt DateTime?     @map("acknowledged_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("logbook_entries")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  message   String
+  type      String
+  link      String?
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  action    String
+  module    String
+  targetId  String?  @map("target_id")
+  details   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("audit_logs")
+}
+
+enum Role {
+  ADMIN
+  FACULTY
+}
+
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  RETURNED
+}
+
+enum TagType {
+  SYSTEM
+  CUSTOM
+}
+
+enum LogbookType {
+  INCOMING
+  OUTGOING
+}
+
+enum LogbookStatus {
+  PENDING
+  ACKNOWLEDGED
+  REJECTED
+}
