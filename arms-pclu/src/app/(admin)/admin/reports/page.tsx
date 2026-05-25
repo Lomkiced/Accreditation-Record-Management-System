@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 
 const reportTypes = [
-  { id: "compliance", title: "Compliance Summary Report", desc: "Overall accreditation readiness per PAASCU Area", icon: BarChart3, color: "blue" },
+  { id: "compliance", title: "Compliance Summary Report", desc: "Overall accreditation readiness per PACUCOA Area", icon: BarChart3, color: "blue" },
   { id: "export", title: "Document Package Export", desc: "Export all approved documents per Area for accreditors", icon: Archive, color: "violet" },
   { id: "faculty", title: "Faculty Contribution Report", desc: "Submission activity and compliance per faculty", icon: Users, color: "emerald" },
   { id: "logbook", title: "Logbook Summary Report", desc: "Incoming/outgoing document log with acknowledgment status", icon: BookMarked, color: "amber" },

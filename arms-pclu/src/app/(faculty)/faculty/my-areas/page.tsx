@@ -28,7 +28,7 @@ export default function MyAreasPage() {
     <>
       <PageHeader
         title="My Assigned Areas"
-        subtitle="Manage and upload documents for your assigned PAASCU areas"
+        subtitle="Manage and upload documents for your assigned PACUCOA areas"
       />
 
       <div className="space-y-4">

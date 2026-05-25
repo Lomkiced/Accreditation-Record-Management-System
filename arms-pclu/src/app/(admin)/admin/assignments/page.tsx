@@ -20,7 +20,7 @@ export default function AssignmentsPage() {
       <div className="shrink-0">
         <PageHeader
           title="Area Assignments"
-          subtitle="Assign PAASCU areas and criteria to faculty members"
+          subtitle="Assign PACUCOA areas and criteria to faculty members"
         />
       </div>
 

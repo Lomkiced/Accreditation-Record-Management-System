@@ -56,7 +56,7 @@ export function AssignmentModal({ open, onClose, facultyName }: AssignmentModalP
 
         <div className="space-y-6 mt-4">
           <div className="space-y-2">
-            <Label>Select PAASCU Area <span className="text-red-500">*</span></Label>
+            <Label>Select PACUCOA Area <span className="text-red-500">*</span></Label>
             <Select value={selectedArea} onValueChange={setSelectedArea}>
               <SelectTrigger>
                 <SelectValue placeholder="Choose an area..." />

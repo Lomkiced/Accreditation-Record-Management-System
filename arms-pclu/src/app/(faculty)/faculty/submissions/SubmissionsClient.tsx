@@ -228,14 +228,17 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
                         ) : (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
+                              <Button
+                                variant="ghost"
+                                className="h-8 w-8 p-0"
+                              >
                                 <span className="sr-only">Open menu</span>
                                 <MoreVertical className="h-4 w-4 text-slate-500" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                            <DropdownMenuContent side="bottom" align="end">
                               <DropdownMenuItem
-                                onClick={() => {
+                                onSelect={() => {
                                   setSelectedDocument(doc)
                                   setIsUploadOpen(true)
                                 }}
@@ -245,7 +248,7 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
                                 <span>Edit Tags / Resume</span>
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() => handleDelete(doc.id)}
+                                onSelect={() => handleDelete(doc.id)}
                                 className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
                               >
                                 <Trash className="mr-2 h-4 w-4" />

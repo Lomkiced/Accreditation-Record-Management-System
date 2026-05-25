@@ -27,7 +27,7 @@ export default function FacultyDashboardPage() {
         <StatCard
           title="My Areas"
           value={2}
-          subtitle="Assigned PAASCU areas"
+          subtitle="Assigned PACUCOA areas"
           icon={FileText}
           color="blue"
         />

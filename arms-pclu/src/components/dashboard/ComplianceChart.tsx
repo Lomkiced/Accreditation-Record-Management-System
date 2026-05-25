@@ -56,7 +56,7 @@ export function ComplianceChart() {
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
       <h3 className="text-base font-semibold text-slate-800">
-        PAASCU Compliance Overview
+        PACUCOA Compliance Overview
       </h3>
       <p className="text-sm text-slate-400 mt-0.5 mb-5">
         Document submission progress per area

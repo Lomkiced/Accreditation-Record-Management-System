@@ -1,7 +1,7 @@
 export const APP_NAME = "ARMS"
 export const COLLEGE_NAME = "Polytechnic College of La Union"
 
-export const PAASCU_AREAS = [
+export const PACUCOA_AREAS = [
   "Area 1: Purposes and Objectives",
   "Area 2: Faculty",
   "Area 3: Instruction",

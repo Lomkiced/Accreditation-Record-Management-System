@@ -30,7 +30,7 @@ export default function LoginPage() {
               📁 Centralized Document Storage
             </div>
             <div className="bg-white/10 rounded-full px-4 py-2 text-xs text-slate-300 backdrop-blur-sm">
-              🏷️ PAASCU Area Management
+              🏷️ PACUCOA Area Management
             </div>
             <div className="bg-white/10 rounded-full px-4 py-2 text-xs text-slate-300 backdrop-blur-sm">
               📊 Compliance Tracking

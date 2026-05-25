@@ -36,8 +36,8 @@ const mockLogbook: LogEntry[] = [
   {
     id: "3",
     type: "INCOMING",
-    title: "PAASCU Self-Survey Guide",
-    fromTo: "Received from PAASCU Secretriat",
+    title: "PACUCOA Self-Survey Guide",
+    fromTo: "Received from PACUCOA Secretriat",
     purpose: "Official guide for conducting the self-survey.",
     date: "Oct 10, 2024",
     faculty: "Elena Santos",
