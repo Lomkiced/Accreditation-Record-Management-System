@@ -250,7 +250,12 @@ export default async function AdminDashboardPage() {
               </div>
             ) : (
               <ul className="divide-y divide-slate-100">
-                {recentLogs.map((log) => (
+                {recentLogs.map((log) => {
+                  const docTitle =
+                    log.details != null && typeof log.details.documentTitle === "string"
+                      ? log.details.documentTitle
+                      : null
+                  return (
                   <li key={log.id} className="flex items-start gap-3 px-5 py-4 hover:bg-slate-50 transition-colors">
                     <div className="w-8 h-8 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0 mt-0.5">
                       <ActivitySquare className="w-4 h-4 text-blue-500" />
@@ -262,9 +267,9 @@ export default async function AdminDashboardPage() {
                           {ACTION_LABELS[log.action] ?? log.action.toLowerCase().replace(/_/g, " ")}
                         </span>
                       </p>
-                      {Boolean(log.details?.documentTitle) && (
+                      {docTitle && (
                         <p className="text-xs text-slate-400 mt-0.5 truncate">
-                          {String(log.details.documentTitle)}
+                          {docTitle}
                         </p>
                       )}
                       <p className="text-[10px] text-slate-400 mt-1">
@@ -280,7 +285,8 @@ export default async function AdminDashboardPage() {
                       {log.module}
                     </span>
                   </li>
-                ))}
+                  )
+                })}
               </ul>
             )}
           </div>
