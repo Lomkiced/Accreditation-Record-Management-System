@@ -118,7 +118,7 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
             No submissions yet
           </h3>
           <p className="text-sm text-slate-500 max-w-sm mx-auto mb-6">
-            You haven't uploaded any documents. Start by uploading your first
+            You haven&apos;t uploaded any documents. Start by uploading your first
             piece of evidence to map it to accreditation indicators.
           </p>
           <Button

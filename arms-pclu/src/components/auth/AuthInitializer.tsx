@@ -73,7 +73,7 @@ export function AuthInitializer({ children }: { children: React.ReactNode }) {
     })
 
     return () => subscription.unsubscribe()
-  }, [clearUser, setUser])
+  }, [clearUser, setUser, supabase.auth])
 
   return <>{children}</>
 }

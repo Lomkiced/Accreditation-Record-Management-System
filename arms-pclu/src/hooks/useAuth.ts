@@ -137,7 +137,7 @@ export function useAuth() {
     return () => {
       subscription.unsubscribe()
     }
-  }, [clearUser, setUser])
+  }, [clearUser, setUser, supabase.auth])
 
   const signIn = useCallback(
     async (email: string, password: string) => {
