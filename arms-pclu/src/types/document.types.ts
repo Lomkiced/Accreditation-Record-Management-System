@@ -1,4 +1,5 @@
 import type { MappingStatus } from "@prisma/client"
+export type { MappingStatus }
 
 // ─── Rich nested types returned from Prisma queries ──────────────────────────
 
