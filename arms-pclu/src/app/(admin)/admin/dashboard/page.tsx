@@ -262,7 +262,7 @@ export default async function AdminDashboardPage() {
                           {ACTION_LABELS[log.action] ?? log.action.toLowerCase().replace(/_/g, " ")}
                         </span>
                       </p>
-                      {log.details?.documentTitle && (
+                      {Boolean(log.details?.documentTitle) && (
                         <p className="text-xs text-slate-400 mt-0.5 truncate">
                           {String(log.details.documentTitle)}
                         </p>
