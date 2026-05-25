@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
+import { redirect } from "next/navigation"
 import type { User } from "@prisma/client"
 
 /**
@@ -27,36 +28,36 @@ export async function getCurrentUser(): Promise<User | null> {
 }
 
 /**
- * Like getCurrentUser, but throws if not authenticated.
- * Use in Server Actions and API routes that require a session.
+ * Like getCurrentUser, but redirects to /login if not authenticated.
+ * Use in Server Components and Server Actions that require a session.
  */
 export async function requireUser(): Promise<User> {
   const user = await getCurrentUser()
   if (!user) {
-    throw new Error("Unauthorized: No active session")
+    redirect("/login")
   }
   return user
 }
 
 /**
- * Throws if the current user is not an ADMIN.
- * Use at the top of all admin-only Server Actions.
+ * Redirects to /login (or /faculty/dashboard if wrong role) if the
+ * current user is not an ADMIN. Use at the top of admin-only Server Actions.
  */
 export async function requireAdmin(): Promise<User> {
   const user = await requireUser()
   if (user.role !== "ADMIN") {
-    throw new Error("Forbidden: Admin access required")
+    redirect("/faculty/dashboard")
   }
   return user
 }
 
 /**
- * Throws if the current user is not a FACULTY member.
+ * Redirects to /admin/dashboard if the user is not a FACULTY member.
  */
 export async function requireFaculty(): Promise<User> {
   const user = await requireUser()
   if (user.role !== "FACULTY") {
-    throw new Error("Forbidden: Faculty access required")
+    redirect("/admin/dashboard")
   }
   return user
 }
