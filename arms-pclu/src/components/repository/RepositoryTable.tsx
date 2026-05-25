@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Eye, Download, Tag } from "lucide-react"
+import { Eye, Download, Tag, MapPin } from "lucide-react"
 import { DataTable } from "@/components/shared/DataTable"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { AvatarInitials } from "@/components/shared/AvatarInitials"
@@ -9,35 +9,61 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ColumnDef } from "@tanstack/react-table"
 
-export interface Document {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+/** A single indicator mapping summary shown in the table row */
+export interface DocumentMappingSummary {
   id: string
-  title: string
-  area: { number: number; name: string }
-  criterion: string
-  faculty: string
-  uploadedAt: string
-  tags: { id: string; name: string; color: string }[]
+  indicatorId: string
+  indicatorName: string
+  criterionName: string
+  areaName: string
   status: string
 }
 
-interface RepositoryTableProps {
-  data: Document[]
-  onRowClick: (doc: Document) => void
+/** Document row shape for the repository table (M:N aware) */
+export interface RepositoryDocument {
+  id: string
+  title: string
+  fileName: string | null
+  faculty: string
+  uploadedAt: string
+  /** A document can be mapped to many indicators across many areas */
+  mappings: DocumentMappingSummary[]
+  /** Custom label tags */
+  tags: { id: string; name: string; color: string }[]
+  /** The "dominant" status for display (most recent / highest precedence) */
+  dominantStatus: string
 }
 
-export function RepositoryTable({ data, onRowClick }: RepositoryTableProps) {
-  const COLORS = [
-    "bg-blue-100 text-blue-700",
-    "bg-violet-100 text-violet-700",
-    "bg-emerald-100 text-emerald-700",
-    "bg-amber-100 text-amber-700",
-    "bg-rose-100 text-rose-700",
-    "bg-cyan-100 text-cyan-700",
-    "bg-orange-100 text-orange-700",
-    "bg-teal-100 text-teal-700",
-  ]
+interface RepositoryTableProps {
+  data: RepositoryDocument[]
+  onRowClick: (doc: RepositoryDocument) => void
+}
 
-  const columns: ColumnDef<Document>[] = [
+// ─── Dominant status logic ────────────────────────────────────────────────────
+// Priority: APPROVED > UNDER_REVIEW > SUBMITTED > RETURNED > DRAFT > (none)
+const STATUS_PRIORITY: Record<string, number> = {
+  APPROVED: 5,
+  UNDER_REVIEW: 4,
+  SUBMITTED: 3,
+  RETURNED: 2,
+  DRAFT: 1,
+}
+
+export function getDominantStatus(mappings: { status: string }[]): string {
+  if (mappings.length === 0) return "DRAFT"
+  return mappings.reduce((best, m) =>
+    (STATUS_PRIORITY[m.status] ?? 0) > (STATUS_PRIORITY[best.status] ?? 0)
+      ? m
+      : best
+  ).status
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export function RepositoryTable({ data, onRowClick }: RepositoryTableProps) {
+  const columns: ColumnDef<RepositoryDocument>[] = [
     {
       id: "select",
       header: ({ table }) => (
@@ -65,7 +91,7 @@ export function RepositoryTable({ data, onRowClick }: RepositoryTableProps) {
       accessorKey: "title",
       header: "Document Title",
       cell: ({ row }) => (
-        <span 
+        <span
           className="font-medium text-slate-800 cursor-pointer hover:text-blue-600 transition-colors"
           onClick={() => onRowClick(row.original)}
         >
@@ -74,26 +100,53 @@ export function RepositoryTable({ data, onRowClick }: RepositoryTableProps) {
       ),
     },
     {
-      accessorKey: "area",
-      header: "Area",
+      accessorKey: "mappings",
+      header: "Mapped To",
       cell: ({ row }) => {
-        const area = row.original.area
-        const colorClass = COLORS[(area.number - 1) % COLORS.length]
+        const mappings = row.original.mappings
+        if (mappings.length === 0) {
+          return (
+            <span className="text-xs text-slate-400 italic">Not mapped yet</span>
+          )
+        }
+        // Group by area for compact display
+        const areaNames = [...new Set(mappings.map((m) => m.areaName))]
         return (
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colorClass}`}>
-            Area {area.number}
-          </span>
+          <div className="flex flex-wrap gap-1">
+            {areaNames.slice(0, 3).map((areaName) => {
+              const areaIdx =
+                [
+                  "Area 1","Area 2","Area 3","Area 4",
+                  "Area 5","Area 6","Area 7","Area 8",
+                ].indexOf(areaName)
+              const BADGE_COLORS = [
+                "bg-blue-100 text-blue-700",
+                "bg-violet-100 text-violet-700",
+                "bg-emerald-100 text-emerald-700",
+                "bg-amber-100 text-amber-700",
+                "bg-rose-100 text-rose-700",
+                "bg-cyan-100 text-cyan-700",
+                "bg-orange-100 text-orange-700",
+                "bg-teal-100 text-teal-700",
+              ]
+              const colorClass = BADGE_COLORS[areaIdx >= 0 ? areaIdx : 0]
+              return (
+                <span
+                  key={areaName}
+                  className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${colorClass}`}
+                >
+                  {areaName}
+                </span>
+              )
+            })}
+            {areaNames.length > 3 && (
+              <span className="text-[10px] bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-full font-medium">
+                +{areaNames.length - 3} more
+              </span>
+            )}
+          </div>
         )
       },
-    },
-    {
-      accessorKey: "criterion",
-      header: "Criterion",
-      cell: ({ row }) => (
-        <span className="text-sm text-slate-500 truncate max-w-[150px] inline-block">
-          {row.getValue("criterion")}
-        </span>
-      ),
     },
     {
       accessorKey: "faculty",
@@ -109,12 +162,12 @@ export function RepositoryTable({ data, onRowClick }: RepositoryTableProps) {
       accessorKey: "uploadedAt",
       header: "Date Uploaded",
       cell: ({ row }) => (
-        <span className="text-sm">{row.getValue("uploadedAt")}</span>
+        <span className="text-sm text-slate-600">{row.getValue("uploadedAt")}</span>
       ),
     },
     {
       accessorKey: "tags",
-      header: "Tags",
+      header: "Labels",
       cell: ({ row }) => {
         const tags = row.original.tags
         return (
@@ -123,7 +176,11 @@ export function RepositoryTable({ data, onRowClick }: RepositoryTableProps) {
               <span
                 key={tag.id}
                 className="text-[10px] font-medium px-2 py-0.5 rounded-full"
-                style={{ backgroundColor: `${tag.color}20`, color: tag.color, border: `1px solid ${tag.color}40` }}
+                style={{
+                  backgroundColor: `${tag.color}20`,
+                  color: tag.color,
+                  border: `1px solid ${tag.color}40`,
+                }}
               >
                 {tag.name}
               </span>
@@ -138,23 +195,39 @@ export function RepositoryTable({ data, onRowClick }: RepositoryTableProps) {
       },
     },
     {
-      accessorKey: "status",
+      accessorKey: "dominantStatus",
       header: "Status",
       cell: ({ row }) => (
-        <StatusBadge status={row.getValue("status")} size="sm" />
+        <StatusBadge status={row.getValue("dominantStatus")} size="sm" />
       ),
     },
     {
       id: "actions",
       cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-blue-600" onClick={() => onRowClick(row.original)}>
+        <div
+          className="flex items-center justify-end gap-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-slate-400 hover:text-blue-600"
+            onClick={() => onRowClick(row.original)}
+          >
             <Eye className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-emerald-600">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-slate-400 hover:text-emerald-600"
+          >
             <Download className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-purple-600">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-slate-400 hover:text-purple-600"
+          >
             <Tag className="w-4 h-4" />
           </Button>
         </div>

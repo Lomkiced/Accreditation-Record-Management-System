@@ -8,6 +8,7 @@ import { StatCard } from "@/components/dashboard/StatCard"
 import { ComplianceChart } from "@/components/dashboard/ComplianceChart"
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed"
 import { StatusBadge } from "@/components/shared/StatusBadge"
+import { HierarchicalDrillDown } from "@/components/dashboard/HierarchicalDrillDown"
 
 const mockSubmissions = [
   { id: 1, faculty: "Juan Perez", area: "Area 2", date: "Oct 12, 2024", status: "PENDING" },
@@ -76,6 +77,11 @@ export default function AdminDashboardPage() {
         <div className="xl:col-span-1">
           <ActivityFeed />
         </div>
+      </div>
+
+      {/* Hierarchical Evidence Drill-Down — Area → Criterion → Indicator → Documents */}
+      <div className="mb-6">
+        <HierarchicalDrillDown />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">

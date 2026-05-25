@@ -4,8 +4,9 @@ import type {
   Criterion,
   Indicator,
   Assignment,
-  Submission,
-  SubmissionVersion,
+  Document,
+  DocumentVersion,
+  DocumentMapping,
   Tag,
   DocumentTag,
   LogbookEntry,
@@ -15,7 +16,7 @@ import type {
 
 import {
   Role,
-  SubmissionStatus,
+  MappingStatus,
   TagType,
   LogbookType,
   LogbookStatus,
@@ -27,8 +28,9 @@ export type {
   Criterion,
   Indicator,
   Assignment,
-  Submission,
-  SubmissionVersion,
+  Document,
+  DocumentVersion,
+  DocumentMapping,
   Tag,
   DocumentTag,
   LogbookEntry,
@@ -38,7 +40,7 @@ export type {
 
 export {
   Role,
-  SubmissionStatus,
+  MappingStatus,
   TagType,
   LogbookType,
   LogbookStatus,

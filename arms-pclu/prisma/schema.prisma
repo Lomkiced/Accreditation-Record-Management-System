@@ -8,26 +8,32 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// ─── USER ─────────────────────────────────────────────────────────────────────
+
 model User {
-  id             String         @id @default(uuid())
-  authId         String         @unique @map("auth_id")
+  id             String            @id @default(uuid())
+  authId         String            @unique @map("auth_id")
   name           String
-  email          String         @unique
-  role           Role           @default(FACULTY)
+  email          String            @unique
+  role           Role              @default(FACULTY)
   department     String
   designation    String
   phone          String?
-  isActive       Boolean        @default(true) @map("is_active")
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
+  isActive       Boolean           @default(true) @map("is_active")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
   assignments    Assignment[]
   auditLogs      AuditLog[]
   logbookEntries LogbookEntry[]
   notifications  Notification[]
-  submissions    Submission[]
+  documents      Document[]         // formerly: submissions
+  mappings       DocumentMapping[]  // mappings this user created
 
   @@map("users")
 }
+
+// ─── ACCREDITATION HIERARCHY ──────────────────────────────────────────────────
 
 model Area {
   id          String       @id @default(uuid())
@@ -36,6 +42,7 @@ model Area {
   order       Int          @default(0)
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
+
   assignments Assignment[]
   criteria    Criterion[]
 
@@ -50,27 +57,125 @@ model Criterion {
   order       Int          @default(0)
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
-  assignments Assignment[]
+
   area        Area         @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  assignments Assignment[]
   indicators  Indicator[]
 
   @@map("criteria")
 }
 
 model Indicator {
-  id           String       @id @default(uuid())
-  criterionId  String       @map("criterion_id")
+  id           String            @id @default(uuid())
+  criterionId  String            @map("criterion_id")
   name         String
-  requiredDocs String?      @map("required_docs")
-  ratingScale  Int          @default(5) @map("rating_scale")
-  order        Int          @default(0)
-  createdAt    DateTime     @default(now()) @map("created_at")
-  updatedAt    DateTime     @updatedAt @map("updated_at")
-  criterion    Criterion    @relation(fields: [criterionId], references: [id], onDelete: Cascade)
-  submissions  Submission[]
+  requiredDocs String?           @map("required_docs")
+  ratingScale  Int               @default(5) @map("rating_scale")
+  order        Int               @default(0)
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+
+  criterion    Criterion         @relation(fields: [criterionId], references: [id], onDelete: Cascade)
+  // Mappings are the M:N link. Deleting an indicator cascades to its mappings
+  // but does NOT delete the central Document.
+  mappings     DocumentMapping[]
 
   @@map("indicators")
 }
+
+// ─── CENTRALIZED DOCUMENT REPOSITORY ─────────────────────────────────────────
+
+/// Central file record — uploaded once, mapped to many indicators.
+model Document {
+  id          String            @id @default(uuid())
+  userId      String            @map("user_id")
+  title       String
+  description String?
+  fileUrl     String?           @map("file_url")
+  fileName    String?           @map("file_name")
+  fileSize    Int?              @map("file_size")
+  documentDate DateTime?        @map("document_date")
+  version     Int               @default(1)
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Deleting this document cascades to all its mappings.
+  mappings    DocumentMapping[]
+  versions    DocumentVersion[]
+  tags        DocumentTag[]
+
+  @@map("documents")
+}
+
+/// Pivot/join table establishing M:N between Document and Indicator.
+/// Status is tracked at the mapping level — a document can be "Approved"
+/// for one indicator and "Under Review" for another simultaneously.
+model DocumentMapping {
+  id          String        @id @default(uuid())
+  documentId  String        @map("document_id")
+  indicatorId String        @map("indicator_id")
+  userId      String        @map("user_id") // faculty member who created this mapping
+  status      MappingStatus @default(DRAFT)
+  remarks     String?       // admin review remarks per mapping
+  rating      Int?          // self-survey rating per mapping
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  // Cascade: deleting a Document removes all its mappings.
+  // Deleting a Mapping does NOT touch the Document (central file).
+  document    Document      @relation(fields: [documentId],  references: [id], onDelete: Cascade)
+  indicator   Indicator     @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId],      references: [id], onDelete: Cascade)
+
+  @@unique([documentId, indicatorId])
+  @@map("document_mappings")
+}
+
+/// Tracks version history for a Document (file revisions).
+model DocumentVersion {
+  id         String   @id @default(uuid())
+  documentId String   @map("document_id")
+  fileUrl    String   @map("file_url")
+  fileName   String   @map("file_name")
+  fileSize   Int?     @map("file_size")
+  version    Int
+  remarks    String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@map("document_versions")
+}
+
+// ─── TAGGING ──────────────────────────────────────────────────────────────────
+
+model Tag {
+  id        String        @id @default(uuid())
+  name      String        @unique
+  type      TagType       @default(CUSTOM)
+  color     String        @default("#3B82F6")
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  documents DocumentTag[]
+
+  @@map("tags")
+}
+
+/// Many-to-many between Document and Tag (custom labels / metadata tags).
+model DocumentTag {
+  id         String   @id @default(uuid())
+  documentId String   @map("document_id")
+  tagId      String   @map("tag_id")
+
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, tagId])
+  @@map("document_tags")
+}
+
+// ─── ASSIGNMENTS ──────────────────────────────────────────────────────────────
 
 model Assignment {
   id          String     @id @default(uuid())
@@ -79,6 +184,7 @@ model Assignment {
   criterionId String?    @map("criterion_id")
   notes       String?
   createdAt   DateTime   @default(now()) @map("created_at")
+
   area        Area       @relation(fields: [areaId], references: [id], onDelete: Cascade)
   criterion   Criterion? @relation(fields: [criterionId], references: [id])
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -87,64 +193,7 @@ model Assignment {
   @@map("assignments")
 }
 
-model Submission {
-  id          String              @id @default(uuid())
-  indicatorId String              @map("indicator_id")
-  userId      String              @map("user_id")
-  title       String
-  description String?
-  fileUrl     String?             @map("file_url")
-  fileName    String?             @map("file_name")
-  fileSize    Int?                @map("file_size")
-  status      SubmissionStatus    @default(DRAFT)
-  remarks     String?
-  rating      Int?
-  version     Int                 @default(1)
-  createdAt   DateTime            @default(now()) @map("created_at")
-  updatedAt   DateTime            @updatedAt @map("updated_at")
-  tags        DocumentTag[]
-  versions    SubmissionVersion[]
-  indicator   Indicator           @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
-  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("submissions")
-}
-
-model SubmissionVersion {
-  id           String     @id @default(uuid())
-  submissionId String     @map("submission_id")
-  fileUrl      String     @map("file_url")
-  fileName     String     @map("file_name")
-  fileSize     Int?       @map("file_size")
-  version      Int
-  remarks      String?
-  createdAt    DateTime   @default(now()) @map("created_at")
-  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-
-  @@map("submission_versions")
-}
-
-model Tag {
-  id        String        @id @default(uuid())
-  name      String        @unique
-  type      TagType       @default(CUSTOM)
-  color     String        @default("#3B82F6")
-  createdAt DateTime      @default(now()) @map("created_at")
-  documents DocumentTag[]
-
-  @@map("tags")
-}
-
-model DocumentTag {
-  id           String     @id @default(uuid())
-  submissionId String     @map("submission_id")
-  tagId        String     @map("tag_id")
-  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  tag          Tag        @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@unique([submissionId, tagId])
-  @@map("document_tags")
-}
+// ─── LOGBOOK ──────────────────────────────────────────────────────────────────
 
 model LogbookEntry {
   id             String        @id @default(uuid())
@@ -162,10 +211,13 @@ model LogbookEntry {
   acknowledgedAt DateTime?     @map("acknowledged_at")
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
+
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("logbook_entries")
 }
+
+// ─── NOTIFICATIONS ────────────────────────────────────────────────────────────
 
 model Notification {
   id        String   @id @default(uuid())
@@ -175,10 +227,13 @@ model Notification {
   link      String?
   isRead    Boolean  @default(false) @map("is_read")
   createdAt DateTime @default(now()) @map("created_at")
+
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
 }
+
+// ─── AUDIT LOG ────────────────────────────────────────────────────────────────
 
 model AuditLog {
   id        String   @id @default(uuid())
@@ -188,17 +243,22 @@ model AuditLog {
   targetId  String?  @map("target_id")
   details   Json?
   createdAt DateTime @default(now()) @map("created_at")
+
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("audit_logs")
 }
+
+// ─── ENUMS ────────────────────────────────────────────────────────────────────
 
 enum Role {
   ADMIN
   FACULTY
 }
 
-enum SubmissionStatus {
+/// Status is tracked per DocumentMapping, not per Document.
+/// A single document can be Approved for one indicator, Under Review for another.
+enum MappingStatus {
   DRAFT
   SUBMITTED
   UNDER_REVIEW
