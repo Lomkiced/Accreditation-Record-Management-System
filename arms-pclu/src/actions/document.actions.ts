@@ -652,6 +652,8 @@ export async function getIndicatorsForSelector(): Promise<
     console.error("[getIndicatorsForSelector]", error)
     return { error: "Failed to load indicators." }
   }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // DELETE DOCUMENT — Remove a central Document record (cascades to mappings)
 // ─────────────────────────────────────────────────────────────────────────────
