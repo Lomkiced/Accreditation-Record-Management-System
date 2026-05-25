@@ -652,4 +652,43 @@ export async function getIndicatorsForSelector(): Promise<
     console.error("[getIndicatorsForSelector]", error)
     return { error: "Failed to load indicators." }
   }
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETE DOCUMENT — Remove a central Document record (cascades to mappings)
+// ─────────────────────────────────────────────────────────────────────────────
+export async function deleteDocument(documentId: string): Promise<ActionResult> {
+  try {
+    const currentUser = await requireUser()
+
+    const document = await prisma.document.findUnique({
+      where: { id: documentId },
+      select: { id: true, userId: true, title: true },
+    })
+
+    if (!document) return { error: "Document not found." }
+
+    // Only the owner or an admin can delete
+    if (document.userId !== currentUser.id && currentUser.role !== "ADMIN") {
+      return { error: "You do not have permission to delete this document." }
+    }
+
+    await prisma.document.delete({ where: { id: documentId } })
+
+    await prisma.auditLog.create({
+      data: {
+        userId: currentUser.id,
+        action: "DELETE_DOCUMENT",
+        module: "DOCUMENT",
+        targetId: documentId,
+        details: { title: document.title },
+      },
+    })
+
+    revalidatePath("/admin/repository")
+    revalidatePath("/faculty/submissions")
+
+    return { success: true }
+  } catch (error) {
+    console.error("[deleteDocument]", error)
+    return { error: "Failed to delete document." }
+  }
 }

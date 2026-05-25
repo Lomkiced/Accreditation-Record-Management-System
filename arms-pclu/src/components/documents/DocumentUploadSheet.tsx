@@ -40,6 +40,7 @@ import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { uploadDocument, createEvidenceMappings } from "@/actions/document.actions"
 import { getIndicatorsForSelector } from "@/actions/document.actions"
+import type { DocumentWithMappings } from "@/types/document.types"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -132,12 +133,14 @@ interface DocumentUploadSheetProps {
   open: boolean
   onClose: () => void
   onSuccess?: (documentId: string) => void
+  initialDocument?: DocumentWithMappings | null
 }
 
 export function DocumentUploadSheet({
   open,
   onClose,
   onSuccess,
+  initialDocument,
 }: DocumentUploadSheetProps) {
   const [step, setStep] = React.useState<1 | 2 | 3>(1)
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null)
@@ -167,6 +170,22 @@ export function DocumentUploadSheet({
     }
     load()
   }, [open])
+
+  // Initialize draft state if initialDocument is provided
+  React.useEffect(() => {
+    if (open && initialDocument) {
+      setUploadedDocumentId(initialDocument.id)
+      setStep(2)
+      // Pre-populate indicators from existing mappings
+      const existingIds = new Set(initialDocument.mappings.map(m => m.indicator.id))
+      setSelectedIndicatorIds(existingIds)
+      
+      // Also pre-fill form just in case we need it for Step 3 summary
+      form.setValue("title", initialDocument.title)
+      form.setValue("description", initialDocument.description ?? "")
+      form.setValue("documentDate", initialDocument.documentDate ? new Date(initialDocument.documentDate).toISOString().split('T')[0] : "")
+    }
+  }, [open, initialDocument, form])
 
   const handleClose = () => {
     form.reset()

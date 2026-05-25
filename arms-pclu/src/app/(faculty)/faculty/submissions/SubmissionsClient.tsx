@@ -10,11 +10,23 @@ import {
   CheckCircle2,
   XCircle,
   FilePen,
+  MoreVertical,
+  Trash,
+  Tag,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { DocumentUploadSheet } from "@/components/documents/DocumentUploadSheet"
 import type { DocumentWithMappings } from "@/types/document.types"
 import { cn } from "@/lib/utils"
+import { deleteDocument } from "@/actions/document.actions"
+import { toast } from "sonner"
 
 // ─── Status Badge Configuration ────────────────────────────────────────────────
 const STATUS_CONFIG: Record<
@@ -52,6 +64,27 @@ interface SubmissionsClientProps {
 
 export function SubmissionsClient({ documents }: SubmissionsClientProps) {
   const [isUploadOpen, setIsUploadOpen] = React.useState(false)
+  const [selectedDocument, setSelectedDocument] = React.useState<DocumentWithMappings | null>(null)
+  const [isDeleting, setIsDeleting] = React.useState<string | null>(null)
+
+  const handleDelete = async (docId: string) => {
+    if (!window.confirm("Are you sure you want to delete this document? This action cannot be undone.")) {
+      return
+    }
+    setIsDeleting(docId)
+    try {
+      const result = await deleteDocument(docId)
+      if (result.error) {
+        toast.error(result.error)
+      } else {
+        toast.success("Document deleted successfully.")
+      }
+    } catch (err) {
+      toast.error("Failed to delete document.")
+    } finally {
+      setIsDeleting(null)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -106,6 +139,7 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
                   <th className="px-6 py-4 font-semibold">Document Details</th>
                   <th className="px-6 py-4 font-semibold">Mapped Indicators</th>
                   <th className="px-6 py-4 font-semibold text-right">Date Uploaded</th>
+                  <th className="px-6 py-4 font-semibold w-10"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -184,6 +218,43 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
                           })}
                         </p>
                       </td>
+
+                      {/* Column 4: Actions */}
+                      <td className="px-6 py-4 align-top text-right">
+                        {isDeleting === doc.id ? (
+                          <div className="flex justify-end p-2">
+                            <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                          </div>
+                        ) : (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreVertical className="h-4 w-4 text-slate-500" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedDocument(doc)
+                                  setIsUploadOpen(true)
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <Tag className="mr-2 h-4 w-4" />
+                                <span>Edit Tags / Resume</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(doc.id)}
+                                className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                              >
+                                <Trash className="mr-2 h-4 w-4" />
+                                <span>Delete Document</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </td>
                     </tr>
                   )
                 })}
@@ -196,7 +267,11 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
       {/* Document Upload Sheet Mounting */}
       <DocumentUploadSheet
         open={isUploadOpen}
-        onClose={() => setIsUploadOpen(false)}
+        initialDocument={selectedDocument}
+        onClose={() => {
+          setIsUploadOpen(false)
+          setSelectedDocument(null)
+        }}
       />
     </div>
   )
