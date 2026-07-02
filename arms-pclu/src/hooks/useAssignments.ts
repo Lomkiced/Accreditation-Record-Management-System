@@ -69,7 +69,7 @@ export function useCreateAssignment() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: createAssignment,
+    mutationFn: (data: Parameters<typeof createAssignment>[0]) => createAssignment({ ...data }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: assignmentKeys.forFaculty(variables.userId),

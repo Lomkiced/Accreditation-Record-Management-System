@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { TagBadge } from "./TagBadge"
 import { cn } from "@/lib/utils"
+import { useCreateTag, useUpdateTag } from "@/hooks/useTagManagement"
+import { Loader2 } from "lucide-react"
 
 const tagSchema = z.object({
   name: z.string().min(1, "Tag Name is required"),
@@ -27,7 +29,7 @@ type TagFormValues = z.infer<typeof tagSchema>
 interface TagFormModalProps {
   open: boolean
   onClose: () => void
-  initialData?: TagFormValues
+  tagToEdit?: { id: string; name: string; color: string }
 }
 
 const PRESET_COLORS = [
@@ -43,34 +45,48 @@ const PRESET_COLORS = [
   "#F43F5E", // rose
 ]
 
-export function TagFormModal({ open, onClose, initialData }: TagFormModalProps) {
+export function TagFormModal({ open, onClose, tagToEdit }: TagFormModalProps) {
   const form = useForm<TagFormValues>({
     resolver: zodResolver(tagSchema),
-    defaultValues: initialData || {
+    defaultValues: tagToEdit || {
       name: "",
       color: "#3B82F6",
     },
   })
+
+  const createTag = useCreateTag()
+  const updateTag = useUpdateTag()
 
   const selectedColor = form.watch("color")
   const watchedName = form.watch("name")
 
   React.useEffect(() => {
     if (open) {
-      form.reset(initialData || { name: "", color: "#3B82F6" })
+      form.reset(tagToEdit || { name: "", color: "#3B82F6" })
     }
-  }, [open, initialData, form])
+  }, [open, tagToEdit, form])
 
   const onSubmit = (data: TagFormValues) => {
-    console.log(data)
-    onClose()
+    if (tagToEdit) {
+      updateTag.mutate(
+        { tagId: tagToEdit.id, name: data.name, color: data.color },
+        { onSuccess: () => onClose() }
+      )
+    } else {
+      createTag.mutate(
+        { name: data.name, color: data.color },
+        { onSuccess: () => onClose() }
+      )
+    }
   }
+
+  const isPending = createTag.isPending || updateTag.isPending
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{initialData ? "Edit Tag" : "Create New Tag"}</DialogTitle>
+          <DialogTitle>{tagToEdit ? "Edit Tag" : "Create New Tag"}</DialogTitle>
         </DialogHeader>
         
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-4">
@@ -80,6 +96,7 @@ export function TagFormModal({ open, onClose, initialData }: TagFormModalProps) 
               id="name" 
               placeholder="e.g., Priority, For Review" 
               {...form.register("name")} 
+              disabled={isPending}
             />
             {form.formState.errors.name && (
               <p className="text-xs text-red-500">{form.formState.errors.name.message}</p>
@@ -93,11 +110,13 @@ export function TagFormModal({ open, onClose, initialData }: TagFormModalProps) 
                 <button
                   key={color}
                   type="button"
+                  disabled={isPending}
                   className={cn(
                     "w-7 h-7 rounded-full transition-all focus:outline-none",
                     selectedColor === color 
                       ? "ring-2 ring-offset-2 scale-110" 
-                      : "hover:scale-110"
+                      : "hover:scale-110",
+                    isPending && "opacity-50 cursor-not-allowed"
                   )}
                   style={{ 
                     backgroundColor: color,
@@ -113,6 +132,7 @@ export function TagFormModal({ open, onClose, initialData }: TagFormModalProps) 
                 type="text" 
                 {...form.register("color")} 
                 className="w-28 h-8 font-mono text-xs uppercase"
+                disabled={isPending}
               />
               <div 
                 className="w-6 h-6 rounded border ml-1"
@@ -137,10 +157,11 @@ export function TagFormModal({ open, onClose, initialData }: TagFormModalProps) 
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={onClose}>
+            <Button type="button" variant="ghost" onClick={onClose} disabled={isPending}>
               Cancel
             </Button>
-            <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white" disabled={isPending}>
+              {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Save Tag
             </Button>
           </DialogFooter>

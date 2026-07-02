@@ -619,9 +619,30 @@ export async function getIndicatorsForSelector(): Promise<
   >
 > {
   try {
-    await requireUser()
+    const currentUser = await requireUser()
+
+    // Base query constraints
+    let areaWhereClause: any = {}
+
+    // If the user is FACULTY, enforce strictly scoped Area assignments
+    if (currentUser.role === "FACULTY") {
+      const assignments = await prisma.assignment.findMany({
+        where: { userId: currentUser.id },
+        select: { areaId: true, criterionId: true },
+      })
+      
+      const assignedAreaIds = Array.from(new Set(assignments.map(a => a.areaId)))
+      
+      // If no assignments, they shouldn't be able to tag anything
+      if (assignedAreaIds.length === 0) {
+        return { success: true, data: [] }
+      }
+
+      areaWhereClause = { id: { in: assignedAreaIds } }
+    }
 
     const areas = await prisma.area.findMany({
+      where: areaWhereClause,
       orderBy: { order: "asc" },
       select: {
         id: true,
@@ -647,7 +668,37 @@ export async function getIndicatorsForSelector(): Promise<
       },
     })
 
-    return { success: true, data: areas }
+    // If FACULTY, further filter criteria based on specific criterion assignments
+    let filteredAreas = areas
+    if (currentUser.role === "FACULTY") {
+      const assignments = await prisma.assignment.findMany({
+        where: { userId: currentUser.id },
+        select: { areaId: true, criterionId: true },
+      })
+
+      filteredAreas = areas.map(area => {
+        // Find assignments for this specific area
+        const areaAssignments = assignments.filter(a => a.areaId === area.id)
+        
+        // If there is ANY assignment for this area that has criterionId === null, 
+        // it means they are assigned to the ENTIRE area. They get all criteria.
+        const hasFullAreaAccess = areaAssignments.some(a => a.criterionId === null)
+        
+        if (hasFullAreaAccess) {
+          return area
+        }
+
+        // Otherwise, they only get the explicitly assigned criteria
+        const assignedCriterionIds = new Set(areaAssignments.map(a => a.criterionId).filter(Boolean))
+        
+        return {
+          ...area,
+          criteria: area.criteria.filter(crit => assignedCriterionIds.has(crit.id))
+        }
+      }).filter(area => area.criteria.length > 0)
+    }
+
+    return { success: true, data: filteredAreas }
   } catch (error) {
     console.error("[getIndicatorsForSelector]", error)
     return { error: "Failed to load indicators." }
@@ -692,5 +743,62 @@ export async function deleteDocument(documentId: string): Promise<ActionResult> 
   } catch (error) {
     console.error("[deleteDocument]", error)
     return { error: "Failed to delete document." }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TAGS — Get all system tags and toggle tags on documents
+// ─────────────────────────────────────────────────────────────────────────────
+export async function getAllTags(): Promise<ActionResult<{ id: string; name: string; color: string }[]>> {
+  try {
+    const tags = await prisma.tag.findMany({
+      select: { id: true, name: true, color: true },
+      orderBy: { name: "asc" }
+    })
+    
+    // Auto-seed if empty for the first time
+    if (tags.length === 0) {
+      const defaultTags = [
+        { name: "Priority",  color: "#EF4444" },
+        { name: "For Review",color: "#F59E0B" },
+        { name: "Finalized", color: "#10B981" },
+        { name: "Archived",  color: "#64748B" },
+      ]
+      await prisma.tag.createMany({ data: defaultTags })
+      const newTags = await prisma.tag.findMany({ select: { id: true, name: true, color: true }, orderBy: { name: "asc" } })
+      return { success: true, data: newTags }
+    }
+    
+    return { success: true, data: tags }
+  } catch (error) {
+    console.error("[getAllTags]", error)
+    return { error: "Failed to load tags." }
+  }
+}
+
+export async function toggleDocumentTag(documentId: string, tagId: string, add: boolean): Promise<ActionResult> {
+  try {
+    await requireUser()
+    
+    if (add) {
+      // Use create instead of upsert to avoid complexity, handle unique constraint if already exists
+      try {
+        await prisma.documentTag.create({
+          data: { documentId, tagId },
+        })
+      } catch (e: any) {
+        if (e.code !== 'P2002') throw e // ignore unique constraint violation
+      }
+    } else {
+      await prisma.documentTag.deleteMany({
+        where: { documentId, tagId },
+      })
+    }
+    
+    revalidatePath("/admin/repository")
+    return { success: true }
+  } catch (error) {
+    console.error("[toggleDocumentTag]", error)
+    return { error: "Failed to toggle tag." }
   }
 }

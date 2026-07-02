@@ -8,27 +8,26 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ColumnDef } from "@tanstack/react-table"
 import { AvatarInitials } from "@/components/shared/AvatarInitials"
-
-export interface AuditLog {
-  id: string
-  timestamp: string
-  user: string
-  action: string
-  module: string
-  details: string
-  ipAddress: string
-}
-
-const mockLogs: AuditLog[] = [
-  { id: "LOG-1024", timestamp: "Oct 12, 2024 14:32:10", user: "Admin User", action: "Approved Document", module: "Submissions", details: "Approved 'Faculty Development Plan 2024'", ipAddress: "192.168.1.105" },
-  { id: "LOG-1023", timestamp: "Oct 12, 2024 14:30:05", user: "Admin User", action: "Viewed Document", module: "Submissions", details: "Viewed 'Faculty Development Plan 2024'", ipAddress: "192.168.1.105" },
-  { id: "LOG-1022", timestamp: "Oct 12, 2024 10:15:22", user: "Dr. Juan Perez", action: "Submitted Document", module: "Submissions", details: "Submitted 'Faculty Development Plan 2024' (v2)", ipAddress: "192.168.1.201" },
-  { id: "LOG-1021", timestamp: "Oct 11, 2024 16:45:00", user: "Maria Clara", action: "Logged In", module: "Authentication", details: "Successful login", ipAddress: "192.168.1.205" },
-  { id: "LOG-1020", timestamp: "Oct 11, 2024 15:20:11", user: "Admin User", action: "Assigned Area", module: "Assignments", details: "Assigned Area 4 to Maria Clara", ipAddress: "192.168.1.105" },
-]
+import { useAuditLogs } from "@/hooks/useAuditLogs"
+import type { AuditLogWithUser } from "@/actions/audit.actions"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function AuditLogsPage() {
-  const columns: ColumnDef<AuditLog>[] = [
+  const { data: logs = [], isLoading } = useAuditLogs()
+  const [searchQuery, setSearchQuery] = React.useState("")
+
+  const filteredLogs = React.useMemo(() => {
+    if (!searchQuery) return logs
+    const q = searchQuery.toLowerCase()
+    return logs.filter(log => 
+      log.user.toLowerCase().includes(q) ||
+      log.action.toLowerCase().includes(q) ||
+      log.module.toLowerCase().includes(q) ||
+      log.details.toLowerCase().includes(q)
+    )
+  }, [logs, searchQuery])
+
+  const columns: ColumnDef<AuditLogWithUser>[] = [
     {
       accessorKey: "timestamp",
       header: "Timestamp",
@@ -50,9 +49,10 @@ export default function AuditLogsPage() {
       cell: ({ row }) => {
         const action = row.getValue("action") as string
         let colorClass = "bg-slate-100 text-slate-700"
-        if (action.includes("Approved")) colorClass = "bg-emerald-100 text-emerald-700"
-        else if (action.includes("Submitted") || action.includes("Logged")) colorClass = "bg-blue-100 text-blue-700"
-        else if (action.includes("Assigned")) colorClass = "bg-violet-100 text-violet-700"
+        if (action.includes("APPROVED") || action.includes("CREATE")) colorClass = "bg-emerald-100 text-emerald-700"
+        else if (action.includes("SUBMITTED") || action.includes("UPLOAD") || action.includes("LOGGED")) colorClass = "bg-blue-100 text-blue-700"
+        else if (action.includes("ASSIGN") || action.includes("UPDATE")) colorClass = "bg-violet-100 text-violet-700"
+        else if (action.includes("DELETE") || action.includes("RETURNED")) colorClass = "bg-red-100 text-red-700"
         
         return (
           <span className={`text-xs px-2 py-0.5 rounded font-medium ${colorClass}`}>
@@ -69,12 +69,11 @@ export default function AuditLogsPage() {
     {
       accessorKey: "details",
       header: "Details",
-      cell: ({ row }) => <span className="text-sm text-slate-600">{row.getValue("details")}</span>,
-    },
-    {
-      accessorKey: "ipAddress",
-      header: "IP Address",
-      cell: ({ row }) => <span className="text-xs font-mono text-slate-400">{row.getValue("ipAddress")}</span>,
+      cell: ({ row }) => (
+        <span className="text-sm text-slate-600 truncate max-w-xs block" title={row.getValue("details")}>
+          {row.getValue("details")}
+        </span>
+      ),
     },
   ]
 
@@ -84,7 +83,7 @@ export default function AuditLogsPage() {
         title="Audit Logs"
         subtitle="System-wide activity monitoring and tracking"
         actions={
-          <Button variant="outline" className="text-slate-700 bg-white">
+          <Button variant="outline" className="text-slate-700 bg-white shadow-sm">
             <Download className="w-4 h-4 mr-2" />
             Export Logs
           </Button>
@@ -95,7 +94,12 @@ export default function AuditLogsPage() {
         <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-wrap gap-3 items-center">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <Input placeholder="Search logs by user, action, or details..." className="pl-9 h-9" />
+            <Input 
+              placeholder="Search logs by user, action, or details..." 
+              className="pl-9 h-9" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
           
           <Button variant="outline" size="sm" className="h-9 text-slate-600 bg-slate-50">
@@ -106,12 +110,23 @@ export default function AuditLogsPage() {
             Date Range
           </Button>
 
-          <div className="ml-auto text-sm text-slate-500">
-            Showing {mockLogs.length} entries
+          <div className="ml-auto text-sm text-slate-500 font-medium">
+            Showing {filteredLogs.length} entries
           </div>
         </div>
 
-        <DataTable columns={columns} data={mockLogs} />
+        {isLoading ? (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-4">
+            <div className="flex gap-4 border-b border-slate-100 pb-4">
+              <Skeleton className="h-6 w-full" />
+            </div>
+            {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        ) : (
+          <DataTable columns={columns} data={filteredLogs} />
+        )}
       </div>
     </>
   )

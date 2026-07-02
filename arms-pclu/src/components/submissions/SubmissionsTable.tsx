@@ -132,22 +132,13 @@ export function SubmissionsTable({ data, onRowClick }: SubmissionsTableProps) {
         const status = row.original.status
         return (
           <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-            {status === "SUBMITTED" || status === "UNDER_REVIEW" ? (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="h-8 text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
-                onClick={() => onRowClick(row.original)}
-              >
-                Review
-              </Button>
-            ) : (
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-blue-600" onClick={() => onRowClick(row.original)}>
-                <Eye className="w-4 h-4" />
-              </Button>
-            )}
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600">
-              <Download className="w-4 h-4" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 text-slate-400 hover:text-blue-600" 
+              onClick={() => onRowClick(row.original)}
+            >
+              <Eye className="w-4 h-4" />
             </Button>
           </div>
         )

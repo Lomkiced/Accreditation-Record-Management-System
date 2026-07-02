@@ -24,7 +24,11 @@ export function useMarkAsRead() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: markAsRead,
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
       queryClient.invalidateQueries({ queryKey: notificationKeys.all })
     },
   })
@@ -33,8 +37,12 @@ export function useMarkAsRead() {
 export function useMarkAllAsRead() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: markAllAsRead,
-    onSuccess: () => {
+    mutationFn: () => markAllAsRead(),
+    onSuccess: (result) => {
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
       queryClient.invalidateQueries({ queryKey: notificationKeys.all })
       toast.success("All notifications marked as read.")
     },

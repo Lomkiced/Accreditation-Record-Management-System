@@ -41,6 +41,8 @@ import { toast } from "sonner"
 import { uploadDocument, createEvidenceMappings } from "@/actions/document.actions"
 import { getIndicatorsForSelector } from "@/actions/document.actions"
 import type { DocumentWithMappings } from "@/types/document.types"
+import { useAuth } from "@/hooks/useAuth"
+import { uploadFileToStorage } from "@/lib/supabase/storage"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -151,6 +153,10 @@ export function DocumentUploadSheet({
   const [areaTree, setAreaTree] = React.useState<AreaNode[]>([])
   const [loadingTree, setLoadingTree] = React.useState(false)
   const [indicatorSearch, setIndicatorSearch] = React.useState("")
+  const [uploadProgress, setUploadProgress] = React.useState<number>(0)
+  const [isUploading, setIsUploading] = React.useState(false)
+
+  const { user } = useAuth()
 
   const form = useForm<Step1Values>({
     resolver: zodResolver(step1Schema),
@@ -203,17 +209,28 @@ export function DocumentUploadSheet({
       toast.error("Please attach a document file.")
       return
     }
+    if (!user?.id) {
+      toast.error("Authentication error. Please refresh and try again.")
+      return
+    }
+
+    setIsUploading(true)
     setIsSaving(true)
     try {
-      // TODO: In production, upload to Supabase Storage first and get the URL.
-      // For now, we pass filename metadata and store the file reference.
+      // Upload to Supabase Storage first
+      const fileMeta = await uploadFileToStorage(
+        selectedFile,
+        user.id,
+        (pct) => setUploadProgress(pct)
+      )
+
       const result = await uploadDocument({
         title: values.title,
         description: values.description,
         documentDate: values.documentDate,
-        fileName: selectedFile.name,
-        fileSize: selectedFile.size,
-        // fileUrl: supabaseStorageUrl (set after actual storage upload)
+        fileName: fileMeta.fileName,
+        fileSize: fileMeta.fileSize,
+        fileUrl: fileMeta.fileUrl,
       })
 
       if (!result.success) {
@@ -223,7 +240,11 @@ export function DocumentUploadSheet({
 
       setUploadedDocumentId(result.data!.documentId)
       setStep(2)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Upload failed."
+      toast.error(message)
     } finally {
+      setIsUploading(false)
       setIsSaving(false)
     }
   }
@@ -361,6 +382,21 @@ export function DocumentUploadSheet({
                     >
                       <X className="w-4 h-4" />
                     </button>
+                  </div>
+                )}
+                {/* Upload progress bar */}
+                {isUploading && (
+                  <div className="mt-2">
+                    <div className="flex justify-between text-xs text-slate-500 mb-1">
+                      <span>Uploading...</span>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-blue-500 transition-all duration-300 rounded-full"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
@@ -707,13 +743,13 @@ export function DocumentUploadSheet({
               <Button
                 type="submit"
                 form="step1-form"
-                disabled={isSaving}
+                disabled={isSaving || isUploading}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
               >
-                {isSaving ? (
+                {isSaving || isUploading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    Saving...
+                    {isUploading ? "Uploading..." : "Saving..."}
                   </>
                 ) : (
                   <>

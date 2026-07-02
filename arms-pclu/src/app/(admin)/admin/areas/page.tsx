@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Search, Plus } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { Button } from "@/components/ui/button"
@@ -48,8 +49,21 @@ export default function AreasPage() {
 
         <div className="space-y-3">
           {isLoading ? (
-            <div className="p-4 text-center text-sm text-slate-500 bg-white rounded-xl border border-slate-200 shadow-sm">
-              Loading areas...
+            <div className="grid grid-cols-1 gap-6">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="bg-white rounded-xl border border-slate-200 p-6 flex items-start gap-4">
+                  <Skeleton className="w-16 h-16 rounded-xl" />
+                  <div className="flex-1 space-y-3">
+                    <Skeleton className="h-6 w-64" />
+                    <Skeleton className="h-4 w-96" />
+                    <div className="grid grid-cols-3 gap-4 mt-4">
+                      <Skeleton className="h-10 w-full" />
+                      <Skeleton className="h-10 w-full" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : filteredAreas.length === 0 ? (
             <div className="p-4 text-center text-sm text-slate-500 bg-white rounded-xl border border-slate-200 shadow-sm">

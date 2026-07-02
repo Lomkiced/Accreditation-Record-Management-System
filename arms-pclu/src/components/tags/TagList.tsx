@@ -85,7 +85,6 @@ export function TagList({ tags, onEdit, onDelete }: TagListProps) {
       id: "actions",
       header: () => <div className="text-right">Actions</div>,
       cell: ({ row }) => {
-        const canDelete = row.original.documentsCount === 0
         return (
           <div className="flex items-center justify-end gap-1">
             <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-blue-600" onClick={() => onEdit(row.original)}>
@@ -100,18 +99,15 @@ export function TagList({ tags, onEdit, onDelete }: TagListProps) {
                       variant="ghost" 
                       size="icon" 
                       className="h-8 w-8 text-slate-400 hover:text-red-500"
-                      disabled={!canDelete}
-                      onClick={() => canDelete && onDelete(row.original)}
+                      onClick={() => onDelete(row.original)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </TooltipTrigger>
-                {!canDelete && (
-                  <TooltipContent>
-                    <p>Cannot delete tag used by {row.original.documentsCount} documents</p>
-                  </TooltipContent>
-                )}
+                <TooltipContent>
+                  <p>Delete tag</p>
+                </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>

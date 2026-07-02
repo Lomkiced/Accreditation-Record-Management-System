@@ -51,7 +51,7 @@ export function useCreateArea() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: createArea,
+    mutationFn: (data: Parameters<typeof createArea>[0]) => createArea({ ...data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: areaKeys.all })
       toast.success("Area created successfully.")
@@ -72,7 +72,7 @@ export function useUpdateArea() {
     }: {
       id: string
       data: Parameters<typeof updateArea>[1]
-    }) => updateArea(id, data),
+    }) => updateArea(id, { ...data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: areaKeys.all })
       toast.success("Area updated successfully.")
@@ -145,7 +145,7 @@ export function useCreateCriterion() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: createCriterion,
+    mutationFn: (data: Parameters<typeof createCriterion>[0]) => createCriterion({ ...data }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: areaKeys.criteria(variables.areaId),
@@ -169,7 +169,7 @@ export function useUpdateCriterion(areaId: string) {
     }: {
       id: string
       data: Parameters<typeof updateCriterion>[1]
-    }) => updateCriterion(id, data),
+    }) => updateCriterion(id, { ...data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: areaKeys.criteria(areaId) })
       queryClient.invalidateQueries({ queryKey: areaKeys.all })
@@ -231,7 +231,7 @@ export function useCreateIndicator(criterionId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: createIndicator,
+    mutationFn: (data: Parameters<typeof createIndicator>[0]) => createIndicator({ ...data }),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: areaKeys.indicators(criterionId),
@@ -255,7 +255,7 @@ export function useUpdateIndicator(criterionId: string) {
     }: {
       id: string
       data: Parameters<typeof updateIndicator>[1]
-    }) => updateIndicator(id, data),
+    }) => updateIndicator(id, { ...data }),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: areaKeys.indicators(criterionId),

@@ -8,18 +8,20 @@ import { SystemTags } from "@/components/tags/SystemTags"
 import { TagList, type CustomTag } from "@/components/tags/TagList"
 import { TagFormModal } from "@/components/tags/TagFormModal"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
-
-const mockTags: CustomTag[] = [
-  { id: "1", name: "Priority", color: "#EF4444", documentsCount: 5, createdAt: "Oct 12, 2024" },
-  { id: "2", name: "For Review", color: "#F59E0B", documentsCount: 2, createdAt: "Oct 11, 2024" },
-  { id: "3", name: "Finalized", color: "#10B981", documentsCount: 12, createdAt: "Oct 10, 2024" },
-  { id: "4", name: "Archived", color: "#64748B", documentsCount: 0, createdAt: "Oct 09, 2024" },
-]
+import { useTagManagement, useDeleteTag } from "@/hooks/useTagManagement"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function TagsPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false)
   const [editingTag, setEditingTag] = React.useState<CustomTag | undefined>()
   const [deletingTag, setDeletingTag] = React.useState<CustomTag | null>(null)
+
+  const { data: tags = [], isLoading } = useTagManagement()
+  const deleteTag = useDeleteTag()
+
+  const customTags = React.useMemo(() => 
+    tags.filter(t => t.type === "CUSTOM"), 
+  [tags])
 
   const handleCreate = () => {
     setEditingTag(undefined)
@@ -32,7 +34,9 @@ export default function TagsPage() {
   }
 
   const handleDelete = () => {
-    console.log("Delete tag", deletingTag?.id)
+    if (deletingTag) {
+      deleteTag.mutate(deletingTag.id)
+    }
     setDeletingTag(null)
   }
 
@@ -59,16 +63,24 @@ export default function TagsPage() {
           <div className="flex items-center gap-2 mb-4">
             <h3 className="text-base font-semibold text-slate-800">Custom Tags</h3>
             <span className="bg-blue-100 text-blue-700 text-xs py-0.5 px-2 rounded-full font-bold">
-              {mockTags.length}
+              {customTags.length}
             </span>
           </div>
 
           <div className="border border-slate-200 rounded-lg overflow-hidden">
-            <TagList 
-              tags={mockTags} 
-              onEdit={handleEdit}
-              onDelete={setDeletingTag}
-            />
+            {isLoading ? (
+              <div className="p-4 space-y-3">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : (
+              <TagList 
+                tags={customTags} 
+                onEdit={handleEdit}
+                onDelete={setDeletingTag}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -76,7 +88,7 @@ export default function TagsPage() {
       <TagFormModal 
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        initialData={editingTag ? { name: editingTag.name, color: editingTag.color } : undefined}
+        tagToEdit={editingTag}
       />
 
       <ConfirmDialog 
@@ -84,8 +96,9 @@ export default function TagsPage() {
         onClose={() => setDeletingTag(null)}
         onConfirm={handleDelete}
         title="Delete Tag"
-        description={`Are you sure you want to delete the "${deletingTag?.name}" tag? This action cannot be undone.`}
+        description={`Are you sure you want to delete the "${deletingTag?.name}" tag? This action cannot be undone and will remove the tag from all documents.`}
         type="danger"
+        isPending={deleteTag.isPending}
       />
     </>
   )

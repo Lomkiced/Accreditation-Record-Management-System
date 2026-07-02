@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { FileText, Clock, AlertCircle, TrendingUp } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
+import { Skeleton } from "@/components/ui/skeleton"
 import { StatCard } from "@/components/dashboard/StatCard"
 import { LogbookCard } from "@/components/logbook/LogbookCard"
 import { useLogbook } from "@/hooks/useLogbook"
@@ -127,7 +128,23 @@ export default function FacultyDashboardPage() {
           </div>
           <div className="flex-1 p-5 overflow-y-auto space-y-3">
             {isAssignmentsLoading ? (
-              <div className="text-center text-sm text-slate-500 py-10">Loading assignments...</div>
+              <div className="space-y-3">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="border border-slate-200 rounded-lg p-3">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Skeleton className="w-8 h-8 rounded-full" />
+                      <div className="space-y-1">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                    </div>
+                    <div className="mt-3 space-y-1">
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-1.5 w-full rounded-full" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : groupedAssignments.length === 0 ? (
               <div className="text-center text-sm text-slate-500 py-10">No active assignments.</div>
             ) : (
@@ -195,8 +212,10 @@ export default function FacultyDashboardPage() {
           </div>
           <div className="flex-1 p-5 overflow-y-auto space-y-3">
             {isLogbookLoading ? (
-              <div className="py-10 text-center text-slate-500 text-sm animate-pulse">
-                Loading recent entries...
+              <div className="space-y-3">
+                {[1, 2, 3].map(i => (
+                  <Skeleton key={i} className="h-20 w-full rounded-lg" />
+                ))}
               </div>
             ) : logbook.length === 0 ? (
               <div className="py-10 text-center text-slate-500 text-sm">

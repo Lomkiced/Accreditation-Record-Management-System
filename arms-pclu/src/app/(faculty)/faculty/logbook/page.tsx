@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Search, Plus } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -55,10 +56,12 @@ export default function FacultyLogbookPage() {
             <Button variant="outline" size="sm" className="h-9 text-slate-600 bg-slate-50">Date Range</Button>
           </div>
 
-          <TabsContent value="all" className="space-y-3 mt-0">
+          <TabsContent value="all" className="space-y-3 mt-4">
             {isLoading ? (
-              <div className="py-10 text-center text-slate-500 text-sm animate-pulse bg-white rounded-xl border border-slate-200">
-                Loading logbook entries...
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map(i => (
+                  <Skeleton key={i} className="h-20 w-full rounded-xl" />
+                ))}
               </div>
             ) : logbook.length === 0 ? (
               <div className="py-10 text-center text-slate-500 text-sm bg-white rounded-xl border border-slate-200">
@@ -75,10 +78,12 @@ export default function FacultyLogbookPage() {
             )}
           </TabsContent>
           
-          <TabsContent value="action-needed" className="space-y-3 mt-0">
+          <TabsContent value="action-needed" className="space-y-3 mt-4">
             {isLoading ? (
-              <div className="py-10 text-center text-slate-500 text-sm animate-pulse bg-white rounded-xl border border-slate-200">
-                Loading logbook entries...
+              <div className="space-y-3">
+                {[1, 2, 3].map(i => (
+                  <Skeleton key={i} className="h-20 w-full rounded-xl" />
+                ))}
               </div>
             ) : logbook.filter(e => e.status === "PENDING" && e.type === "INCOMING").length === 0 ? (
               <div className="py-10 text-center text-slate-500 text-sm bg-white rounded-xl border border-slate-200">

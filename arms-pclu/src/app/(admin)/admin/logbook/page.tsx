@@ -5,6 +5,7 @@ import { Download, Search } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { LogbookCard } from "@/components/logbook/LogbookCard"
 import { useLogbook, useUpdateLogbookStatus } from "@/hooks/useLogbook"
@@ -75,8 +76,10 @@ export default function AdminLogbookPage() {
 
           <TabsContent value="all" className="space-y-3 mt-0">
             {isLoading ? (
-              <div className="py-10 text-center text-slate-500 text-sm animate-pulse bg-white rounded-xl border border-slate-200">
-                Loading logbook entries...
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map(i => (
+                  <Skeleton key={i} className="h-20 w-full rounded-xl" />
+                ))}
               </div>
             ) : logbook.length === 0 ? (
               <div className="py-10 text-center text-slate-500 text-sm bg-white rounded-xl border border-slate-200">

@@ -9,6 +9,7 @@ import {
   getAllSubmissions,
   reviewSubmission,
 } from "@/actions/submission.actions"
+import { submitAllMappings } from "@/actions/document.actions"
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ export function useSubmitDocument() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: uploadAndMapDocument,
+    mutationFn: (data: Parameters<typeof uploadAndMapDocument>[0]) => uploadAndMapDocument({ ...data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
       toast.success("Document submitted for review.")
@@ -54,13 +55,31 @@ export function useSaveDraft() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: saveDocumentAsDraft,
+    mutationFn: (data: Parameters<typeof saveDocumentAsDraft>[0]) => saveDocumentAsDraft({ ...data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
       toast.success("Draft saved successfully.")
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to save draft.")
+    },
+  })
+}
+
+// ─── SUBMIT ALL MAPPINGS (From Draft to Submitted) ───────────────────────────
+
+export function useSubmitAllMappings() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (documentId: string) => submitAllMappings(documentId),
+    onSuccess: (result) => {
+      if (!result.success) throw new Error(result.error)
+      queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
+      toast.success(`Successfully submitted ${result.data?.submittedCount} mappings for review.`)
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to submit mappings.")
     },
   })
 }
@@ -85,7 +104,7 @@ export function useReviewSubmission() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: reviewSubmission,
+    mutationFn: (data: Parameters<typeof reviewSubmission>[0]) => reviewSubmission({ ...data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: submissionKeys.all })
       queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
@@ -93,6 +112,39 @@ export function useReviewSubmission() {
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to review submission.")
+    },
+  })
+}
+
+// ─── TAGS ────────────────────────────────────────────────────────────────────
+
+import { getAllTags, toggleDocumentTag } from "@/actions/document.actions"
+
+export function useTags() {
+  return useQuery({
+    queryKey: ["tags"],
+    queryFn: async () => {
+      const result = await getAllTags()
+      if (!result.success) throw new Error(result.error)
+      return result.data
+    },
+    staleTime: 1000 * 60 * 60, // 1 hour
+  })
+}
+
+export function useToggleTag() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: { documentId: string; tagId: string; add: boolean }) => 
+      toggleDocumentTag(data.documentId, data.tagId, data.add),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: submissionKeys.all })
+      queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
+      toast.success("Tags updated successfully.")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update tags.")
     },
   })
 }

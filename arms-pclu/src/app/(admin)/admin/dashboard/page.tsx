@@ -10,6 +10,7 @@ import {
   FileText,
   ChevronRight,
 } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { StatCard } from "@/components/dashboard/StatCard"
 import { ComplianceChart } from "@/components/dashboard/ComplianceChart"

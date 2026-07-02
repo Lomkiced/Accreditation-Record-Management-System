@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Search } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -80,8 +81,27 @@ export default function MyAreasPage() {
         </div>
 
         {isLoading ? (
-          <div className="py-12 text-center text-slate-500 text-sm bg-white rounded-xl border border-slate-200">
-            Loading your assignments...
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="bg-white rounded-xl border border-slate-200 p-5 h-64 flex flex-col">
+                <div className="flex items-start gap-4 mb-4">
+                  <Skeleton className="w-12 h-12 rounded-xl shrink-0" />
+                  <div className="flex-1 space-y-2 py-1">
+                    <Skeleton className="h-5 w-48" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-3 mb-4 flex-1 space-y-2">
+                  <Skeleton className="h-3 w-32 mb-3" />
+                  <Skeleton className="h-3 w-4/5" />
+                  <Skeleton className="h-3 w-3/4" />
+                </div>
+                <div className="mt-auto space-y-2">
+                   <div className="flex justify-between"><Skeleton className="h-3 w-20" /><Skeleton className="h-3 w-8" /></div>
+                   <Skeleton className="h-2 w-full rounded-full" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : groupedAssignments.length === 0 ? (
           <div className="py-12 text-center text-slate-500 text-sm bg-white rounded-xl border border-slate-200">

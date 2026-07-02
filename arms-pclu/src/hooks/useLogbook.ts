@@ -17,7 +17,7 @@ export function useCreateLogbookEntry() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: LogbookEntryInput) => createLogbookEntry(data),
+    mutationFn: (data: LogbookEntryInput) => createLogbookEntry({ ...data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: logbookKeys.all })
     },

@@ -26,8 +26,10 @@ export interface RepositoryDocument {
   id: string
   title: string
   fileName: string | null
+  fileUrl: string | null
   faculty: string
   uploadedAt: string
+  rawDate: Date
   /** A document can be mapped to many indicators across many areas */
   mappings: DocumentMappingSummary[]
   /** Custom label tags */
@@ -215,20 +217,6 @@ export function RepositoryTable({ data, onRowClick }: RepositoryTableProps) {
             onClick={() => onRowClick(row.original)}
           >
             <Eye className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-slate-400 hover:text-emerald-600"
-          >
-            <Download className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-slate-400 hover:text-purple-600"
-          >
-            <Tag className="w-4 h-4" />
           </Button>
         </div>
       ),

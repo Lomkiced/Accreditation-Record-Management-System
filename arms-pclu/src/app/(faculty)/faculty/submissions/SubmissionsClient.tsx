@@ -14,6 +14,7 @@ import {
   Trash,
   Tag,
   Loader2,
+  Send,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -27,6 +28,7 @@ import type { DocumentWithMappings } from "@/types/document.types"
 import { cn } from "@/lib/utils"
 import { deleteDocument } from "@/actions/document.actions"
 import { toast } from "sonner"
+import { useSubmitAllMappings } from "@/hooks/useSubmissions"
 
 // ─── Status Badge Configuration ────────────────────────────────────────────────
 const STATUS_CONFIG: Record<
@@ -66,6 +68,8 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
   const [isUploadOpen, setIsUploadOpen] = React.useState(false)
   const [selectedDocument, setSelectedDocument] = React.useState<DocumentWithMappings | null>(null)
   const [isDeleting, setIsDeleting] = React.useState<string | null>(null)
+  
+  const submitAllMappings = useSubmitAllMappings()
 
   const handleDelete = async (docId: string) => {
     if (!window.confirm("Are you sure you want to delete this document? This action cannot be undone.")) {
@@ -237,6 +241,24 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent side="bottom" align="end">
+                              {doc.mappings.some(m => m.status === "DRAFT" || m.status === "RETURNED") && (
+                                <DropdownMenuItem
+                                  onSelect={(e) => {
+                                    e.preventDefault()
+                                    if (window.confirm("Submit all draft/returned mappings for review?")) {
+                                      submitAllMappings.mutate(doc.id)
+                                    }
+                                  }}
+                                  className="cursor-pointer font-medium text-blue-600 focus:text-blue-700 focus:bg-blue-50"
+                                >
+                                  {submitAllMappings.isPending ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Send className="mr-2 h-4 w-4" />
+                                  )}
+                                  <span>Submit for Review</span>
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem
                                 onSelect={() => {
                                   setSelectedDocument(doc)

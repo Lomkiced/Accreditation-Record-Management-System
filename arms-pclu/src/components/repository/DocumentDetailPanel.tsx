@@ -153,6 +153,12 @@ export function DocumentDetailPanel({
                   variant="outline"
                   size="sm"
                   className="h-8 text-xs text-blue-600"
+                  onClick={() => {
+                    if (document.fileUrl) {
+                      window.open(document.fileUrl, "_blank")
+                    }
+                  }}
+                  disabled={!document.fileUrl}
                 >
                   <Eye className="w-3.5 h-3.5 mr-1" /> Preview
                 </Button>
@@ -160,6 +166,13 @@ export function DocumentDetailPanel({
                   variant="outline"
                   size="sm"
                   className="h-8 text-xs text-emerald-600"
+                  onClick={() => {
+                    if (document.fileUrl) {
+                      // Supabase public URLs support ?download= to force download
+                      window.open(`${document.fileUrl}?download=`, "_blank")
+                    }
+                  }}
+                  disabled={!document.fileUrl}
                 >
                   <Download className="w-3.5 h-3.5 mr-1" /> Download
                 </Button>
