@@ -8,14 +8,16 @@ import { Input } from "@/components/ui/input"
 import { AreaCard } from "@/components/areas/AreaCard"
 import { AreaFormModal } from "@/components/areas/AreaFormModal"
 
-const mockAreas = [
-  { id: "1", number: 1, name: "Purposes and Objectives", criteriaCount: 4, completion: 100 },
-  { id: "2", number: 2, name: "Faculty", criteriaCount: 8, completion: 65 },
-  { id: "3", number: 3, name: "Instruction", criteriaCount: 5, completion: 0 },
-]
+import { useAreas } from "@/hooks/useAreas"
 
 export default function AreasPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false)
+  const [searchQuery, setSearchQuery] = React.useState("")
+  const { data: areas = [], isLoading } = useAreas()
+
+  const filteredAreas = areas.filter(area => 
+    area.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   return (
     <>
@@ -37,15 +39,27 @@ export default function AreasPage() {
         <div className="relative">
           <Search className="absolute left-3 top-2.5 h-5 w-5 text-slate-400" />
           <Input 
-            placeholder="Search areas by name or number..." 
+            placeholder="Search areas by name..." 
             className="pl-10 h-10 w-full bg-white border-slate-200"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
         <div className="space-y-3">
-          {mockAreas.map((area) => (
-            <AreaCard key={area.id} area={area} />
-          ))}
+          {isLoading ? (
+            <div className="p-4 text-center text-sm text-slate-500 bg-white rounded-xl border border-slate-200 shadow-sm">
+              Loading areas...
+            </div>
+          ) : filteredAreas.length === 0 ? (
+            <div className="p-4 text-center text-sm text-slate-500 bg-white rounded-xl border border-slate-200 shadow-sm">
+              No areas found.
+            </div>
+          ) : (
+            filteredAreas.map((area) => (
+              <AreaCard key={area.id} area={area} />
+            ))
+          )}
         </div>
       </div>
 

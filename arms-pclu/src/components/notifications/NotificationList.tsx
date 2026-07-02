@@ -5,28 +5,21 @@ import { Bell, CheckCircle, FileText, AlertCircle, Calendar } from "lucide-react
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-interface Notification {
-  id: string
-  title: string
-  message: string
-  time: string
-  isRead: boolean
-  type: "success" | "warning" | "info" | "default"
-}
+import type { NotificationItem } from "@/actions/notification.actions"
 
 interface NotificationListProps {
-  notifications: Notification[]
+  notifications: NotificationItem[]
   onMarkAsRead: (id: string) => void
   onMarkAllAsRead: () => void
 }
 
 export function NotificationList({ notifications, onMarkAsRead, onMarkAllAsRead }: NotificationListProps) {
-  const getIcon = (type: string) => {
+  const getIconAndTitle = (type: string) => {
     switch (type) {
-      case "success": return <CheckCircle className="w-5 h-5 text-emerald-500" />
-      case "warning": return <AlertCircle className="w-5 h-5 text-amber-500" />
-      case "info": return <FileText className="w-5 h-5 text-blue-500" />
-      default: return <Bell className="w-5 h-5 text-slate-500" />
+      case "ASSIGNMENT": return { icon: <FileText className="w-5 h-5 text-blue-500" />, title: "New Assignment" }
+      case "REVIEW": return { icon: <CheckCircle className="w-5 h-5 text-emerald-500" />, title: "Document Reviewed" }
+      case "LOGBOOK": return { icon: <FileText className="w-5 h-5 text-amber-500" />, title: "Logbook Update" }
+      default: return { icon: <Bell className="w-5 h-5 text-slate-500" />, title: "Notification" }
     }
   }
 
@@ -62,7 +55,9 @@ export function NotificationList({ notifications, onMarkAsRead, onMarkAllAsRead 
             <p className="text-xs mt-1">No new notifications at this time.</p>
           </div>
         ) : (
-          notifications.map((notif) => (
+          notifications.map((notif) => {
+            const { icon, title } = getIconAndTitle(notif.type)
+            return (
             <div 
               key={notif.id} 
               className={cn(
@@ -72,16 +67,16 @@ export function NotificationList({ notifications, onMarkAsRead, onMarkAllAsRead 
               onClick={() => onMarkAsRead(notif.id)}
             >
               <div className="shrink-0 mt-0.5">
-                {getIcon(notif.type)}
+                {icon}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-start gap-2 mb-1">
                   <h4 className={cn("text-sm font-semibold truncate", !notif.isRead ? "text-slate-900" : "text-slate-700")}>
-                    {notif.title}
+                    {title}
                   </h4>
                   <span className="text-xs text-slate-400 whitespace-nowrap flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
-                    {notif.time}
+                    {new Date(notif.createdAt).toLocaleDateString()}
                   </span>
                 </div>
                 <p className="text-sm text-slate-600 leading-snug">
@@ -94,7 +89,7 @@ export function NotificationList({ notifications, onMarkAsRead, onMarkAllAsRead 
                 </div>
               )}
             </div>
-          ))
+          )})
         )}
       </div>
     </div>

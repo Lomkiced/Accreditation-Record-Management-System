@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { X, Star } from "lucide-react"
+import { X } from "lucide-react"
 import {
   Sheet,
   SheetContent,
@@ -20,6 +20,9 @@ import { StatusBadge } from "@/components/shared/StatusBadge"
 import { VersionHistory } from "./VersionHistory"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { uploadFileToStorage } from "@/lib/supabase/storage"
+import { useSubmitDocument, useSaveDraft } from "@/hooks/useSubmissions"
+import { useAuth } from "@/hooks/useAuth"
 
 const SubmissionSchema = z.object({
   title: z.string().min(1, "Document title is required"),
@@ -71,8 +74,12 @@ export function SubmissionUploadForm({
   const [selectedRating, setSelectedRating] = useState<number>(
     existingSubmission?.rating ?? 0
   )
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isSavingDraft, setIsSavingDraft] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<number>(0)
+  const [isUploading, setIsUploading] = useState(false)
+
+  const { user } = useAuth()
+  const submitDocument = useSubmitDocument()
+  const saveDraft = useSaveDraft()
 
   const isApproved = existingSubmission?.status === "APPROVED"
 
@@ -90,43 +97,110 @@ export function SubmissionUploadForm({
     form.reset()
     setSelectedFile(null)
     setSelectedRating(0)
+    setUploadProgress(0)
     onClose()
   }
 
+  // ─── Upload file to Supabase Storage and return metadata ────────────────────
+  const resolveFileMetadata = async (): Promise<{
+    fileUrl: string
+    fileName: string
+    fileSize: number
+  } | null> => {
+    if (!selectedFile) return null
+    if (!user?.id) {
+      toast.error("Authentication error. Please refresh and try again.")
+      return null
+    }
+
+    setIsUploading(true)
+    try {
+      const result = await uploadFileToStorage(
+        selectedFile,
+        user.id,
+        (pct) => setUploadProgress(pct)
+      )
+      return result
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "File upload failed."
+      toast.error(message)
+      return null
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  // ─── Save as Draft ───────────────────────────────────────────────────────────
   const handleSaveDraft = async () => {
     const values = form.getValues()
     if (!values.title) {
-      form.setError("title", { 
-        message: "Title is required even for drafts" 
-      })
+      form.setError("title", { message: "Title is required even for drafts" })
+      return
+    }
+    if (!values.documentDate) {
+      form.setError("documentDate", { message: "Date is required" })
+      return
+    }
+    if (!indicator) {
+      toast.error("No indicator selected.")
       return
     }
 
-    setIsSavingDraft(true)
-    // TODO: Connect to submission.actions.ts in backend stage
-    await new Promise(resolve => setTimeout(resolve, 800))
-    setIsSavingDraft(false)
-    toast.success("Draft saved successfully")
-    handleClose()
+    // Upload file if one is selected
+    const fileMeta = selectedFile ? await resolveFileMetadata() : null
+    if (selectedFile && !fileMeta) return // upload failed
+
+    const result = await saveDraft.mutateAsync({
+      indicatorId: indicator.id,
+      title: values.title,
+      description: values.description || undefined,
+      documentDate: values.documentDate,
+      fileUrl: fileMeta?.fileUrl,
+      fileName: fileMeta?.fileName,
+      fileSize: fileMeta?.fileSize,
+      rating: selectedRating > 0 ? selectedRating : undefined,
+    })
+
+    if (result?.success) handleClose()
   }
 
+  // ─── Submit for Review ───────────────────────────────────────────────────────
   const handleSubmit = async (values: SubmissionFormValues) => {
     if (!selectedFile && !existingSubmission) {
       toast.error("Please attach a document file")
       return
     }
+    if (!indicator) {
+      toast.error("No indicator selected.")
+      return
+    }
 
-    setIsSubmitting(true)
-    // TODO: Connect to submission.actions.ts in backend stage
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setIsSubmitting(false)
-    toast.success(
-      existingSubmission
-        ? "Document resubmitted successfully"
-        : "Document submitted for review"
-    )
-    handleClose()
+    // Upload file to storage first
+    const fileMeta = selectedFile ? await resolveFileMetadata() : null
+    if (selectedFile && !fileMeta) return // upload failed
+
+    if (!fileMeta) {
+      toast.error("A file is required to submit for review.")
+      return
+    }
+
+    const result = await submitDocument.mutateAsync({
+      indicatorId: indicator.id,
+      title: values.title,
+      description: values.description || undefined,
+      documentDate: values.documentDate,
+      fileUrl: fileMeta.fileUrl,
+      fileName: fileMeta.fileName,
+      fileSize: fileMeta.fileSize,
+      rating: selectedRating > 0 ? selectedRating : undefined,
+    })
+
+    if (result?.success) handleClose()
   }
+
+  const isPending =
+    isUploading || submitDocument.isPending || saveDraft.isPending
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
@@ -157,9 +231,7 @@ export function SubmissionUploadForm({
               <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">
                 Required Document
               </p>
-              <p className="text-sm text-blue-800">
-                {indicator.requiredDocs}
-              </p>
+              <p className="text-sm text-blue-800">{indicator.requiredDocs}</p>
             </div>
           )}
 
@@ -185,26 +257,28 @@ export function SubmissionUploadForm({
                 </span>
               </Label>
               <div className="flex items-center gap-2">
-                {Array.from({ length: indicator?.ratingScale ?? 5 }).map((_, i) => {
-                  const rating = i + 1
-                  return (
-                    <button
-                      key={rating}
-                      type="button"
-                      onClick={() => setSelectedRating(rating)}
-                      className={cn(
-                        "w-10 h-10 rounded-lg border-2",
-                        "text-sm font-semibold",
-                        "transition-all duration-150",
-                        selectedRating === rating
-                          ? "border-blue-500 bg-blue-600 text-white shadow-sm"
-                          : "border-slate-200 bg-white text-slate-600 hover:border-blue-300"
-                      )}
-                    >
-                      {rating}
-                    </button>
-                  )
-                })}
+                {Array.from({ length: indicator?.ratingScale ?? 5 }).map(
+                  (_, i) => {
+                    const rating = i + 1
+                    return (
+                      <button
+                        key={rating}
+                        type="button"
+                        onClick={() => setSelectedRating(rating)}
+                        className={cn(
+                          "w-10 h-10 rounded-lg border-2",
+                          "text-sm font-semibold",
+                          "transition-all duration-150",
+                          selectedRating === rating
+                            ? "border-blue-500 bg-blue-600 text-white shadow-sm"
+                            : "border-slate-200 bg-white text-slate-600 hover:border-blue-300"
+                        )}
+                      >
+                        {rating}
+                      </button>
+                    )
+                  }
+                )}
                 {selectedRating > 0 && (
                   <button
                     type="button"
@@ -242,15 +316,36 @@ export function SubmissionUploadForm({
                 accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png"
                 maxSize={25 * 1024 * 1024}
               />
+              {/* Upload progress bar */}
+              {isUploading && (
+                <div className="mt-2">
+                  <div className="flex justify-between text-xs text-slate-500 mb-1">
+                    <span>Uploading...</span>
+                    <span>{uploadProgress}%</span>
+                  </div>
+                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 transition-all duration-300 rounded-full"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {/* Form fields */}
           {!isApproved && (
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <form
+              onSubmit={form.handleSubmit(handleSubmit)}
+              className="space-y-4"
+            >
               {/* Document Title */}
               <div>
-                <Label htmlFor="title" className="text-sm font-medium text-slate-700 mb-1.5 block">
+                <Label
+                  htmlFor="title"
+                  className="text-sm font-medium text-slate-700 mb-1.5 block"
+                >
                   Document Title
                   <span className="text-red-500 ml-1">*</span>
                 </Label>
@@ -259,7 +354,8 @@ export function SubmissionUploadForm({
                   placeholder="e.g., Faculty TOR — Dr. Juan Dela Cruz"
                   {...form.register("title")}
                   className={cn(
-                    form.formState.errors.title && "border-red-400 focus-visible:ring-red-400"
+                    form.formState.errors.title &&
+                      "border-red-400 focus-visible:ring-red-400"
                   )}
                 />
                 {form.formState.errors.title && (
@@ -271,7 +367,10 @@ export function SubmissionUploadForm({
 
               {/* Description */}
               <div>
-                <Label htmlFor="description" className="text-sm font-medium text-slate-700 mb-1.5 block">
+                <Label
+                  htmlFor="description"
+                  className="text-sm font-medium text-slate-700 mb-1.5 block"
+                >
                   Description / Remarks
                   <span className="text-slate-400 font-normal ml-1">
                     (optional)
@@ -288,7 +387,10 @@ export function SubmissionUploadForm({
 
               {/* Document Date */}
               <div>
-                <Label htmlFor="documentDate" className="text-sm font-medium text-slate-700 mb-1.5 block">
+                <Label
+                  htmlFor="documentDate"
+                  className="text-sm font-medium text-slate-700 mb-1.5 block"
+                >
                   Document Date
                   <span className="text-red-500 ml-1">*</span>
                 </Label>
@@ -297,7 +399,8 @@ export function SubmissionUploadForm({
                   type="date"
                   {...form.register("documentDate")}
                   className={cn(
-                    form.formState.errors.documentDate && "border-red-400 focus-visible:ring-red-400"
+                    form.formState.errors.documentDate &&
+                      "border-red-400 focus-visible:ring-red-400"
                   )}
                 />
                 {form.formState.errors.documentDate && (
@@ -311,13 +414,13 @@ export function SubmissionUploadForm({
               <div className="flex flex-col gap-2 pt-2">
                 <Button
                   type="submit"
-                  disabled={isSubmitting || isSavingDraft}
+                  disabled={isPending}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                 >
-                  {isSubmitting ? (
+                  {isPending && (submitDocument.isPending || isUploading) ? (
                     <>
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                      Submitting...
+                      {isUploading ? "Uploading file..." : "Submitting..."}
                     </>
                   ) : existingSubmission ? (
                     "Resubmit for Review"
@@ -329,10 +432,10 @@ export function SubmissionUploadForm({
                   type="button"
                   variant="outline"
                   onClick={handleSaveDraft}
-                  disabled={isSubmitting || isSavingDraft}
+                  disabled={isPending}
                   className="w-full"
                 >
-                  {isSavingDraft ? (
+                  {saveDraft.isPending ? (
                     <>
                       <span className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin mr-2" />
                       Saving...
@@ -346,14 +449,15 @@ export function SubmissionUploadForm({
           )}
 
           {/* Version history */}
-          {existingSubmission && existingSubmission.versions.length > 0 && (
-            <div className="border-t border-slate-200 pt-4">
-              <p className="text-sm font-semibold text-slate-700 mb-3">
-                Submission History
-              </p>
-              <VersionHistory versions={existingSubmission.versions} />
-            </div>
-          )}
+          {existingSubmission &&
+            existingSubmission.versions.length > 0 && (
+              <div className="border-t border-slate-200 pt-4">
+                <p className="text-sm font-semibold text-slate-700 mb-3">
+                  Submission History
+                </p>
+                <VersionHistory versions={existingSubmission.versions} />
+              </div>
+            )}
         </div>
       </SheetContent>
     </Sheet>

@@ -14,25 +14,16 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 
-export interface User {
-  id: string
-  name: string
-  email: string
-  department: string
-  designation: string
-  assignedAreas: number
-  status: "ACTIVE" | "INACTIVE"
-  lastLogin: string | null
-}
+import { type UserWithCounts } from "@/actions/user.actions"
 
 interface UsersTableProps {
-  data: User[]
-  onEdit: (user: User) => void
-  onToggleStatus: (user: User) => void
+  data: UserWithCounts[]
+  onEdit: (user: UserWithCounts) => void
+  onToggleStatus: (user: UserWithCounts) => void
 }
 
 export function UsersTable({ data, onEdit, onToggleStatus }: UsersTableProps) {
-  const columns: ColumnDef<User>[] = [
+  const columns: ColumnDef<UserWithCounts>[] = [
     {
       accessorKey: "name",
       header: "Faculty",

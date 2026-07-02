@@ -6,15 +6,10 @@ import { ChevronDown, Edit, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { CriterionList } from "./CriterionList"
 
+import { AreaWithHierarchy } from "@/actions/area.actions"
+
 interface AreaCardProps {
-  area: {
-    id: string
-    number: number
-    name: string
-    description?: string
-    criteriaCount: number
-    completion: number // 0-100
-  }
+  area: AreaWithHierarchy
 }
 
 export function AreaCard({ area }: AreaCardProps) {
@@ -31,9 +26,28 @@ export function AreaCard({ area }: AreaCardProps) {
     "bg-orange-100 text-orange-700",
     "bg-teal-100 text-teal-700",
   ]
-  const colorClass = COLORS[(area.number - 1) % COLORS.length]
+  const number = (area.order ?? 0) + 1
+  const colorClass = COLORS[(number - 1) % COLORS.length]
+
+  // Calculate dynamic stats
+  const criteriaCount = area.criteria.length
+  
+  let totalIndicators = 0
+  let approvedIndicators = 0
+  
+  area.criteria.forEach(criterion => {
+    totalIndicators += criterion.indicators.length
+    criterion.indicators.forEach(indicator => {
+      // If there is any approved mapping for this indicator, it counts as fulfilled
+      const isApproved = indicator.mappings.some(m => m.status === "APPROVED")
+      if (isApproved) approvedIndicators++
+    })
+  })
+
+  const completion = totalIndicators === 0 ? 0 : Math.round((approvedIndicators / totalIndicators) * 100)
 
   const getCompletionPill = (completion: number) => {
+    if (totalIndicators === 0) return <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">No Indicators</span>
     if (completion === 100) return <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">100% Complete</span>
     if (completion > 0) return <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">{completion}% Partial</span>
     return <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">0%</span>
@@ -46,15 +60,15 @@ export function AreaCard({ area }: AreaCardProps) {
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${colorClass}`}>
-          {area.number}
+          {number}
         </div>
         <h3 className="font-semibold text-slate-800 ml-3">{area.name}</h3>
         <span className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full ml-2 font-medium">
-          {area.criteriaCount} Criteria
+          {criteriaCount} Criteria
         </span>
         
         <div className="ml-auto flex items-center gap-3">
-          {getCompletionPill(area.completion)}
+          {getCompletionPill(completion)}
           
           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-blue-600">

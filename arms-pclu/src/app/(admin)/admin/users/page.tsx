@@ -5,33 +5,43 @@ import { Search, UserPlus } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { UsersTable, type User } from "@/components/users/UsersTable"
+import { UsersTable } from "@/components/users/UsersTable"
 import { UserFormPanel } from "@/components/users/UserFormPanel"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
-
-const mockUsers: User[] = [
-  { id: "1", name: "Dr. Juan Perez", email: "jperez@pclu.edu.ph", department: "Computer Science", designation: "Dean", assignedAreas: 2, status: "ACTIVE", lastLogin: "2 hours ago" },
-  { id: "2", name: "Maria Clara", email: "mclara@pclu.edu.ph", department: "Information Tech", designation: "Professor", assignedAreas: 1, status: "ACTIVE", lastLogin: "1 day ago" },
-  { id: "3", name: "Pedro Penduko", email: "ppenduko@pclu.edu.ph", department: "Computer Science", designation: "Instructor", assignedAreas: 0, status: "INACTIVE", lastLogin: "1 month ago" },
-]
+import { useUsers, useToggleUserStatus } from "@/hooks/useUsers"
+import type { UserWithCounts } from "@/actions/user.actions"
+import { toast } from "sonner"
 
 export default function UsersPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false)
-  const [editingUser, setEditingUser] = React.useState<User | undefined>()
-  const [togglingUser, setTogglingUser] = React.useState<User | null>(null)
+  const [editingUser, setEditingUser] = React.useState<UserWithCounts | undefined>()
+  const [togglingUser, setTogglingUser] = React.useState<UserWithCounts | null>(null)
+  
+  const { data: users = [], isLoading } = useUsers()
+  const { mutateAsync: toggleStatus, isPending: isToggling } = useToggleUserStatus()
 
   const handleAdd = () => {
     setEditingUser(undefined)
     setIsModalOpen(true)
   }
 
-  const handleEdit = (user: User) => {
+  const handleEdit = (user: UserWithCounts) => {
     setEditingUser(user)
     setIsModalOpen(true)
   }
 
-  const handleToggleConfirm = () => {
-    console.log("Toggling status for", togglingUser?.id)
+  const handleToggleConfirm = async () => {
+    if (!togglingUser) return
+    
+    const activate = togglingUser.status === "INACTIVE"
+    const result = await toggleStatus({ userId: togglingUser.id, activate })
+    
+    if (result.error) {
+      toast.error(result.error)
+    } else {
+      toast.success(`User successfully ${activate ? "activated" : "deactivated"}.`)
+    }
+    
     setTogglingUser(null)
   }
 
@@ -66,15 +76,21 @@ export default function UsersPage() {
           </div>
 
           <div className="ml-auto text-sm text-slate-500">
-            Showing {mockUsers.length} results
+            Showing {users.length} results
           </div>
         </div>
 
-        <UsersTable 
-          data={mockUsers} 
-          onEdit={handleEdit}
-          onToggleStatus={setTogglingUser}
-        />
+        {isLoading ? (
+          <div className="py-10 text-center text-slate-500 text-sm animate-pulse bg-white rounded-xl border border-slate-200">
+            Loading faculty accounts...
+          </div>
+        ) : (
+          <UsersTable 
+            data={users} 
+            onEdit={handleEdit}
+            onToggleStatus={setTogglingUser}
+          />
+        )}
       </div>
 
       <UserFormPanel 
@@ -87,6 +103,7 @@ export default function UsersPage() {
         open={!!togglingUser}
         onClose={() => setTogglingUser(null)}
         onConfirm={handleToggleConfirm}
+        isPending={isToggling}
         title={togglingUser?.status === "ACTIVE" ? `Deactivate ${togglingUser.name}?` : `Activate ${togglingUser?.name}?`}
         description={togglingUser?.status === "ACTIVE" 
           ? "They will lose access immediately but their data will be preserved." 

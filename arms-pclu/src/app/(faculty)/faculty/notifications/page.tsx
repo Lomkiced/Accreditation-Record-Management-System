@@ -3,20 +3,19 @@
 import * as React from "react"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { NotificationList } from "@/components/notifications/NotificationList"
+import { useNotifications, useMarkAsRead, useMarkAllAsRead } from "@/hooks/useNotifications"
 
 export default function FacultyNotificationsPage() {
-  const [notifications, setNotifications] = React.useState([
-    { id: "1", title: "Document Approved", message: "Your submission 'Course Syllabus CS101' was approved by the admin.", time: "1 hour ago", isRead: false, type: "success" as const },
-    { id: "2", title: "Document Returned", message: "Admin returned 'Faculty Profile' for revision. Please check the remarks.", time: "3 hours ago", isRead: false, type: "warning" as const },
-    { id: "3", title: "New Logbook Entry", message: "You received a new document in your logbook.", time: "Yesterday", isRead: true, type: "info" as const },
-  ])
+  const { data: notifications = [] } = useNotifications()
+  const { mutate: markAsRead } = useMarkAsRead()
+  const { mutate: markAllAsRead } = useMarkAllAsRead()
 
   const handleMarkAsRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n))
+    markAsRead(id)
   }
 
   const handleMarkAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
+    markAllAsRead()
   }
 
   return (

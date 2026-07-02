@@ -6,49 +6,29 @@ import { PageHeader } from "@/components/shared/PageHeader"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { LogbookCard, type LogEntry } from "@/components/logbook/LogbookCard"
-
-const mockLogbook: LogEntry[] = [
-  {
-    id: "1",
-    type: "INCOMING",
-    title: "Memo on Updated Syllabus Format",
-    refNo: "MEMO-2024-045",
-    fromTo: "Received from Dean's Office",
-    purpose: "Guidelines for the new syllabus format for AY 2024-2025.",
-    date: "Oct 12, 2024",
-    faculty: "Dr. Juan Perez",
-    status: "PENDING",
-    hasAttachment: true,
-  },
-  {
-    id: "2",
-    type: "OUTGOING",
-    title: "Request for Lab Equipment Validation",
-    fromTo: "Sent to Quality Assurance Office",
-    purpose: "Validation of new computer laboratory units for IT students.",
-    date: "Oct 11, 2024",
-    faculty: "Maria Clara",
-    status: "ACKNOWLEDGED",
-    hasAttachment: false,
-    acknowledgedDate: "Oct 12, 2024",
-  },
-  {
-    id: "3",
-    type: "INCOMING",
-    title: "PACUCOA Self-Survey Guide",
-    fromTo: "Received from PACUCOA Secretriat",
-    purpose: "Official guide for conducting the self-survey.",
-    date: "Oct 10, 2024",
-    faculty: "Elena Santos",
-    status: "REJECTED",
-    hasAttachment: true,
-    remarks: "Incorrect document version attached. Please resubmit.",
-  },
-]
+import { LogbookCard } from "@/components/logbook/LogbookCard"
+import { useLogbook, useUpdateLogbookStatus } from "@/hooks/useLogbook"
+import type { LogbookEntryWithUser } from "@/actions/logbook.actions"
+import { toast } from "sonner"
 
 export default function AdminLogbookPage() {
-  const pendingCount = mockLogbook.filter(e => e.status === "PENDING").length
+  const { data: logbook = [], isLoading } = useLogbook()
+  const { mutateAsync: updateStatus } = useUpdateLogbookStatus()
+
+  const pendingCount = logbook.filter(e => e.status === "PENDING").length
+  
+  const handleAcknowledge = async (entry: LogbookEntryWithUser) => {
+    const result = await updateStatus({ id: entry.id, status: "ACKNOWLEDGED" })
+    if (result.error) toast.error(result.error)
+    else toast.success("Logbook entry acknowledged.")
+  }
+
+  const handleReject = async (entry: LogbookEntryWithUser) => {
+    // Ideally we would prompt for remarks using a dialog, but for now we'll just reject
+    const result = await updateStatus({ id: entry.id, status: "REJECTED", remarks: "Rejected by Admin" })
+    if (result.error) toast.error(result.error)
+    else toast.success("Logbook entry rejected.")
+  }
 
   return (
     <>
@@ -68,7 +48,7 @@ export default function AdminLogbookPage() {
           <TabsList className="mb-4">
             <TabsTrigger value="all" className="flex gap-2">
               All Entries
-              <span className="bg-slate-200 text-slate-700 text-xs px-1.5 rounded-full">{mockLogbook.length}</span>
+              <span className="bg-slate-200 text-slate-700 text-xs px-1.5 rounded-full">{logbook.length}</span>
             </TabsTrigger>
             <TabsTrigger value="pending" className="flex gap-2">
               Pending Acknowledgment
@@ -94,15 +74,35 @@ export default function AdminLogbookPage() {
           </div>
 
           <TabsContent value="all" className="space-y-3 mt-0">
-            {mockLogbook.map((entry) => (
-              <LogbookCard key={entry.id} entry={entry} role="admin" />
-            ))}
+            {isLoading ? (
+              <div className="py-10 text-center text-slate-500 text-sm animate-pulse bg-white rounded-xl border border-slate-200">
+                Loading logbook entries...
+              </div>
+            ) : logbook.length === 0 ? (
+              <div className="py-10 text-center text-slate-500 text-sm bg-white rounded-xl border border-slate-200">
+                No entries found.
+              </div>
+            ) : (
+              logbook.map((entry) => (
+                <LogbookCard key={entry.id} entry={entry} role="admin" onAcknowledge={handleAcknowledge} onReject={handleReject} />
+              ))
+            )}
           </TabsContent>
           
           <TabsContent value="pending" className="space-y-3 mt-0">
-            {mockLogbook.filter(e => e.status === "PENDING").map((entry) => (
-              <LogbookCard key={entry.id} entry={entry} role="admin" />
-            ))}
+            {isLoading ? (
+              <div className="py-10 text-center text-slate-500 text-sm animate-pulse bg-white rounded-xl border border-slate-200">
+                Loading logbook entries...
+              </div>
+            ) : logbook.filter(e => e.status === "PENDING").length === 0 ? (
+              <div className="py-10 text-center text-slate-500 text-sm bg-white rounded-xl border border-slate-200">
+                No pending entries.
+              </div>
+            ) : (
+              logbook.filter(e => e.status === "PENDING").map((entry) => (
+                <LogbookCard key={entry.id} entry={entry} role="admin" onAcknowledge={handleAcknowledge} onReject={handleReject} />
+              ))
+            )}
           </TabsContent>
         </Tabs>
       </div>

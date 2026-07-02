@@ -5,30 +5,40 @@ import { Search, Archive, Clock, CheckCircle, XCircle } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { SubmissionsTable, type Submission } from "@/components/submissions/SubmissionsTable"
+import { SubmissionsTable } from "@/components/submissions/SubmissionsTable"
 import { SubmissionReviewPanel } from "@/components/submissions/SubmissionReviewPanel"
-
-const mockSubmissions: Submission[] = [
-  { id: "1", title: "Faculty Development Plan 2024", faculty: "Dr. Juan Perez", area: { number: 2, name: "Faculty" }, criterion: "A. Academic Qualifications", submittedAt: "Oct 12, 2024", version: 2, status: "PENDING" },
-  { id: "2", title: "Library Holdings Inventory", faculty: "Maria Clara", area: { number: 4, name: "Library" }, criterion: "B. Collection", submittedAt: "Oct 11, 2024", version: 1, status: "APPROVED" },
-  { id: "3", title: "Course Syllabus CS101", faculty: "Pedro Penduko", area: { number: 3, name: "Instruction" }, criterion: "C. Program of Studies", submittedAt: "Oct 10, 2024", version: 1, status: "RETURNED" },
-  { id: "4", title: "Alumni Tracer Study Results", faculty: "Elena Santos", area: { number: 7, name: "Student Services" }, criterion: "D. Alumni", submittedAt: "Oct 09, 2024", version: 1, status: "DRAFT" },
-]
+import { useAllSubmissions } from "@/hooks/useSubmissions"
+import type { AdminSubmission } from "@/actions/submission.actions"
 
 export default function SubmissionsPage() {
   const [activeTab, setActiveTab] = React.useState("ALL")
-  const [selectedSubmission, setSelectedSubmission] = React.useState<Submission | null>(null)
+  const [selectedSubmission, setSelectedSubmission] = React.useState<AdminSubmission | null>(null)
+  const [searchQuery, setSearchQuery] = React.useState("")
+  
+  const { data: submissions = [], isLoading } = useAllSubmissions()
   
   const stats = {
-    total: mockSubmissions.length,
-    pending: mockSubmissions.filter(s => s.status === "PENDING").length,
-    approved: mockSubmissions.filter(s => s.status === "APPROVED").length,
-    returned: mockSubmissions.filter(s => s.status === "RETURNED").length,
+    total: submissions.length,
+    pending: submissions.filter(s => s.status === "SUBMITTED" || s.status === "UNDER_REVIEW").length,
+    approved: submissions.filter(s => s.status === "APPROVED").length,
+    returned: submissions.filter(s => s.status === "RETURNED").length,
   }
 
-  const filtered = activeTab === "ALL" 
-    ? mockSubmissions 
-    : mockSubmissions.filter(s => s.status === activeTab)
+  const filtered = submissions.filter(s => {
+    // 1. Tab filter
+    if (activeTab === "SUBMITTED" && s.status !== "SUBMITTED" && s.status !== "UNDER_REVIEW") return false
+    if (activeTab !== "ALL" && activeTab !== "SUBMITTED" && s.status !== activeTab) return false
+    
+    // 2. Search filter
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      if (!s.document.title.toLowerCase().includes(q) && 
+          !s.user.name.toLowerCase().includes(q)) {
+        return false
+      }
+    }
+    return true
+  })
 
   return (
     <>
@@ -58,7 +68,7 @@ export default function SubmissionsPage() {
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
           <div className="flex items-center gap-6 border-b border-slate-200 mb-4 pb-2">
-            {["ALL", "PENDING", "APPROVED", "RETURNED", "DRAFT"].map(tab => (
+            {["ALL", "SUBMITTED", "APPROVED", "RETURNED", "DRAFT"].map(tab => (
               <button
                 key={tab}
                 className={`text-sm font-medium pb-2 -mb-[9px] px-1 border-b-2 transition-colors ${
@@ -68,7 +78,7 @@ export default function SubmissionsPage() {
                 }`}
                 onClick={() => setActiveTab(tab)}
               >
-                {tab === "PENDING" ? "Pending Review" : tab.charAt(0) + tab.slice(1).toLowerCase()}
+                {tab === "SUBMITTED" ? "Pending Review" : tab.charAt(0) + tab.slice(1).toLowerCase()}
               </button>
             ))}
           </div>
@@ -76,7 +86,12 @@ export default function SubmissionsPage() {
           <div className="flex items-center gap-3">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <Input placeholder="Search by title or faculty..." className="pl-9 h-9" />
+              <Input 
+                placeholder="Search by title or faculty..." 
+                className="pl-9 h-9" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
             <Button variant="outline" className="h-9 text-slate-600">Area</Button>
             <Button variant="outline" className="h-9 text-slate-600">Criterion</Button>

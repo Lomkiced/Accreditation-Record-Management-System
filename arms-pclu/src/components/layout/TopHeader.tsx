@@ -19,16 +19,17 @@ import {
 import { Button } from "@/components/ui/button"
 import { AvatarInitials } from "../shared/AvatarInitials"
 import { useAuth } from "@/hooks/useAuth"
+import { useNotifications, useMarkAsRead } from "@/hooks/useNotifications"
 import type { StoredUser } from "@/store/authStore"
+import { useRouter } from "next/navigation"
 
 interface TopHeaderProps {
-  title: string
   role: "admin" | "faculty"
   /** Optional server-prefetched user — falls back to Zustand store */
   user?: Pick<StoredUser, "name" | "role" | "email"> | null
 }
 
-export function TopHeader({ title, role, user: serverUser }: TopHeaderProps) {
+export function TopHeader({ role, user: serverUser }: TopHeaderProps) {
   const { user: storeUser, signOut } = useAuth()
 
   const displayUser = serverUser ?? storeUser
@@ -38,11 +39,23 @@ export function TopHeader({ title, role, user: serverUser }: TopHeaderProps) {
   const profileHref = role === "admin" ? "/admin/profile" : "/faculty/profile"
   const notifHref = role === "admin" ? "/admin/notifications" : "/faculty/notifications"
 
+  const { data: notifications = [] } = useNotifications()
+  const { mutate: markAsRead } = useMarkAsRead()
+  const router = useRouter()
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length
+  const topNotifications = notifications.slice(0, 5)
+
+  const handleNotificationClick = (id: string, link: string | null) => {
+    markAsRead(id)
+    if (link) {
+      router.push(link)
+    }
+  }
+
   return (
-    <header className="header-fixed flex items-center justify-between px-6">
-      <div className="flex items-center gap-3">
-        <h1 className="text-lg font-semibold text-slate-800">{title}</h1>
-      </div>
+    <header className="header-fixed flex items-center justify-end px-6">
+
 
       <div className="flex items-center gap-2">
         <button
@@ -61,20 +74,48 @@ export function TopHeader({ title, role, user: serverUser }: TopHeaderProps) {
               aria-label="Notifications"
             >
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-amber-500 rounded-full"></span>
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 flex h-3 w-3 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-80 p-0" align="end">
-            <div className="px-4 py-3 border-b">
+            <div className="px-4 py-3 border-b flex justify-between items-center">
               <h3 className="font-semibold text-sm">Notifications</h3>
+              {unreadCount > 0 && (
+                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+                  {unreadCount} New
+                </span>
+              )}
             </div>
             <div className="max-h-[300px] overflow-y-auto">
-              <div className="p-4 text-center text-sm text-slate-500">
-                You have unread notifications.
-              </div>
+              {topNotifications.length > 0 ? (
+                topNotifications.map((notif) => (
+                  <div
+                    key={notif.id}
+                    onClick={() => handleNotificationClick(notif.id, notif.link)}
+                    className={`p-3 text-sm border-b cursor-pointer hover:bg-slate-50 transition-colors ${
+                      !notif.isRead ? "bg-blue-50/30" : ""
+                    }`}
+                  >
+                    <p className="font-medium text-slate-800 line-clamp-2">
+                      {notif.message}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {new Date(notif.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className="p-4 text-center text-sm text-slate-500">
+                  No notifications.
+                </div>
+              )}
             </div>
-            <div className="px-4 py-2 border-t text-center">
-              <Link href={notifHref} className="text-xs text-blue-600 hover:underline">
+            <div className="px-4 py-2 border-t text-center bg-slate-50">
+              <Link href={notifHref} className="text-xs text-blue-600 hover:underline font-medium">
                 View all notifications
               </Link>
             </div>

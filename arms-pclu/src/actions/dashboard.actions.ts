@@ -5,6 +5,11 @@ import { requireAdmin } from "@/lib/auth/getUser"
 
 // ─── Return Types ─────────────────────────────────────────────────────────────
 
+export interface AreaCompliance {
+  name: string
+  value: number
+}
+
 export interface DashboardStats {
   totalDocuments: number
   pendingReviews: number
@@ -193,3 +198,56 @@ export async function getRecentAuditLogs(): Promise<RecentAuditLog[]> {
     details: (log.details as Record<string, unknown> | null) ?? null,
   }))
 }
+
+// ─── getComplianceData ────────────────────────────────────────────────────────
+
+/**
+ * Fetches compliance percentage per Area for the dashboard chart.
+ */
+export async function getComplianceData(): Promise<AreaCompliance[]> {
+  await requireAdmin()
+
+  // Fetch all areas with their indicators and approved mappings
+  const areas = await prisma.area.findMany({
+    orderBy: { order: "asc" },
+    select: {
+      name: true,
+      criteria: {
+        select: {
+          indicators: {
+            select: {
+              id: true,
+              mappings: {
+                where: { status: "APPROVED" },
+                select: { id: true },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+
+  // Calculate percentage per area
+  return areas.map((area) => {
+    let totalIndicators = 0
+    let approvedIndicators = 0
+
+    area.criteria.forEach((criterion) => {
+      criterion.indicators.forEach((indicator) => {
+        totalIndicators++
+        if (indicator.mappings.length > 0) {
+          approvedIndicators++
+        }
+      })
+    })
+
+    const value = totalIndicators > 0 ? Math.round((approvedIndicators / totalIndicators) * 100) : 0
+
+    return {
+      name: area.name,
+      value,
+    }
+  })
+}
+

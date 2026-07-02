@@ -15,17 +15,20 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
-import { createFacultyAccount, toggleFacultyStatus } from "@/actions/auth.actions"
+import { createFacultyAccount, updateFacultyProfile } from "@/actions/auth.actions"
 import {
   CreateFacultySchema,
+  UpdateProfileSchema,
   type CreateFacultyValues,
 } from "@/lib/validations/auth.schema"
-import type { User } from "./UsersTable"
+import { type UserWithCounts } from "@/actions/user.actions"
+import { useQueryClient } from "@tanstack/react-query"
+import { userKeys } from "@/hooks/useUsers"
 
 interface UserFormPanelProps {
   open: boolean
   onClose: () => void
-  user?: User
+  user?: UserWithCounts
 }
 
 export function UserFormPanel({ open, onClose, user }: UserFormPanelProps) {
@@ -33,8 +36,9 @@ export function UserFormPanel({ open, onClose, user }: UserFormPanelProps) {
   const [showPassword, setShowPassword] = React.useState(false)
   const [isActive, setIsActive] = React.useState(user?.status === "ACTIVE")
 
+  // We use CreateFacultySchema for creation, and cast it safely since we handle isEdit below
   const form = useForm<CreateFacultyValues>({
-    resolver: zodResolver(CreateFacultySchema),
+    resolver: zodResolver(isEdit ? UpdateProfileSchema : CreateFacultySchema),
     defaultValues: {
       name: "",
       email: "",
@@ -44,6 +48,8 @@ export function UserFormPanel({ open, onClose, user }: UserFormPanelProps) {
       password: "",
     },
   })
+  
+  const queryClient = useQueryClient()
 
   React.useEffect(() => {
     if (open) {
@@ -71,12 +77,31 @@ export function UserFormPanel({ open, onClose, user }: UserFormPanelProps) {
   }
 
   const onSubmit = async (data: CreateFacultyValues) => {
-    const result = await createFacultyAccount(data)
-    if (result.error) {
-      toast.error(result.error)
+    if (isEdit && user) {
+      // Update existing faculty
+      const result = await updateFacultyProfile(user.id, {
+        name: data.name,
+        department: data.department,
+        designation: data.designation,
+        phone: data.phone,
+      })
+      if (result.error) {
+        toast.error(result.error)
+      } else {
+        toast.success(`Faculty profile updated for ${data.name}.`)
+        queryClient.invalidateQueries({ queryKey: userKeys.all })
+        onClose()
+      }
     } else {
-      toast.success(`Faculty account created for ${data.name}.`)
-      onClose()
+      // Create new faculty
+      const result = await createFacultyAccount(data)
+      if (result.error) {
+        toast.error(result.error)
+      } else {
+        toast.success(`Faculty account created for ${data.name}.`)
+        queryClient.invalidateQueries({ queryKey: userKeys.all })
+        onClose()
+      }
     }
   }
 
@@ -124,8 +149,10 @@ export function UserFormPanel({ open, onClose, user }: UserFormPanelProps) {
               <Label htmlFor="femail">
                 Email Address <span className="text-red-500">*</span>
               </Label>
-              <Input id="femail" type="email" {...form.register("email")} />
-              <p className="text-xs text-slate-500">This will be their login email.</p>
+              <Input id="femail" type="email" disabled={isEdit} {...form.register("email")} />
+              <p className="text-xs text-slate-500">
+                {isEdit ? "Email address cannot be changed." : "This will be their login email."}
+              </p>
               {form.formState.errors.email && (
                 <p className="text-xs text-red-500">
                   {form.formState.errors.email.message}
@@ -257,7 +284,7 @@ export function UserFormPanel({ open, onClose, user }: UserFormPanelProps) {
               className="w-full bg-blue-600 hover:bg-blue-700 text-white"
               disabled={form.formState.isSubmitting}
             >
-              {form.formState.isSubmitting ? "Creating…" : "Create Faculty Account"}
+              {form.formState.isSubmitting ? (isEdit ? "Updating…" : "Creating…") : (isEdit ? "Update Profile" : "Create Faculty Account")}
             </Button>
             <Button
               type="button"

@@ -9,20 +9,11 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ColumnDef } from "@tanstack/react-table"
 
-export interface Submission {
-  id: string
-  title: string
-  faculty: string
-  area: { number: number; name: string }
-  criterion: string
-  submittedAt: string
-  version: number
-  status: string
-}
+import { AdminSubmission } from "@/actions/submission.actions"
 
 interface SubmissionsTableProps {
-  data: Submission[]
-  onRowClick: (submission: Submission) => void
+  data: AdminSubmission[]
+  onRowClick: (submission: AdminSubmission) => void
 }
 
 export function SubmissionsTable({ data, onRowClick }: SubmissionsTableProps) {
@@ -38,7 +29,7 @@ export function SubmissionsTable({ data, onRowClick }: SubmissionsTableProps) {
     "bg-teal-100 text-teal-700",
   ]
 
-  const columns: ColumnDef<Submission>[] = [
+  const columns: ColumnDef<AdminSubmission>[] = [
     {
       id: "select",
       header: ({ table }) => (
@@ -63,61 +54,64 @@ export function SubmissionsTable({ data, onRowClick }: SubmissionsTableProps) {
       enableHiding: false,
     },
     {
-      accessorKey: "title",
+      id: "title",
       header: "Document Title",
       cell: ({ row }) => (
         <span 
           className="font-medium text-slate-800 cursor-pointer hover:text-blue-600 transition-colors"
           onClick={() => onRowClick(row.original)}
         >
-          {row.getValue("title")}
+          {row.original.document.title}
         </span>
       ),
     },
     {
-      accessorKey: "faculty",
+      id: "faculty",
       header: "Faculty",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <AvatarInitials name={row.getValue("faculty")} size="sm" />
-          <span className="text-sm">{row.getValue("faculty")}</span>
+          <AvatarInitials name={row.original.user.name} size="sm" />
+          <span className="text-sm">{row.original.user.name}</span>
         </div>
       ),
     },
     {
-      accessorKey: "area",
+      id: "area",
       header: "Area",
       cell: ({ row }) => {
-        const area = row.original.area
-        const colorClass = COLORS[(area.number - 1) % COLORS.length]
+        const area = row.original.indicator.criterion.area
+        const number = (area.order ?? 0) + 1
+        const colorClass = COLORS[(number - 1) % COLORS.length]
         return (
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colorClass}`}>
-            Area {area.number}
+            Area {number}
           </span>
         )
       },
     },
     {
-      accessorKey: "criterion",
+      id: "criterion",
       header: "Criterion",
       cell: ({ row }) => (
         <span className="text-sm text-slate-500 truncate max-w-[150px] inline-block">
-          {row.getValue("criterion")}
+          {row.original.indicator.criterion.name}
         </span>
       ),
     },
     {
-      accessorKey: "submittedAt",
+      id: "submittedAt",
       header: "Submitted",
       cell: ({ row }) => (
-        <span className="text-sm">{row.getValue("submittedAt")}</span>
+        <span className="text-sm">
+          {new Date(row.original.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+        </span>
       ),
     },
     {
-      accessorKey: "version",
+      id: "version",
       header: "Version",
       cell: ({ row }) => {
-        const version = row.getValue("version") as number
+        const version = row.original.document.version
         return (
           <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${version > 1 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
             v{version}
@@ -129,7 +123,7 @@ export function SubmissionsTable({ data, onRowClick }: SubmissionsTableProps) {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => (
-        <StatusBadge status={row.getValue("status")} size="sm" />
+        <StatusBadge status={row.original.status} size="sm" />
       ),
     },
     {
@@ -138,7 +132,7 @@ export function SubmissionsTable({ data, onRowClick }: SubmissionsTableProps) {
         const status = row.original.status
         return (
           <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-            {status === "PENDING" || status === "UNDER_REVIEW" ? (
+            {status === "SUBMITTED" || status === "UNDER_REVIEW" ? (
               <Button 
                 variant="outline" 
                 size="sm" 

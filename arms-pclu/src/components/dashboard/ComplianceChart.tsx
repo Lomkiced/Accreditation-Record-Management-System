@@ -13,16 +13,7 @@ import {
   LabelList,
 } from "recharts"
 
-const mockData = [
-  { name: "Area 1: Purposes", value: 95 },
-  { name: "Area 2: Faculty", value: 82 },
-  { name: "Area 3: Instruction", value: 78 },
-  { name: "Area 4: Library", value: 100 },
-  { name: "Area 5: Laboratories", value: 65 },
-  { name: "Area 6: Physical Plant", value: 90 },
-  { name: "Area 7: Student Services", value: 88 },
-  { name: "Area 8: Administration", value: 92 },
-]
+import { useComplianceData } from "@/hooks/useDashboard"
 
 interface TooltipPayloadItem {
   value: number
@@ -51,7 +42,7 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
 }
 
 export function ComplianceChart() {
-  const data = mockData
+  const { data = [], isLoading } = useComplianceData()
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
@@ -62,7 +53,12 @@ export function ComplianceChart() {
         Document submission progress per area
       </p>
 
-      <ResponsiveContainer width="100%" height={300}>
+      {isLoading ? (
+        <div className="h-[300px] flex items-center justify-center">
+          <p className="text-sm text-slate-500 animate-pulse">Loading chart data...</p>
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={300}>
         <BarChart
           data={data}
           layout="vertical"
@@ -115,6 +111,7 @@ export function ComplianceChart() {
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+      )}
     </div>
   )
 }

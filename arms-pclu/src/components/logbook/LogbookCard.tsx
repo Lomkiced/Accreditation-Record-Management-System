@@ -7,28 +7,16 @@ import { AvatarInitials } from "@/components/shared/AvatarInitials"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-export interface LogEntry {
-  id: string
-  type: "INCOMING" | "OUTGOING"
-  title: string
-  refNo?: string
-  fromTo: string
-  purpose: string
-  date: string
-  faculty: string
-  status: "PENDING" | "ACKNOWLEDGED" | "REJECTED"
-  hasAttachment: boolean
-  remarks?: string
-  acknowledgedDate?: string
-}
+import { type LogbookEntryWithUser } from "@/actions/logbook.actions"
+import { format } from "date-fns"
 
 interface LogbookCardProps {
-  entry: LogEntry
+  entry: LogbookEntryWithUser
   role: "admin" | "faculty"
-  onAcknowledge?: (entry: LogEntry) => void
-  onReject?: (entry: LogEntry) => void
-  onEdit?: (entry: LogEntry) => void
-  onView?: (entry: LogEntry) => void
+  onAcknowledge?: (entry: LogbookEntryWithUser) => void
+  onReject?: (entry: LogbookEntryWithUser) => void
+  onEdit?: (entry: LogbookEntryWithUser) => void
+  onView?: (entry: LogbookEntryWithUser) => void
 }
 
 export function LogbookCard({ entry, role, onAcknowledge, onReject, onEdit, onView }: LogbookCardProps) {
@@ -73,21 +61,21 @@ export function LogbookCard({ entry, role, onAcknowledge, onReject, onEdit, onVi
 
         <p className="text-sm text-slate-500 truncate mb-2">{entry.purpose}</p>
 
-        {entry.status === "REJECTED" && entry.remarks && (
+        {entry.status === "REJECTED" && entry.adminRemarks && (
           <p className="text-xs text-red-600 italic mb-2">
-            “{entry.remarks}”
+            “{entry.adminRemarks}”
           </p>
         )}
 
         <div className="flex items-center gap-4 mt-auto">
           <div className="flex items-center gap-1.5 text-xs text-slate-400">
             <Calendar className="w-3 h-3" />
-            {entry.date}
+            {format(new Date(entry.date), "MMM dd, yyyy")}
           </div>
           {role === "admin" && (
             <div className="flex items-center gap-1.5 text-xs text-slate-500">
-              <AvatarInitials name={entry.faculty} size="sm" className="w-4 h-4 text-[8px]" />
-              {entry.faculty}
+              <AvatarInitials name={entry.user.name} size="sm" className="w-4 h-4 text-[8px]" />
+              {entry.user.name}
             </div>
           )}
         </div>
@@ -96,7 +84,7 @@ export function LogbookCard({ entry, role, onAcknowledge, onReject, onEdit, onVi
       {/* Right Content */}
       <div className="flex flex-col items-end gap-2 shrink-0">
         <div className="flex items-center gap-2 mb-auto">
-          {entry.hasAttachment && (
+          {!!entry.fileUrl && (
             <button className="text-slate-400 hover:text-blue-600 transition-colors" title="View attachment">
               <Paperclip className="w-4 h-4" />
             </button>
@@ -128,9 +116,9 @@ export function LogbookCard({ entry, role, onAcknowledge, onReject, onEdit, onVi
         )}
 
         {/* Acknowledged info */}
-        {entry.status === "ACKNOWLEDGED" && entry.acknowledgedDate && (
+        {entry.status === "ACKNOWLEDGED" && entry.acknowledgedAt && (
           <div className="text-[10px] text-slate-400 text-right mt-2">
-            <div>Ack: {entry.acknowledgedDate}</div>
+            <div>Ack: {format(new Date(entry.acknowledgedAt), "MMM dd, yyyy")}</div>
             {role === "faculty" && <div>by Admin</div>}
           </div>
         )}

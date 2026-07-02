@@ -4,13 +4,16 @@ import { LoginForm } from "@/components/auth/LoginForm"
 export default function LoginPage() {
   return (
     <div className="min-h-screen flex">
+      {/* Left panel — decorative */}
       <div className="hidden lg:flex w-1/2 bg-[#0F172A] flex-col p-10">
         <div>
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-              <div className="w-5 h-5 bg-navy rounded-sm" />
+              <div className="w-5 h-5 bg-blue-700 rounded-sm" />
             </div>
-            <span className="text-2xl font-bold text-white tracking-wide">ARMS</span>
+            <span className="text-2xl font-bold text-white tracking-wide">
+              ARMS
+            </span>
           </div>
         </div>
 
@@ -45,11 +48,11 @@ export default function LoginPage() {
         </div>
       </div>
 
+      {/* Right panel — login form */}
+      {/* LoginForm internally wraps useSearchParams in its own <Suspense> */}
       <div className="flex-1 flex items-center justify-center bg-white p-8">
         <div className="w-full max-w-sm">
-          <React.Suspense fallback={null}>
-            <LoginForm />
-          </React.Suspense>
+          <LoginForm />
         </div>
       </div>
     </div>

@@ -6,37 +6,12 @@ import { PageHeader } from "@/components/shared/PageHeader"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { LogbookCard, type LogEntry } from "@/components/logbook/LogbookCard"
-
-const mockFacultyLogbook: LogEntry[] = [
-  {
-    id: "1",
-    type: "INCOMING",
-    title: "Memo on Updated Syllabus Format",
-    refNo: "MEMO-2024-045",
-    fromTo: "Received from Admin",
-    purpose: "Guidelines for the new syllabus format.",
-    date: "Oct 12, 2024",
-    faculty: "Dr. Juan Perez",
-    status: "PENDING",
-    hasAttachment: true,
-  },
-  {
-    id: "2",
-    type: "OUTGOING",
-    title: "Submitted Faculty Profile",
-    fromTo: "Sent to Admin",
-    purpose: "Updated profile for AY 2024-2025",
-    date: "Oct 10, 2024",
-    faculty: "Dr. Juan Perez",
-    status: "ACKNOWLEDGED",
-    hasAttachment: true,
-    acknowledgedDate: "Oct 11, 2024"
-  },
-]
+import { LogbookCard } from "@/components/logbook/LogbookCard"
+import { useLogbook } from "@/hooks/useLogbook"
 
 export default function FacultyLogbookPage() {
-  const pendingCount = mockFacultyLogbook.filter(e => e.status === "PENDING" && e.type === "INCOMING").length
+  const { data: logbook = [], isLoading } = useLogbook()
+  const pendingCount = logbook.filter(e => e.status === "PENDING" && e.type === "INCOMING").length
 
   return (
     <>
@@ -56,7 +31,7 @@ export default function FacultyLogbookPage() {
           <TabsList className="mb-4">
             <TabsTrigger value="all" className="flex gap-2">
               All Entries
-              <span className="bg-slate-200 text-slate-700 text-xs px-1.5 rounded-full">{mockFacultyLogbook.length}</span>
+              <span className="bg-slate-200 text-slate-700 text-xs px-1.5 rounded-full">{logbook.length}</span>
             </TabsTrigger>
             <TabsTrigger value="action-needed" className="flex gap-2">
               Action Needed
@@ -81,27 +56,43 @@ export default function FacultyLogbookPage() {
           </div>
 
           <TabsContent value="all" className="space-y-3 mt-0">
-            {mockFacultyLogbook.map((entry) => (
-              <LogbookCard
-                key={entry.id}
-                entry={entry}
-                role="faculty"
-                onEdit={() => console.log("Edit", entry.id)}
-                onView={() => console.log("View", entry.id)}
-              />
-            ))}
+            {isLoading ? (
+              <div className="py-10 text-center text-slate-500 text-sm animate-pulse bg-white rounded-xl border border-slate-200">
+                Loading logbook entries...
+              </div>
+            ) : logbook.length === 0 ? (
+              <div className="py-10 text-center text-slate-500 text-sm bg-white rounded-xl border border-slate-200">
+                No entries found.
+              </div>
+            ) : (
+              logbook.map((entry) => (
+                <LogbookCard
+                  key={entry.id}
+                  entry={entry}
+                  role="faculty"
+                />
+              ))
+            )}
           </TabsContent>
           
           <TabsContent value="action-needed" className="space-y-3 mt-0">
-            {mockFacultyLogbook.filter(e => e.status === "PENDING" && e.type === "INCOMING").map((entry) => (
-              <LogbookCard
-                key={entry.id}
-                entry={entry}
-                role="faculty"
-                onEdit={() => console.log("Edit", entry.id)}
-                onView={() => console.log("View", entry.id)}
-              />
-            ))}
+            {isLoading ? (
+              <div className="py-10 text-center text-slate-500 text-sm animate-pulse bg-white rounded-xl border border-slate-200">
+                Loading logbook entries...
+              </div>
+            ) : logbook.filter(e => e.status === "PENDING" && e.type === "INCOMING").length === 0 ? (
+              <div className="py-10 text-center text-slate-500 text-sm bg-white rounded-xl border border-slate-200">
+                No pending actions needed.
+              </div>
+            ) : (
+              logbook.filter(e => e.status === "PENDING" && e.type === "INCOMING").map((entry) => (
+                <LogbookCard
+                  key={entry.id}
+                  entry={entry}
+                  role="faculty"
+                />
+              ))
+            )}
           </TabsContent>
         </Tabs>
       </div>

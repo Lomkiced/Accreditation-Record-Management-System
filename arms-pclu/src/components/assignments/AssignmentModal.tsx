@@ -12,40 +12,90 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Loader2 } from "lucide-react"
+import { useAreas } from "@/hooks/useAreas"
+import { useCreateAssignment } from "@/hooks/useAssignments"
 
 interface AssignmentModalProps {
   open: boolean
   onClose: () => void
+  /** The internal DB user ID of the faculty member being assigned */
+  facultyId: string
   facultyName: string
 }
 
-const mockAreas = [
-  { id: "1", name: "Area 1: Purposes and Objectives" },
-  { id: "2", name: "Area 2: Faculty" },
-  { id: "3", name: "Area 3: Instruction" },
-]
+export function AssignmentModal({
+  open,
+  onClose,
+  facultyId,
+  facultyName,
+}: AssignmentModalProps) {
+  const [selectedAreaId, setSelectedAreaId] = React.useState<string>("")
+  const [selectedCriterionIds, setSelectedCriterionIds] = React.useState<
+    string[]
+  >([])
+  const [notes, setNotes] = React.useState("")
 
-const mockCriteria = [
-  { id: "c1", name: "A. Academic Qualifications" },
-  { id: "c2", name: "B. Professional Performance" },
-  { id: "c3", name: "C. Professional Development" },
-]
+  const { data: areas, isLoading: areasLoading } = useAreas()
+  const createAssignment = useCreateAssignment()
 
-export function AssignmentModal({ open, onClose, facultyName }: AssignmentModalProps) {
-  const [selectedArea, setSelectedArea] = React.useState<string>("")
-  const [selectedCriteria, setSelectedCriteria] = React.useState<string[]>([])
+  // Reset state when modal closes
+  React.useEffect(() => {
+    if (!open) {
+      setSelectedAreaId("")
+      setSelectedCriterionIds([])
+      setNotes("")
+    }
+  }, [open])
+
+  const selectedArea = areas?.find((a) => a.id === selectedAreaId)
 
   const handleCriterionToggle = (id: string) => {
-    setSelectedCriteria(prev => 
-      prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
+    setSelectedCriterionIds((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
     )
   }
 
-  const handleAssign = () => {
-    console.log({ selectedArea, selectedCriteria })
-    onClose()
+  const handleAssign = async () => {
+    if (!selectedAreaId) return
+
+    // If no specific criteria selected, create an area-level assignment (criterionId: null)
+    if (selectedCriterionIds.length === 0) {
+      const result = await createAssignment.mutateAsync({
+        userId: facultyId,
+        areaId: selectedAreaId,
+        notes: notes || undefined,
+      })
+      if (result?.success) onClose()
+      return
+    }
+
+    // Create one assignment per selected criterion
+    const results = await Promise.all(
+      selectedCriterionIds.map((criterionId) =>
+        createAssignment.mutateAsync({
+          userId: facultyId,
+          areaId: selectedAreaId,
+          criterionId,
+          notes: notes || undefined,
+        })
+      )
+    )
+
+    // Close if all succeeded
+    if (results.every((r) => r?.success)) {
+      onClose()
+    }
   }
+
+  const isPending = createAssignment.isPending
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -55,32 +105,61 @@ export function AssignmentModal({ open, onClose, facultyName }: AssignmentModalP
         </DialogHeader>
 
         <div className="space-y-6 mt-4">
+          {/* Area selector */}
           <div className="space-y-2">
-            <Label>Select PACUCOA Area <span className="text-red-500">*</span></Label>
-            <Select value={selectedArea} onValueChange={setSelectedArea}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose an area..." />
-              </SelectTrigger>
-              <SelectContent>
-                {mockAreas.map(area => (
-                  <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>
+              Select PACUCOA Area <span className="text-red-500">*</span>
+            </Label>
+            {areasLoading ? (
+              <div className="flex items-center gap-2 text-sm text-slate-500">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading areas...
+              </div>
+            ) : (
+              <Select
+                value={selectedAreaId}
+                onValueChange={(val) => {
+                  setSelectedAreaId(val)
+                  setSelectedCriterionIds([]) // reset criteria when area changes
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose an area..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {areas?.map((area) => (
+                    <SelectItem key={area.id} value={area.id}>
+                      Area {area.order + 1}: {area.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
-          {selectedArea && (
+          {/* Criteria selector — only shown when an area is selected */}
+          {selectedArea && selectedArea.criteria.length > 0 && (
             <div className="space-y-3">
-              <Label>Select Criteria to Assign <span className="text-red-500">*</span></Label>
+              <Label>
+                Select Specific Criteria{" "}
+                <span className="text-slate-400 font-normal">
+                  (leave empty to assign entire area)
+                </span>
+              </Label>
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-3 max-h-[200px] overflow-y-auto">
-                {mockCriteria.map(criterion => (
-                  <div key={criterion.id} className="flex items-center space-x-2">
-                    <Checkbox 
-                      id={`crit-${criterion.id}`} 
-                      checked={selectedCriteria.includes(criterion.id)}
-                      onCheckedChange={() => handleCriterionToggle(criterion.id)}
+                {selectedArea.criteria.map((criterion) => (
+                  <div
+                    key={criterion.id}
+                    className="flex items-center space-x-2"
+                  >
+                    <Checkbox
+                      id={`crit-${criterion.id}`}
+                      checked={selectedCriterionIds.includes(criterion.id)}
+                      onCheckedChange={() =>
+                        handleCriterionToggle(criterion.id)
+                      }
                     />
-                    <label 
+                    <label
                       htmlFor={`crit-${criterion.id}`}
                       className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                     >
@@ -89,23 +168,43 @@ export function AssignmentModal({ open, onClose, facultyName }: AssignmentModalP
                   </div>
                 ))}
               </div>
+              {selectedCriterionIds.length === 0 && (
+                <p className="text-xs text-amber-600">
+                  No criteria selected — this will assign the entire area.
+                </p>
+              )}
             </div>
           )}
 
+          {/* Notes */}
           <div className="space-y-2">
             <Label>Notes (Optional)</Label>
-            <Textarea placeholder="Any specific instructions..." className="resize-none" />
+            <Textarea
+              placeholder="Any specific instructions..."
+              className="resize-none"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
           </div>
         </div>
 
         <DialogFooter className="mt-6">
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button 
-            className="bg-blue-600 hover:bg-blue-700 text-white" 
+          <Button variant="ghost" onClick={onClose} disabled={isPending}>
+            Cancel
+          </Button>
+          <Button
+            className="bg-blue-600 hover:bg-blue-700 text-white"
             onClick={handleAssign}
-            disabled={!selectedArea || selectedCriteria.length === 0}
+            disabled={!selectedAreaId || isPending}
           >
-            Assign
+            {isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Assigning...
+              </>
+            ) : (
+              "Assign"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

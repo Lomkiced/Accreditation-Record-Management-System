@@ -21,7 +21,9 @@ interface ConfirmDialogProps {
   title: string
   description: string
   type?: "danger" | "warning" | "info"
-  isLoading?: boolean
+  confirmText?: string
+  cancelText?: string
+  isPending?: boolean
 }
 
 export function ConfirmDialog({
@@ -30,8 +32,10 @@ export function ConfirmDialog({
   onConfirm,
   title,
   description,
-  type = "warning",
-  isLoading = false,
+  type = "danger",
+  confirmText = "Confirm",
+  cancelText = "Cancel",
+  isPending = false,
 }: ConfirmDialogProps) {
   
   const getIcon = () => {
@@ -50,14 +54,6 @@ export function ConfirmDialog({
     }
   }
 
-  const getButtonStyles = () => {
-    switch (type) {
-      case "danger": return "bg-red-600 hover:bg-red-700 text-white"
-      case "warning": return "bg-amber-600 hover:bg-amber-700 text-white"
-      case "info": return "bg-blue-600 hover:bg-blue-700 text-white"
-    }
-  }
-
   return (
     <AlertDialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <AlertDialogContent className="sm:max-w-[425px]">
@@ -73,18 +69,24 @@ export function ConfirmDialog({
           </div>
         </AlertDialogHeader>
         <AlertDialogFooter className="mt-4">
-          <AlertDialogCancel onClick={onClose} disabled={isLoading}>
-            Cancel
+          <AlertDialogCancel onClick={onClose} disabled={isPending}>
+            {cancelText}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault()
-              onConfirm()
+              if (!isPending) onConfirm()
             }}
-            className={getButtonStyles()}
-            disabled={isLoading}
+            disabled={isPending}
+            className={
+              type === "danger"
+                ? "bg-red-600 hover:bg-red-700 text-white"
+                : type === "warning"
+                  ? "bg-amber-600 hover:bg-amber-700 text-white"
+                  : "bg-blue-600 hover:bg-blue-700 text-white"
+            }
           >
-            {isLoading ? "Processing..." : "Confirm"}
+            {isPending ? "Please wait..." : confirmText}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
