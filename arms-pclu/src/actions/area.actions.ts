@@ -26,7 +26,7 @@ const ReorderSchema = z.object({
 
 // ─── Nested include shape (shared) ────────────────────────────────────────────
 
-export const AREA_FULL_INCLUDE = {
+const AREA_FULL_INCLUDE = {
   criteria: {
     orderBy: { order: "asc" as const },
     include: {
