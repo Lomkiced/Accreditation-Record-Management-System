@@ -35,19 +35,19 @@ export default function MyAreaDetailPage({ params }: { params: { id: string } })
   // 1. Find the specific Area
   const area = areas.find((a) => a.id === areaId)
 
-  // 2. Filter Criteria based on assignments
-  const areaAssignments = assignments.filter((a) => a.areaId === areaId)
-  const isAssignedWholeArea = areaAssignments.some((a) => !a.criterionId)
-  
-  const assignedCriteriaIds = new Set(
-    areaAssignments.filter((a) => a.criterionId).map((a) => a.criterionId)
-  )
-
   const visibleCriteria = React.useMemo(() => {
     if (!area) return []
+    
+    const areaAssignments = assignments.filter((a) => a.areaId === areaId)
+    const isAssignedWholeArea = areaAssignments.some((a) => !a.criterionId)
+    
     if (isAssignedWholeArea) return area.criteria
+    
+    const assignedCriteriaIds = new Set(
+      areaAssignments.filter((a) => a.criterionId).map((a) => a.criterionId)
+    )
     return area.criteria.filter((c) => assignedCriteriaIds.has(c.id))
-  }, [area, isAssignedWholeArea, assignedCriteriaIds])
+  }, [area, assignments, areaId])
 
   if (isLoading) {
     return (
@@ -79,7 +79,7 @@ export default function MyAreaDetailPage({ params }: { params: { id: string } })
         <AlertCircle className="w-12 h-12 text-slate-300 mb-4" />
         <h2 className="text-xl font-semibold text-slate-700">Area not found</h2>
         <p className="text-slate-500 mt-2 text-center max-w-md">
-          This area doesn't exist or you don't have access to it.
+          This area doesn&apos;t exist or you don&apos;t have access to it.
         </p>
         <Button asChild className="mt-6" variant="outline">
           <Link href="/faculty/my-areas">
