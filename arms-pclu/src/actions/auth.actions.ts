@@ -63,6 +63,8 @@ export async function createFacultyAccount(
 
     // 4. Create Supabase Auth user (admin client skips email confirmation)
     const adminSupabase = createAdminClient()
+    let authUserId: string
+
     const { data: authData, error: authError } =
       await adminSupabase.auth.admin.createUser({
         email: validated.email,
@@ -75,18 +77,75 @@ export async function createFacultyAccount(
       })
 
     if (authError || !authData.user) {
-      console.error("[createFacultyAccount] Supabase Auth error:", authError?.message)
-      return {
-        error: authError?.message ?? "Failed to create authentication account.",
+      // ── Handle orphaned Supabase Auth user from a previous failed attempt ──
+      // If Supabase says the user already exists but Prisma has no record,
+      // delete the orphan and retry.
+      if (
+        authError?.message?.toLowerCase().includes("already been registered") ||
+        authError?.message?.toLowerCase().includes("already exists")
+      ) {
+        console.warn(
+          `[createFacultyAccount] Supabase Auth user exists for ${validated.email} but no Prisma record. Attempting orphan recovery...`
+        )
+        // Find the orphaned auth user
+        const { data: listData } = await adminSupabase.auth.admin.listUsers({
+          page: 1,
+          perPage: 1000,
+        })
+        const orphan = listData?.users?.find(
+          (u) => u.email?.toLowerCase() === validated.email.toLowerCase()
+        )
+
+        if (orphan) {
+          // Delete the orphaned auth user
+          await adminSupabase.auth.admin.deleteUser(orphan.id)
+          console.warn(
+            `[createFacultyAccount] Deleted orphaned auth user ${orphan.id} for ${validated.email}. Retrying creation...`
+          )
+
+          // Retry creation
+          const { data: retryData, error: retryError } =
+            await adminSupabase.auth.admin.createUser({
+              email: validated.email,
+              password: validated.password,
+              email_confirm: true,
+              user_metadata: {
+                name: validated.name,
+                role: "FACULTY",
+              },
+            })
+
+          if (retryError || !retryData.user) {
+            console.error("[createFacultyAccount] Retry also failed:", retryError?.message)
+            return {
+              error: retryError?.message ?? "Failed to create authentication account after orphan recovery.",
+            }
+          }
+
+          authUserId = retryData.user.id
+        } else {
+          // Couldn't find the orphan — surface the original Supabase error
+          return {
+            error: authError?.message ?? "Failed to create authentication account.",
+          }
+        }
+      } else {
+        // Non-duplicate Supabase error — surface it
+        console.error("[createFacultyAccount] Supabase Auth error:", authError?.message)
+        return {
+          error: authError?.message ?? "Failed to create authentication account.",
+        }
       }
+    } else {
+      authUserId = authData.user.id
     }
 
-    createdAuthUserId = authData.user.id
+    createdAuthUserId = authUserId
 
     // 5. Create Prisma record linked by authId
     const newUser = await prisma.user.create({
       data: {
-        authId: authData.user.id,
+        authId: authUserId,
         name: validated.name,
         email: validated.email,
         role: "FACULTY",
@@ -150,13 +209,18 @@ export async function createFacultyAccount(
       return { error: "You do not have permission to perform this action." }
     }
 
-    // ── Structured production logging ──
+    // ── Surface the actual error for diagnosis ──
+    const errorMessage = error instanceof Error ? error.message : String(error)
     console.error("[createFacultyAccount] Unhandled error:", {
       name: error instanceof Error ? error.name : "Unknown",
-      message: error instanceof Error ? error.message : String(error),
+      message: errorMessage,
       stack: error instanceof Error ? error.stack : undefined,
     })
-    return { error: "Failed to create account. Please try again." }
+
+    // Return the real error so we can diagnose in production
+    return {
+      error: `Failed to create account: ${errorMessage}`,
+    }
   }
 }
 
