@@ -7,6 +7,16 @@ import { Button } from "@/components/ui/button"
 import { useCriteria, useDeleteCriterion } from "@/hooks/useAreas"
 import { CriterionFormModal } from "./CriterionFormModal"
 import type { CriterionWithIndicators } from "@/actions/criterion.actions"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface CriterionListProps {
   areaId: string
@@ -18,6 +28,7 @@ export function CriterionList({ areaId }: CriterionListProps) {
 
   const [addOpen, setAddOpen] = React.useState(false)
   const [editTarget, setEditTarget] = React.useState<CriterionWithIndicators | null>(null)
+  const [deleteTarget, setDeleteTarget] = React.useState<CriterionWithIndicators | null>(null)
 
   // Compute completion percentage from real mapping statuses
   const getCompletion = (criterion: CriterionWithIndicators): number => {
@@ -107,7 +118,7 @@ export function CriterionList({ areaId }: CriterionListProps) {
                     size="icon"
                     className="h-6 w-6 text-slate-400 hover:text-red-500"
                     disabled={deleteCriterion.isPending}
-                    onClick={() => deleteCriterion.mutate(criterion.id)}
+                    onClick={() => setDeleteTarget(criterion)}
                   >
                     <Trash2 className="w-3 h-3" />
                   </Button>
@@ -152,6 +163,36 @@ export function CriterionList({ areaId }: CriterionListProps) {
           }}
         />
       )}
+
+      {/* Delete confirmation modal */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the criterion
+              <strong> {deleteTarget?.name}</strong> and all its associated indicators.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteCriterion.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600 text-white"
+              disabled={deleteCriterion.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (deleteTarget) {
+                  deleteCriterion.mutate(deleteTarget.id, {
+                    onSuccess: () => setDeleteTarget(null)
+                  });
+                }
+              }}
+            >
+              {deleteCriterion.isPending ? "Deleting..." : "Delete Criterion"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

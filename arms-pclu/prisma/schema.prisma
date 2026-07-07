@@ -195,7 +195,7 @@ model Assignment {
   createdAt   DateTime   @default(now()) @map("created_at")
 
   area        Area       @relation(fields: [areaId], references: [id], onDelete: Cascade)
-  criterion   Criterion? @relation(fields: [criterionId], references: [id])
+  criterion   Criterion? @relation(fields: [criterionId], references: [id], onDelete: Cascade)
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, areaId, criterionId])

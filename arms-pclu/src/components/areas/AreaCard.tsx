@@ -5,6 +5,18 @@ import { motion, AnimatePresence } from "framer-motion"
 import { ChevronDown, Edit, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { CriterionList } from "./CriterionList"
+import { AreaFormModal } from "./AreaFormModal"
+import { useDeleteArea } from "@/hooks/useAreas"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 import { AreaWithHierarchy } from "@/actions/area.actions"
 
@@ -14,6 +26,9 @@ interface AreaCardProps {
 
 export function AreaCard({ area }: AreaCardProps) {
   const [isExpanded, setIsExpanded] = React.useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
+  const deleteArea = useDeleteArea()
 
   // Cycling colors for the number badge
   const COLORS = [
@@ -71,10 +86,20 @@ export function AreaCard({ area }: AreaCardProps) {
           {getCompletionPill(completion)}
           
           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-blue-600">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 text-slate-400 hover:text-blue-600"
+              onClick={() => setIsEditModalOpen(true)}
+            >
               <Edit className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-500">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 text-slate-400 hover:text-red-500"
+              onClick={() => setIsDeleteDialogOpen(true)}
+            >
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
@@ -106,6 +131,40 @@ export function AreaCard({ area }: AreaCardProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AreaFormModal
+        open={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        areaId={area.id}
+        initialData={{ name: area.name, description: area.description || undefined }}
+      />
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the area
+              <strong> {area.name}</strong> and all its associated criteria and indicators.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteArea.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600 text-white"
+              disabled={deleteArea.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                deleteArea.mutate(area.id, {
+                  onSuccess: () => setIsDeleteDialogOpen(false)
+                });
+              }}
+            >
+              {deleteArea.isPending ? "Deleting..." : "Delete Area"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

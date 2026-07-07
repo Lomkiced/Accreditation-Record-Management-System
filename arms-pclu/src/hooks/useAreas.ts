@@ -51,7 +51,11 @@ export function useCreateArea() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: Parameters<typeof createArea>[0]) => createArea({ ...data }),
+    mutationFn: async (data: Parameters<typeof createArea>[0]) => {
+      const res = await createArea(data)
+      if (res.error) throw new Error(res.error)
+      return res.data
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: areaKeys.all })
       toast.success("Area created successfully.")
@@ -66,13 +70,11 @@ export function useUpdateArea() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({
-      id,
-      data,
-    }: {
-      id: string
-      data: Parameters<typeof updateArea>[1]
-    }) => updateArea(id, { ...data }),
+    mutationFn: async ({ id, data }: { id: string; data: Parameters<typeof updateArea>[1] }) => {
+      const res = await updateArea(id, data)
+      if (res.error) throw new Error(res.error)
+      return res.data
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: areaKeys.all })
       toast.success("Area updated successfully.")
@@ -87,7 +89,11 @@ export function useDeleteArea() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: deleteArea,
+    mutationFn: async (areaId: string) => {
+      const res = await deleteArea(areaId)
+      if (res.error) throw new Error(res.error)
+      return res.data
+    },
     onMutate: async (areaId: string) => {
       // Optimistic update — remove from cache immediately
       await queryClient.cancelQueries({ queryKey: areaKeys.all })
@@ -97,11 +103,11 @@ export function useDeleteArea() {
       )
       return { previous }
     },
-    onError: (_error, _id, context) => {
+    onError: (error: Error, _id, context) => {
       if (context?.previous) {
         queryClient.setQueryData(areaKeys.all, context.previous)
       }
-      toast.error("Failed to delete area.")
+      toast.error(error.message || "Failed to delete area.")
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: areaKeys.all })
@@ -114,12 +120,16 @@ export function useReorderAreas() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: reorderAreas,
+    mutationFn: async (orderedIds: string[]) => {
+      const res = await reorderAreas(orderedIds)
+      if (res.error) throw new Error(res.error)
+      return res.data
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: areaKeys.all })
     },
-    onError: () => {
-      toast.error("Failed to reorder areas.")
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to reorder areas.")
     },
   })
 }
@@ -145,7 +155,11 @@ export function useCreateCriterion() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: Parameters<typeof createCriterion>[0]) => createCriterion({ ...data }),
+    mutationFn: async (data: Parameters<typeof createCriterion>[0]) => {
+      const res = await createCriterion(data)
+      if (res.error) throw new Error(res.error)
+      return res.data
+    },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: areaKeys.criteria(variables.areaId),
@@ -163,13 +177,11 @@ export function useUpdateCriterion(areaId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({
-      id,
-      data,
-    }: {
-      id: string
-      data: Parameters<typeof updateCriterion>[1]
-    }) => updateCriterion(id, { ...data }),
+    mutationFn: async ({ id, data }: { id: string; data: Parameters<typeof updateCriterion>[1] }) => {
+      const res = await updateCriterion(id, data)
+      if (res.error) throw new Error(res.error)
+      return res.data
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: areaKeys.criteria(areaId) })
       queryClient.invalidateQueries({ queryKey: areaKeys.all })
@@ -185,7 +197,11 @@ export function useDeleteCriterion(areaId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: deleteCriterion,
+    mutationFn: async (criterionId: string) => {
+      const res = await deleteCriterion(criterionId)
+      if (res.error) throw new Error(res.error)
+      return res.data
+    },
     onMutate: async (criterionId: string) => {
       await queryClient.cancelQueries({
         queryKey: areaKeys.criteria(areaId),
@@ -196,11 +212,11 @@ export function useDeleteCriterion(areaId: string) {
       )
       return { previous }
     },
-    onError: (_error, _id, context) => {
+    onError: (error: Error, _id, context) => {
       if (context?.previous) {
         queryClient.setQueryData(areaKeys.criteria(areaId), context.previous)
       }
-      toast.error("Failed to delete criterion.")
+      toast.error(error.message || "Failed to delete criterion.")
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: areaKeys.criteria(areaId) })
@@ -231,7 +247,11 @@ export function useCreateIndicator(criterionId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: Parameters<typeof createIndicator>[0]) => createIndicator({ ...data }),
+    mutationFn: async (data: Parameters<typeof createIndicator>[0]) => {
+      const res = await createIndicator(data)
+      if (res.error) throw new Error(res.error)
+      return res.data
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: areaKeys.indicators(criterionId),
@@ -249,13 +269,11 @@ export function useUpdateIndicator(criterionId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({
-      id,
-      data,
-    }: {
-      id: string
-      data: Parameters<typeof updateIndicator>[1]
-    }) => updateIndicator(id, { ...data }),
+    mutationFn: async ({ id, data }: { id: string; data: Parameters<typeof updateIndicator>[1] }) => {
+      const res = await updateIndicator(id, data)
+      if (res.error) throw new Error(res.error)
+      return res.data
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: areaKeys.indicators(criterionId),
@@ -273,7 +291,11 @@ export function useDeleteIndicator(criterionId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: deleteIndicator,
+    mutationFn: async (indicatorId: string) => {
+      const res = await deleteIndicator(indicatorId)
+      if (res.error) throw new Error(res.error)
+      return res.data
+    },
     onMutate: async (indicatorId: string) => {
       await queryClient.cancelQueries({
         queryKey: areaKeys.indicators(criterionId),
@@ -284,14 +306,14 @@ export function useDeleteIndicator(criterionId: string) {
       )
       return { previous }
     },
-    onError: (_error, _id, context) => {
+    onError: (error: Error, _id, context) => {
       if (context?.previous) {
         queryClient.setQueryData(
           areaKeys.indicators(criterionId),
           context.previous
         )
       }
-      toast.error("Failed to delete indicator.")
+      toast.error(error.message || "Failed to delete indicator.")
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
