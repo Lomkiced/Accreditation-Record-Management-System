@@ -53,7 +53,7 @@ export function useCreateArea() {
   return useMutation({
     mutationFn: async (data: Parameters<typeof createArea>[0]) => {
       const res = await createArea(data)
-      if (res.error) throw new Error(res.error)
+      if (!res.success) throw new Error(res.error)
       return res.data
     },
     onSuccess: () => {
@@ -72,7 +72,7 @@ export function useUpdateArea() {
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Parameters<typeof updateArea>[1] }) => {
       const res = await updateArea(id, data)
-      if (res.error) throw new Error(res.error)
+      if (!res.success) throw new Error(res.error)
       return res.data
     },
     onSuccess: () => {
@@ -91,7 +91,7 @@ export function useDeleteArea() {
   return useMutation({
     mutationFn: async (areaId: string) => {
       const res = await deleteArea(areaId)
-      if (res.error) throw new Error(res.error)
+      if (!res.success) throw new Error(res.error)
       return res.data
     },
     onMutate: async (areaId: string) => {
@@ -122,7 +122,7 @@ export function useReorderAreas() {
   return useMutation({
     mutationFn: async (orderedIds: string[]) => {
       const res = await reorderAreas(orderedIds)
-      if (res.error) throw new Error(res.error)
+      if (!res.success) throw new Error(res.error)
       return res.data
     },
     onSuccess: () => {
@@ -157,7 +157,7 @@ export function useCreateCriterion() {
   return useMutation({
     mutationFn: async (data: Parameters<typeof createCriterion>[0]) => {
       const res = await createCriterion(data)
-      if (res.error) throw new Error(res.error)
+      if (!res.success) throw new Error(res.error)
       return res.data
     },
     onSuccess: (_data, variables) => {
@@ -179,7 +179,7 @@ export function useUpdateCriterion(areaId: string) {
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Parameters<typeof updateCriterion>[1] }) => {
       const res = await updateCriterion(id, data)
-      if (res.error) throw new Error(res.error)
+      if (!res.success) throw new Error(res.error)
       return res.data
     },
     onSuccess: () => {
@@ -199,7 +199,7 @@ export function useDeleteCriterion(areaId: string) {
   return useMutation({
     mutationFn: async (criterionId: string) => {
       const res = await deleteCriterion(criterionId)
-      if (res.error) throw new Error(res.error)
+      if (!res.success) throw new Error(res.error)
       return res.data
     },
     onMutate: async (criterionId: string) => {
@@ -249,7 +249,7 @@ export function useCreateIndicator(criterionId: string) {
   return useMutation({
     mutationFn: async (data: Parameters<typeof createIndicator>[0]) => {
       const res = await createIndicator(data)
-      if (res.error) throw new Error(res.error)
+      if (!res.success) throw new Error(res.error)
       return res.data
     },
     onSuccess: () => {
@@ -271,7 +271,7 @@ export function useUpdateIndicator(criterionId: string) {
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Parameters<typeof updateIndicator>[1] }) => {
       const res = await updateIndicator(id, data)
-      if (res.error) throw new Error(res.error)
+      if (!res.success) throw new Error(res.error)
       return res.data
     },
     onSuccess: () => {
@@ -293,7 +293,7 @@ export function useDeleteIndicator(criterionId: string) {
   return useMutation({
     mutationFn: async (indicatorId: string) => {
       const res = await deleteIndicator(indicatorId)
-      if (res.error) throw new Error(res.error)
+      if (!res.success) throw new Error(res.error)
       return res.data
     },
     onMutate: async (indicatorId: string) => {
