@@ -56,21 +56,18 @@ export function CriterionFormModal({
     }
   }, [open, initialData, form])
 
-  const onSubmit = async (data: CriterionFormValues) => {
+  const onSubmit = (data: CriterionFormValues) => {
     if (isEditing) {
-      const result = await updateCriterion.mutateAsync({
-        id: criterionId,
-        data,
-      })
-      if (result?.error) return
+      updateCriterion.mutate(
+        { id: criterionId, data },
+        { onSuccess: () => onClose() }
+      )
     } else {
-      const result = await createCriterion.mutateAsync({
-        areaId,
-        ...data,
-      })
-      if (result?.error) return
+      createCriterion.mutate(
+        { areaId, ...data },
+        { onSuccess: () => onClose() }
+      )
     }
-    onClose()
   }
 
   const isPending = createCriterion.isPending || updateCriterion.isPending

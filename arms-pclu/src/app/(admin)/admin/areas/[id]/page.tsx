@@ -64,13 +64,17 @@ function IndicatorFormModal({
     }
   }, [open, indicator, form])
 
-  const onSubmit = async (data: IndicatorFormValues) => {
+  const onSubmit = (data: IndicatorFormValues) => {
     if (indicator) {
-      const result = await updateIndicator.mutateAsync({ id: indicator.id, data })
-      if (result?.success) onClose()
+      updateIndicator.mutate(
+        { id: indicator.id, data },
+        { onSuccess: () => onClose() }
+      )
     } else {
-      const result = await createIndicator.mutateAsync({ criterionId, ...data })
-      if (result?.success) onClose()
+      createIndicator.mutate(
+        { criterionId, ...data },
+        { onSuccess: () => onClose() }
+      )
     }
   }
 

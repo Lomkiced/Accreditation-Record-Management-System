@@ -54,15 +54,12 @@ export function AreaFormModal({
     }
   }, [open, initialData, form])
 
-  const onSubmit = async (data: AreaFormValues) => {
+  const onSubmit = (data: AreaFormValues) => {
     if (isEditing) {
-      const result = await updateArea.mutateAsync({ id: areaId, data })
-      if (result?.error) return // toast handled inside mutation
+      updateArea.mutate({ id: areaId, data }, { onSuccess: () => onClose() })
     } else {
-      const result = await createArea.mutateAsync(data)
-      if (result?.error) return
+      createArea.mutate(data, { onSuccess: () => onClose() })
     }
-    onClose()
   }
 
   const isPending = createArea.isPending || updateArea.isPending
