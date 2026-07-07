@@ -1,7 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
-import { createClient as createAdminClient } from "@supabase/supabase-js"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin, requireUser } from "@/lib/auth/getUser"
 import { revalidatePath } from "next/cache"
@@ -13,31 +13,35 @@ import {
 } from "@/lib/validations/auth.schema"
 import { sanitizeString, sanitizeEmail, sanitizeName } from "@/lib/sanitize"
 
-// ─── Supabase Admin Client (service role — server only) ───────────────────────
-function getAdminClient() {
-  return createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    }
-  )
-}
-
 // ─── Shared result type ───────────────────────────────────────────────────────
 type ActionResult<T = undefined> =
   | { success: true; data?: T; error?: never }
   | { success?: never; error: string }
 
+// ─── Helper: detect Next.js internal redirect/notFound errors ─────────────────
+// Next.js `redirect()` and `notFound()` work by throwing special errors.
+// If we catch them in a Server Action we MUST re-throw, otherwise the
+// redirect is silently swallowed and the user sees a generic error instead.
+function isNextRedirectError(error: unknown): boolean {
+  if (error instanceof Error) {
+    // Next.js 14 uses error.digest starting with "NEXT_REDIRECT" or "NEXT_NOT_FOUND"
+    const digest = (error as Error & { digest?: string }).digest
+    if (typeof digest === "string") {
+      return digest.startsWith("NEXT_REDIRECT") || digest.startsWith("NEXT_NOT_FOUND")
+    }
+  }
+  return false
+}
+
 // ─── CREATE FACULTY ACCOUNT (Admin only) ──────────────────────────────────────
 export async function createFacultyAccount(
   formData: z.infer<typeof CreateFacultySchema>
 ): Promise<ActionResult<{ id: string; name: string; email: string }>> {
+  // Track Supabase auth user id for rollback on Prisma failure
+  let createdAuthUserId: string | null = null
+
   try {
-    // 1. Verify admin
+    // 1. Verify admin (may throw NEXT_REDIRECT if unauthenticated)
     const admin = await requireAdmin()
 
     // 2. Validate + sanitize input
@@ -49,7 +53,7 @@ export async function createFacultyAccount(
       designation: sanitizeString(formData.designation),
     })
 
-    // 3. Check for duplicate email
+    // 3. Check for duplicate email in Prisma
     const existing = await prisma.user.findUnique({
       where: { email: validated.email },
     })
@@ -58,7 +62,7 @@ export async function createFacultyAccount(
     }
 
     // 4. Create Supabase Auth user (admin client skips email confirmation)
-    const adminSupabase = getAdminClient()
+    const adminSupabase = createAdminClient()
     const { data: authData, error: authError } =
       await adminSupabase.auth.admin.createUser({
         email: validated.email,
@@ -71,10 +75,13 @@ export async function createFacultyAccount(
       })
 
     if (authError || !authData.user) {
+      console.error("[createFacultyAccount] Supabase Auth error:", authError?.message)
       return {
         error: authError?.message ?? "Failed to create authentication account.",
       }
     }
+
+    createdAuthUserId = authData.user.id
 
     // 5. Create Prisma record linked by authId
     const newUser = await prisma.user.create({
@@ -89,6 +96,9 @@ export async function createFacultyAccount(
         isActive: true,
       },
     })
+
+    // If we reach here, both Supabase + Prisma succeeded — clear rollback flag
+    createdAuthUserId = null
 
     // 6. Audit log
     await prisma.auditLog.create({
@@ -111,13 +121,41 @@ export async function createFacultyAccount(
       data: { id: newUser.id, name: newUser.name, email: newUser.email },
     }
   } catch (error) {
+    // ── CRITICAL: re-throw Next.js redirect/notFound errors ──
+    if (isNextRedirectError(error)) {
+      throw error
+    }
+
+    // ── Rollback: delete orphaned Supabase Auth user if Prisma failed ──
+    if (createdAuthUserId) {
+      try {
+        const adminSupabase = createAdminClient()
+        await adminSupabase.auth.admin.deleteUser(createdAuthUserId)
+        console.warn(
+          `[createFacultyAccount] Rolled back Supabase Auth user ${createdAuthUserId} after Prisma failure.`
+        )
+      } catch (rollbackErr) {
+        console.error(
+          "[createFacultyAccount] CRITICAL: Failed to rollback Supabase Auth user:",
+          createdAuthUserId,
+          rollbackErr
+        )
+      }
+    }
+
     if (error instanceof z.ZodError) {
       return { error: error.errors[0]?.message ?? "Validation failed." }
     }
     if (error instanceof Error && error.message.startsWith("Forbidden")) {
       return { error: "You do not have permission to perform this action." }
     }
-    console.error("[createFacultyAccount]", error)
+
+    // ── Structured production logging ──
+    console.error("[createFacultyAccount] Unhandled error:", {
+      name: error instanceof Error ? error.name : "Unknown",
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    })
     return { error: "Failed to create account. Please try again." }
   }
 }
@@ -136,7 +174,7 @@ export async function toggleFacultyStatus(
     if (!targetUser) return { error: "User not found." }
 
     // Update Supabase ban status
-    const adminSupabase = getAdminClient()
+    const adminSupabase = createAdminClient()
     const { error: banError } = await adminSupabase.auth.admin.updateUserById(
       targetUser.authId,
       {
@@ -144,6 +182,7 @@ export async function toggleFacultyStatus(
       }
     )
     if (banError) {
+      console.error("[toggleFacultyStatus] Supabase ban error:", banError.message)
       return { error: "Failed to update authentication status." }
     }
 
@@ -170,10 +209,15 @@ export async function toggleFacultyStatus(
     revalidatePath("/admin/users")
     return { success: true }
   } catch (error) {
+    if (isNextRedirectError(error)) throw error
+
     if (error instanceof Error && error.message.startsWith("Forbidden")) {
       return { error: "You do not have permission to perform this action." }
     }
-    console.error("[toggleFacultyStatus]", error)
+    console.error("[toggleFacultyStatus] Unhandled error:", {
+      name: error instanceof Error ? error.name : "Unknown",
+      message: error instanceof Error ? error.message : String(error),
+    })
     return { error: "Failed to update account status." }
   }
 }
@@ -216,10 +260,15 @@ export async function updateProfile(
     revalidatePath("/faculty/profile")
     return { success: true }
   } catch (error) {
+    if (isNextRedirectError(error)) throw error
+
     if (error instanceof z.ZodError) {
       return { error: error.errors[0]?.message ?? "Validation failed." }
     }
-    console.error("[updateProfile]", error)
+    console.error("[updateProfile] Unhandled error:", {
+      name: error instanceof Error ? error.name : "Unknown",
+      message: error instanceof Error ? error.message : String(error),
+    })
     return { error: "Failed to update profile." }
   }
 }
@@ -274,10 +323,15 @@ export async function changePassword(
 
     return { success: true }
   } catch (error) {
+    if (isNextRedirectError(error)) throw error
+
     if (error instanceof z.ZodError) {
       return { error: error.errors[0]?.message ?? "Validation failed." }
     }
-    console.error("[changePassword]", error)
+    console.error("[changePassword] Unhandled error:", {
+      name: error instanceof Error ? error.name : "Unknown",
+      message: error instanceof Error ? error.message : String(error),
+    })
     return { error: "Failed to change password." }
   }
 }
@@ -299,13 +353,16 @@ export async function resetFacultyPassword(
     })
     if (!targetUser) return { error: "User not found." }
 
-    const adminSupabase = getAdminClient()
+    const adminSupabase = createAdminClient()
     const { error } = await adminSupabase.auth.admin.updateUserById(
       targetUser.authId,
       { password: newPassword }
     )
 
-    if (error) return { error: "Failed to reset password." }
+    if (error) {
+      console.error("[resetFacultyPassword] Supabase error:", error.message)
+      return { error: "Failed to reset password." }
+    }
 
     // Audit log
     await prisma.auditLog.create({
@@ -320,10 +377,15 @@ export async function resetFacultyPassword(
 
     return { success: true }
   } catch (error) {
+    if (isNextRedirectError(error)) throw error
+
     if (error instanceof Error && error.message.startsWith("Forbidden")) {
       return { error: "You do not have permission to perform this action." }
     }
-    console.error("[resetFacultyPassword]", error)
+    console.error("[resetFacultyPassword] Unhandled error:", {
+      name: error instanceof Error ? error.name : "Unknown",
+      message: error instanceof Error ? error.message : String(error),
+    })
     return { error: "Failed to reset password." }
   }
 }
@@ -366,10 +428,15 @@ export async function updateFacultyProfile(
     revalidatePath("/admin/users")
     return { success: true }
   } catch (error) {
+    if (isNextRedirectError(error)) throw error
+
     if (error instanceof z.ZodError) {
       return { error: error.errors[0]?.message ?? "Validation failed." }
     }
-    console.error("[updateFacultyProfile]", error)
+    console.error("[updateFacultyProfile] Unhandled error:", {
+      name: error instanceof Error ? error.name : "Unknown",
+      message: error instanceof Error ? error.message : String(error),
+    })
     return { error: "Failed to update faculty profile." }
   }
 }

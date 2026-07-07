@@ -25,10 +25,11 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
 
-  // Allow Prisma to run in Node.js middleware (not Edge runtime).
-  // Next.js 14 uses experimental.serverExternalPackages
+  // Allow Prisma to run in Node.js runtime (not Edge).
+  // In Next.js 14.x the key is experimental.serverComponentsExternalPackages.
+  // (Renamed to top-level serverExternalPackages in Next.js 15+.)
   experimental: {
-    serverExternalPackages: ["@prisma/client", "bcryptjs"],
+    serverComponentsExternalPackages: ["@prisma/client", "bcryptjs"],
   },
 
   async headers() {
