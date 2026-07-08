@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextResponse, type NextRequest } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { prisma } from "@/lib/prisma"
 
@@ -6,14 +6,28 @@ import { prisma } from "@/lib/prisma"
  * Production Diagnostics Endpoint
  * Tests each component of the user creation pipeline individually.
  * 
- * GET /api/diagnostics
+ * GET /api/diagnostics?key=YOUR_DIAGNOSTICS_SECRET
  * 
- * DELETE THIS FILE after debugging is complete.
+ * Set DIAGNOSTICS_SECRET env var in Vercel to restrict access.
+ * If not set, the endpoint is accessible without a key (dev mode).
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // ── Simple secret-key auth (optional, recommended for production) ──
+  const diagSecret = process.env.DIAGNOSTICS_SECRET
+  if (diagSecret) {
+    const providedKey = request.nextUrl.searchParams.get("key")
+    if (providedKey !== diagSecret) {
+      return NextResponse.json(
+        { error: "Unauthorized. Provide ?key=YOUR_DIAGNOSTICS_SECRET" },
+        { status: 401 }
+      )
+    }
+  }
+
   const results: Record<string, unknown> = {
     timestamp: new Date().toISOString(),
     nodeEnv: process.env.NODE_ENV,
+    runtime: typeof (globalThis as Record<string, unknown>).EdgeRuntime !== "undefined" ? "edge" : "nodejs",
   }
 
   // ── Step 1: Check environment variables ──
@@ -30,10 +44,28 @@ export async function GET() {
     SUPABASE_URL_VALUE: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "MISSING",
   }
 
-  // ── Step 2: Test Supabase Admin Client ──
+  // ── Step 2: Test Admin Client Creation (validates fix for singleton bug) ──
+  let adminClient
   try {
-    const admin = createAdminClient()
-    const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1 })
+    adminClient = createAdminClient()
+    results.adminClientCreation = {
+      ok: true,
+      message: "Admin client created successfully (no singleton caching).",
+    }
+  } catch (err) {
+    results.adminClientCreation = {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+      type: err instanceof Error ? err.constructor.name : "Unknown",
+      fix: "Ensure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set in Vercel Environment Variables.",
+    }
+    // Can't continue without admin client
+    return NextResponse.json(results, { status: 200 })
+  }
+
+  // ── Step 3: Test Supabase Admin API ──
+  try {
+    const { data, error } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 1 })
     if (error) {
       results.supabaseAdmin = { ok: false, error: error.message, status: error.status }
     } else {
@@ -51,7 +83,7 @@ export async function GET() {
     }
   }
 
-  // ── Step 3: Test Prisma Database Connection ──
+  // ── Step 4: Test Prisma Database Connection ──
   try {
     const userCount = await prisma.user.count()
     results.prismaDB = {
@@ -67,7 +99,7 @@ export async function GET() {
     }
   }
 
-  // ── Step 4: Test Prisma can read admin user ──
+  // ── Step 5: Test Prisma can read admin user ──
   try {
     const adminUser = await prisma.user.findFirst({
       where: { role: "ADMIN" },
@@ -83,10 +115,9 @@ export async function GET() {
     }
   }
 
-  // ── Step 5: Check for orphaned Supabase auth users ──
+  // ── Step 6: Check for orphaned Supabase auth users ──
   try {
-    const admin = createAdminClient()
-    const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 50 })
+    const { data } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 50 })
     if (data?.users) {
       const authEmails = data.users.map((u) => u.email)
       const dbUsers = await prisma.user.findMany({
@@ -114,14 +145,13 @@ export async function GET() {
     }
   }
 
-  // ── Step 6: Simulate the createUser flow (dry-run) ──
+  // ── Step 7: Simulate the createUser flow (dry-run) ──
   try {
     const testEmail = `diag-test-${Date.now()}@test.invalid`
-    const admin = createAdminClient()
 
     // Try creating a test user
     const { data: authData, error: authError } =
-      await admin.auth.admin.createUser({
+      await adminClient.auth.admin.createUser({
         email: testEmail,
         password: "DiagTest123!",
         email_confirm: true,
@@ -137,7 +167,7 @@ export async function GET() {
       }
     } else if (authData.user) {
       // Immediately clean up the test user
-      await admin.auth.admin.deleteUser(authData.user.id)
+      await adminClient.auth.admin.deleteUser(authData.user.id)
       results.createUserDryRun = {
         ok: true,
         message: "Supabase Auth createUser works. Test user created and cleaned up.",
@@ -150,6 +180,17 @@ export async function GET() {
       type: err instanceof Error ? err.constructor.name : "Unknown",
     }
   }
+
+  // ── Summary ──
+  const allOk = [
+    results.adminClientCreation,
+    results.supabaseAdmin,
+    results.prismaDB,
+    results.adminUser,
+    results.createUserDryRun,
+  ].every((r) => r && typeof r === "object" && "ok" in r && r.ok)
+
+  results.overallHealth = allOk ? "✅ ALL SYSTEMS HEALTHY" : "⚠️ ISSUES DETECTED — Review individual steps"
 
   return NextResponse.json(results, { status: 200 })
 }

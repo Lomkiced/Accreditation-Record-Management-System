@@ -10,6 +10,8 @@ export function useUsers() {
   return useQuery({
     queryKey: userKeys.all,
     queryFn: () => getUsers(),
+    staleTime: 30_000, // Cache for 30s to reduce server load
+    retry: 2, // Retry twice on failure (covers transient serverless cold starts)
   })
 }
 
@@ -19,16 +21,24 @@ export function useToggleUserStatus() {
   return useMutation({
     mutationFn: ({ userId, activate }: { userId: string; activate: boolean }) =>
       toggleFacultyStatus(userId, activate),
-    onSuccess: (_, variables) => {
-      // Optimistically update or invalidate
-      queryClient.setQueryData<UserWithCounts[]>(userKeys.all, (old) => {
-        if (!old) return []
-        return old.map((u) =>
-          u.id === variables.userId
-            ? { ...u, status: variables.activate ? "ACTIVE" : "INACTIVE" }
-            : u
-        )
-      })
+    onSuccess: (result, variables) => {
+      // Only optimistically update if the server action succeeded
+      if (result && "success" in result && result.success) {
+        queryClient.setQueryData<UserWithCounts[]>(userKeys.all, (old) => {
+          if (!old) return []
+          return old.map((u) =>
+            u.id === variables.userId
+              ? { ...u, status: variables.activate ? "ACTIVE" : "INACTIVE" }
+              : u
+          )
+        })
+      }
+      // Always refetch to ensure consistency
+      queryClient.invalidateQueries({ queryKey: userKeys.all })
+    },
+    onError: (error) => {
+      console.error("[useToggleUserStatus] Mutation error:", error)
+      // Refetch to ensure UI is consistent after failed toggle
       queryClient.invalidateQueries({ queryKey: userKeys.all })
     },
   })

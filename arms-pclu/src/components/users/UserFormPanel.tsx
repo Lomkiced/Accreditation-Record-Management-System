@@ -77,31 +77,46 @@ export function UserFormPanel({ open, onClose, user }: UserFormPanelProps) {
   }
 
   const onSubmit = async (data: CreateFacultyValues) => {
-    if (isEdit && user) {
-      // Update existing faculty
-      const result = await updateFacultyProfile(user.id, {
-        name: data.name,
-        department: data.department,
-        designation: data.designation,
-        phone: data.phone,
-      })
-      if (result.error) {
-        toast.error(result.error)
+    try {
+      if (isEdit && user) {
+        // Update existing faculty
+        const result = await updateFacultyProfile(user.id, {
+          name: data.name,
+          department: data.department,
+          designation: data.designation,
+          phone: data.phone,
+        })
+        if (!result) {
+          toast.error("Network error: No response from server. Please check your connection and try again.")
+          return
+        }
+        if (result.error) {
+          toast.error(result.error)
+        } else {
+          toast.success(`Faculty profile updated for ${data.name}.`)
+          queryClient.invalidateQueries({ queryKey: userKeys.all })
+          onClose()
+        }
       } else {
-        toast.success(`Faculty profile updated for ${data.name}.`)
-        queryClient.invalidateQueries({ queryKey: userKeys.all })
-        onClose()
+        // Create new faculty
+        const result = await createFacultyAccount(data)
+        if (!result) {
+          toast.error("Network error: No response from server. Please check your connection and try again.")
+          return
+        }
+        if (result.error) {
+          toast.error(result.error)
+        } else {
+          toast.success(`Faculty account created for ${data.name}.`)
+          queryClient.invalidateQueries({ queryKey: userKeys.all })
+          onClose()
+        }
       }
-    } else {
-      // Create new faculty
-      const result = await createFacultyAccount(data)
-      if (result.error) {
-        toast.error(result.error)
-      } else {
-        toast.success(`Faculty account created for ${data.name}.`)
-        queryClient.invalidateQueries({ queryKey: userKeys.all })
-        onClose()
-      }
+    } catch (err) {
+      // Handle thrown errors from server actions (auth failures, network issues, etc.)
+      const message = err instanceof Error ? err.message : "An unexpected error occurred."
+      console.error("[UserFormPanel] Server action threw:", err)
+      toast.error(message)
     }
   }
 

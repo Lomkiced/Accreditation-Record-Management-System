@@ -61,3 +61,33 @@ export async function requireFaculty(): Promise<User> {
   }
   return user
 }
+
+// ─── Server Action-safe variants ────────────────────────────────────────────
+// These throw descriptive errors instead of calling redirect().
+// Use in Server Actions where redirect() causes unpredictable behavior
+// on Vercel production (the NEXT_REDIRECT throw is intercepted differently
+// when the server action is invoked from a client component via RPC).
+
+/**
+ * Returns the current user or throws an error (no redirect).
+ * Use in server actions called from client components.
+ */
+export async function requireUserOrThrow(): Promise<User> {
+  const user = await getCurrentUser()
+  if (!user) {
+    throw new Error("Unauthorized: No active session. Please log in again.")
+  }
+  return user
+}
+
+/**
+ * Returns the current admin user or throws an error (no redirect).
+ * Use in server actions called from client components.
+ */
+export async function requireAdminOrThrow(): Promise<User> {
+  const user = await requireUserOrThrow()
+  if (user.role !== "ADMIN") {
+    throw new Error("Forbidden: ADMIN role required.")
+  }
+  return user
+}
