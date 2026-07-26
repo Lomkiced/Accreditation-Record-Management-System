@@ -1,7 +1,7 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { requireAdmin } from "@/lib/auth/getUser"
+import { requireAdminOrDean } from "@/lib/auth/getUser"
 
 // ─── Return Types ─────────────────────────────────────────────────────────────
 
@@ -65,7 +65,7 @@ export interface RecentAuditLog {
  * Runs 4 parallel Prisma queries for performance.
  */
 export async function getDashboardStats(): Promise<DashboardStats> {
-  await requireAdmin()
+  await requireAdminOrDean()
 
   const [
     totalDocuments,
@@ -117,7 +117,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
  * Returns a flat, denormalized shape optimized for the dashboard table.
  */
 export async function getPendingSubmissions(): Promise<PendingSubmission[]> {
-  await requireAdmin()
+  await requireAdminOrDean()
 
   const mappings = await prisma.documentMapping.findMany({
     where: {
@@ -173,7 +173,7 @@ export async function getPendingSubmissions(): Promise<PendingSubmission[]> {
  * Fetches the latest 5 audit log entries for the Recent Activity panel.
  */
 export async function getRecentAuditLogs(): Promise<RecentAuditLog[]> {
-  await requireAdmin()
+  await requireAdminOrDean()
 
   const logs = await prisma.auditLog.findMany({
     orderBy: { createdAt: "desc" },
@@ -205,7 +205,7 @@ export async function getRecentAuditLogs(): Promise<RecentAuditLog[]> {
  * Fetches compliance percentage per Area for the dashboard chart.
  */
 export async function getComplianceData(): Promise<AreaCompliance[]> {
-  await requireAdmin()
+  await requireAdminOrDean()
 
   // Fetch all areas with their indicators and approved mappings
   const areas = await prisma.area.findMany({
