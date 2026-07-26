@@ -1,7 +1,7 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { requireAdmin, requireUser } from "@/lib/auth/getUser"
+import { requireAdmin, requireUser, requireAdminOrDean } from "@/lib/auth/getUser"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { sanitizeString } from "@/lib/sanitize"
@@ -106,7 +106,7 @@ export async function getAssignedScopeForFaculty(userId?: string) {
 
 export async function getFacultyWithAssignmentCounts() {
   try {
-    await requireAdmin()
+    await requireAdminOrDean()
 
     const faculty = await prisma.user.findMany({
       where: { role: "FACULTY" },
@@ -151,7 +151,7 @@ export async function createAssignment(
   formData: z.infer<typeof CreateAssignmentSchema>
 ): Promise<ActionResult<{ id: string }>> {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireAdminOrDean()
 
     const validated = CreateAssignmentSchema.parse({
       userId: formData.userId,
@@ -222,6 +222,7 @@ export async function createAssignment(
     })
 
     revalidatePath("/admin/assignments")
+    revalidatePath("/dean/assignments")
     return { success: true, data: { id: assignment.id } }
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -248,7 +249,7 @@ export async function deleteAssignment(
   assignmentId: string
 ): Promise<ActionResult> {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireAdminOrDean()
 
     const assignment = await prisma.assignment.findUnique({
       where: { id: assignmentId },
@@ -275,6 +276,7 @@ export async function deleteAssignment(
     })
 
     revalidatePath("/admin/assignments")
+    revalidatePath("/dean/assignments")
     return { success: true }
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("Forbidden")) {
