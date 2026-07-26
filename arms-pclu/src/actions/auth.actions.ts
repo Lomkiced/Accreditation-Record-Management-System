@@ -37,7 +37,7 @@ function correlationId(): string {
 // ─── CREATE FACULTY ACCOUNT (Admin only) ──────────────────────────────────────
 export async function createFacultyAccount(
   formData: z.infer<typeof CreateFacultySchema>,
-  targetRole: "FACULTY" | "ADMIN" = "FACULTY"
+  targetRole: "FACULTY" | "ADMIN" | "DEAN" = "FACULTY"
 ): Promise<ActionResult<{ id: string; name: string; email: string }>> {
   const cid = correlationId()
   let createdAuthUserId: string | null = null

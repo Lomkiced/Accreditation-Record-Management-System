@@ -144,7 +144,6 @@ export function NewVersionUploadSheet({
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
             <h3 className="font-semibold text-slate-900">Upload File</h3>
             <FileUploadZone
-              selectedFile={selectedFile}
               onFileSelect={setSelectedFile}
               disabled={isSubmitting}
             />
