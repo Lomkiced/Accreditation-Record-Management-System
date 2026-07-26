@@ -14,6 +14,7 @@ import {
   ChevronRight,
   BarChart3,
   TrendingUp,
+  ArrowRight
 } from "lucide-react"
 
 import { StatCard } from "@/components/dashboard/StatCard"
@@ -194,7 +195,7 @@ export function DeanDashboardClient({
                     <BarChart3 size={22} className="text-blue-600" />
                     Compliance Progress
                   </h3>
-                  <p className="text-sm text-slate-500 mt-1 font-medium">Track your department's compliance per area.</p>
+                  <p className="text-sm text-slate-500 mt-1 font-medium">Track your department&apos;s compliance per area.</p>
                 </div>
               </div>
               <div className="bg-slate-50/50 rounded-2xl border border-slate-100 p-2">
