@@ -106,7 +106,6 @@ export function NewVersionUploadSheet({
     <Sheet open={open} onOpenChange={(val) => !val && onClose()}>
       <SheetContent
         className="w-full sm:max-w-lg p-0 flex flex-col bg-slate-50 overflow-hidden border-l border-slate-200"
-        hideClose
       >
         <SheetHeader className="p-6 bg-white border-b border-slate-200 flex-row items-center justify-between sticky top-0 z-10 shrink-0">
           <SheetTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
