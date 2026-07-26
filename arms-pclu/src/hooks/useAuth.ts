@@ -215,7 +215,11 @@ export function useAuth() {
         clearRateLimit(email.trim().toLowerCase())
 
         const destination =
-          dbUser.role === "ADMIN" ? "/admin/dashboard" : "/faculty/dashboard"
+          dbUser.role === "ADMIN"
+            ? "/admin/dashboard"
+            : dbUser.role === "DEAN"
+              ? "/dean/dashboard"
+              : "/faculty/dashboard"
 
         window.location.href = destination
 
@@ -241,13 +245,65 @@ export function useAuth() {
     }
   }, [clearUser, router, supabase])
 
+  const requestPasswordReset = useCallback(
+    async (email: string) => {
+      setLoading(true)
+      try {
+        const response = await fetch("/api/auth/forgot-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        })
+        
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}))
+          setLoading(false)
+          return { error: data.error || "Failed to send password reset email." }
+        }
+        
+        setLoading(false)
+        return { error: null }
+      } catch (error) {
+        setLoading(false)
+        console.error("[useAuth] requestPasswordReset error:", error)
+        return { error: "Unexpected error. Please try again." }
+      }
+    },
+    [setLoading]
+  )
+
+  const updatePassword = useCallback(
+    async (password: string) => {
+      setLoading(true)
+      try {
+        const { error } = await supabase.auth.updateUser({
+          password: password,
+        })
+        if (error) {
+          setLoading(false)
+          return { error: error.message }
+        }
+        setLoading(false)
+        return { error: null }
+      } catch (error) {
+        setLoading(false)
+        console.error("[useAuth] updatePassword error:", error)
+        return { error: "Unexpected error. Please try again." }
+      }
+    },
+    [setLoading, supabase]
+  )
+
   return {
     user,
     isLoading,
     isAuthenticated,
     signIn,
     signOut,
+    requestPasswordReset,
+    updatePassword,
     isAdmin: user?.role === "ADMIN",
+    isDean: user?.role === "DEAN",
     isFaculty: user?.role === "FACULTY",
   }
 }

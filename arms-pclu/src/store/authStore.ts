@@ -5,7 +5,7 @@ export interface StoredUser {
   authId: string
   name: string
   email: string
-  role: "ADMIN" | "FACULTY"
+  role: "ADMIN" | "DEAN" | "FACULTY"
   department: string
   designation: string
   phone: string | null

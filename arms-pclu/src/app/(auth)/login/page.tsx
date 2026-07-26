@@ -12,21 +12,10 @@ export default function LoginPage() {
       {/* Left panel — Hero text */}
       <div className="hidden lg:flex w-[55%] flex-col p-12 relative z-10 justify-between">
         <div>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl flex items-center justify-center shadow-2xl">
-              <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-lg shadow-inner" />
-            </div>
-            <span className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-300 tracking-tight">
-              ARMS
-            </span>
-          </div>
+          {/* Logo removed */}
         </div>
 
         <div className="flex-1 flex flex-col justify-center max-w-2xl animate-in slide-in-from-left-8 fade-in duration-1000">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-slate-300 text-xs font-medium w-fit mb-6">
-            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            System Online & Secure
-          </div>
           <h1 className="text-5xl lg:text-[3.5rem] font-extrabold text-white leading-[1.1] tracking-tight">
             Accreditation Record
             <br />
@@ -35,29 +24,8 @@ export default function LoginPage() {
             </span>
           </h1>
           <p className="text-slate-400 mt-6 text-lg max-w-lg font-light leading-relaxed">
-            Elevating academic standards for the Polytechnic College of La Union through centralized, secure, and intelligent compliance tracking.
+            for IT Department in Polytechnic College of La Union.
           </p>
-
-          <div className="mt-12 flex flex-col gap-4">
-            <div className="flex items-center gap-4 bg-white/5 border border-white/5 rounded-2xl p-4 max-w-md backdrop-blur-md transition-all hover:bg-white/10 hover:border-white/10 hover:-translate-y-0.5 cursor-default">
-              <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center text-blue-400 text-xl border border-blue-500/20 shadow-inner">
-                📁
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold text-slate-200">Centralized Vault</span>
-                <span className="text-xs text-slate-500 mt-0.5">Secure, organized evidence repository</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 bg-white/5 border border-white/5 rounded-2xl p-4 max-w-md backdrop-blur-md transition-all hover:bg-white/10 hover:border-white/10 hover:-translate-y-0.5 cursor-default">
-              <div className="w-12 h-12 bg-indigo-500/20 rounded-xl flex items-center justify-center text-indigo-400 text-xl border border-indigo-500/20 shadow-inner">
-                🏷️
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold text-slate-200">PACUCOA Intelligence</span>
-                <span className="text-xs text-slate-500 mt-0.5">Streamlined area management mapping</span>
-              </div>
-            </div>
-          </div>
         </div>
 
         <div className="animate-in fade-in duration-1000 delay-500">

@@ -22,6 +22,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { useNotifications, useMarkAsRead } from "@/hooks/useNotifications"
 import type { StoredUser } from "@/store/authStore"
 import { useRouter } from "next/navigation"
+import { GlobalSearchDialog } from "./GlobalSearchDialog"
 
 interface TopHeaderProps {
   role: "admin" | "faculty"
@@ -42,6 +43,7 @@ export function TopHeader({ role, user: serverUser }: TopHeaderProps) {
   const { data: notifications = [] } = useNotifications()
   const { mutate: markAsRead } = useMarkAsRead()
   const router = useRouter()
+  const [searchOpen, setSearchOpen] = React.useState(false)
 
   const unreadCount = notifications.filter((n) => !n.isRead).length
   const topNotifications = notifications.slice(0, 5)
@@ -60,11 +62,13 @@ export function TopHeader({ role, user: serverUser }: TopHeaderProps) {
       <div className="flex items-center gap-2">
         <button
           type="button"
+          onClick={() => setSearchOpen(true)}
           className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
           aria-label="Search"
         >
           <Search className="w-5 h-5" />
         </button>
+        <GlobalSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
 
         <Popover>
           <PopoverTrigger asChild>
@@ -81,7 +85,7 @@ export function TopHeader({ role, user: serverUser }: TopHeaderProps) {
               )}
             </button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 p-0" align="end">
+          <PopoverContent className="w-80 p-0 bg-white shadow-lg border-slate-200" align="end">
             <div className="px-4 py-3 border-b flex justify-between items-center">
               <h3 className="font-semibold text-sm">Notifications</h3>
               {unreadCount > 0 && (
@@ -141,7 +145,7 @@ export function TopHeader({ role, user: serverUser }: TopHeaderProps) {
             </button>
           </DropdownMenuTrigger>
 
-          <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuContent align="end" className="w-52 bg-white shadow-lg border-slate-200">
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-0.5">
                 <p className="text-sm font-medium text-slate-900">{displayName}</p>

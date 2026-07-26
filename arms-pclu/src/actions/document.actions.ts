@@ -82,6 +82,89 @@ export async function uploadDocument(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// UPLOAD NEW VERSION — Handle "Returned" documents by creating a new version
+// ─────────────────────────────────────────────────────────────────────────────
+export async function uploadNewVersion(
+  documentId: string,
+  input: {
+    title: string
+    description?: string
+    documentDate: string
+    fileUrl: string
+    fileName: string
+    fileSize: number
+  }
+): Promise<ActionResult<{ documentId: string; newVersion: number }>> {
+  try {
+    const currentUser = await requireUser()
+
+    const document = await prisma.document.findUnique({
+      where: { id: documentId },
+      include: { mappings: true },
+    })
+
+    if (!document) return { error: "Document not found." }
+    if (document.userId !== currentUser.id) {
+      return { error: "You do not have permission to modify this document." }
+    }
+
+    const [updatedDoc] = await prisma.$transaction(async (tx) => {
+      // 1. Update the document with new file and increment version
+      const doc = await tx.document.update({
+        where: { id: documentId },
+        data: {
+          title: input.title,
+          description: input.description ?? null,
+          documentDate: new Date(input.documentDate),
+          fileUrl: input.fileUrl,
+          fileName: input.fileName,
+          fileSize: input.fileSize,
+          version: document.version + 1,
+        },
+      })
+
+      // 2. Any mappings that are RETURNED should be switched back to SUBMITTED
+      const returnedMappingIds = document.mappings
+        .filter((m) => m.status === "RETURNED")
+        .map((m) => m.id)
+
+      if (returnedMappingIds.length > 0) {
+        await tx.documentMapping.updateMany({
+          where: { id: { in: returnedMappingIds } },
+          data: { status: "SUBMITTED" },
+        })
+      }
+
+      return [doc]
+    })
+
+    await prisma.auditLog.create({
+      data: {
+        userId: currentUser.id,
+        action: "UPLOAD_NEW_VERSION",
+        module: "DOCUMENT",
+        targetId: document.id,
+        details: {
+          title: updatedDoc.title,
+          newVersion: updatedDoc.version,
+        },
+      },
+    })
+
+    revalidatePath("/faculty/submissions")
+    revalidatePath("/admin/submissions")
+    revalidatePath("/dean/submissions")
+    revalidatePath("/admin/dashboard")
+    revalidatePath("/dean/dashboard")
+
+    return { success: true, data: { documentId: updatedDoc.id, newVersion: updatedDoc.version } }
+  } catch (error) {
+    console.error("[uploadNewVersion]", error)
+    return { error: "Failed to upload new version." }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // CREATE EVIDENCE MAPPINGS — M:N linking of Document → Indicators
 // Accepts a documentId and an array of indicatorIds.
 // Idempotent: skips indicator IDs that already have a mapping for this document.

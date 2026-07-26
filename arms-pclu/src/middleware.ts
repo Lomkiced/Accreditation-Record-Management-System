@@ -4,7 +4,17 @@ import { NextResponse, type NextRequest } from "next/server"
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  const publicPaths = ["/login", "/api/auth", "/api/diagnostics", "/_next", "/favicon.ico", "/public"]
+  const publicPaths = [
+    "/login", 
+    "/forgot-password",
+    "/update-password",
+    "/api/auth", 
+    "/api/diagnostics", 
+    "/api/seed",
+    "/_next", 
+    "/favicon.ico", 
+    "/public"
+  ]
   const isPublic = publicPaths.some((p) => pathname.startsWith(p))
 
   let response = NextResponse.next({ request })
@@ -50,7 +60,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  if (pathname === "/") {
+  if (pathname === "/" || pathname === "/admin" || pathname === "/dean") {
     return NextResponse.redirect(new URL("/login", request.url))
   }
 

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
@@ -115,6 +116,9 @@ export function LoginForm() {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="password" className="text-slate-200 lg:text-slate-700 font-medium">Password</Label>
+            <Link href="/forgot-password" className="text-xs font-medium text-blue-500 hover:text-blue-600 lg:text-blue-600 lg:hover:text-blue-700 transition-colors z-50 relative">
+              Forgot password?
+            </Link>
           </div>
           <div className="relative group">
             <Lock className="absolute left-3.5 top-3 h-[18px] w-[18px] text-slate-400 group-focus-within:text-blue-500 transition-colors" />

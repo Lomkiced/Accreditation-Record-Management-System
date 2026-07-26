@@ -205,23 +205,13 @@ export default function AreaDetailPage({ params }: { params: { id: string } }) {
                   {criterion.indicators.length} Indicator
                   {criterion.indicators.length !== 1 ? "s" : ""}
                 </span>
-                <Button
-                  size="sm"
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-7"
-                  onClick={() => setAddModal({ criterionId: criterion.id })}
-                >
-                  <Plus className="w-3 h-3 mr-1" />
-                  Add Indicator
-                </Button>
               </div>
             </div>
             <div className="p-0">
               <IndicatorTable
                 indicators={criterion.indicators}
                 criterionId={criterion.id}
-                onEdit={(ind) =>
-                  setEditModal({ criterionId: criterion.id, indicator: ind })
-                }
+                readOnly={true}
               />
             </div>
           </div>

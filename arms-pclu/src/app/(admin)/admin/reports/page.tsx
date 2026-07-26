@@ -16,7 +16,7 @@ const reportTypes = [
   { id: "logbook", title: "Logbook Summary Report", desc: "Incoming/outgoing document log with acknowledgment status", icon: BookMarked, color: "amber" },
 ]
 
-export default function ReportsPage() {
+export default function AdminReportsPage() {
   const [selectedReport, setSelectedReport] = React.useState("compliance")
   const [format, setFormat] = React.useState<"pdf" | "excel">("pdf")
   const [isGenerating, setIsGenerating] = React.useState(false)

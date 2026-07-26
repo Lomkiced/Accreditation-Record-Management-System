@@ -40,12 +40,36 @@ export async function requireUser(): Promise<User> {
 }
 
 /**
- * Redirects to /login (or /faculty/dashboard if wrong role) if the
- * current user is not an ADMIN. Use at the top of admin-only Server Actions.
+ * Redirects if the current user is not an ADMIN (New Admin Portal).
+ * Use at the top of admin-only Server Actions.
  */
 export async function requireAdmin(): Promise<User> {
   const user = await requireUser()
   if (user.role !== "ADMIN") {
+    if (user.role === "DEAN") redirect("/dean/dashboard")
+    redirect("/faculty/dashboard")
+  }
+  return user
+}
+
+/**
+ * Redirects if the current user is not a DEAN (Dean's Portal).
+ */
+export async function requireDean(): Promise<User> {
+  const user = await requireUser()
+  if (user.role !== "DEAN") {
+    if (user.role === "ADMIN") redirect("/admin/dashboard")
+    redirect("/faculty/dashboard")
+  }
+  return user
+}
+
+/**
+ * Allows both ADMIN and DEAN roles for shared functionality.
+ */
+export async function requireAdminOrDean(): Promise<User> {
+  const user = await requireUser()
+  if (user.role !== "ADMIN" && user.role !== "DEAN") {
     redirect("/faculty/dashboard")
   }
   return user
@@ -57,21 +81,14 @@ export async function requireAdmin(): Promise<User> {
 export async function requireFaculty(): Promise<User> {
   const user = await requireUser()
   if (user.role !== "FACULTY") {
+    if (user.role === "DEAN") redirect("/dean/dashboard")
     redirect("/admin/dashboard")
   }
   return user
 }
 
 // ─── Server Action-safe variants ────────────────────────────────────────────
-// These throw descriptive errors instead of calling redirect().
-// Use in Server Actions where redirect() causes unpredictable behavior
-// on Vercel production (the NEXT_REDIRECT throw is intercepted differently
-// when the server action is invoked from a client component via RPC).
 
-/**
- * Returns the current user or throws an error (no redirect).
- * Use in server actions called from client components.
- */
 export async function requireUserOrThrow(): Promise<User> {
   const user = await getCurrentUser()
   if (!user) {
@@ -80,10 +97,6 @@ export async function requireUserOrThrow(): Promise<User> {
   return user
 }
 
-/**
- * Returns the current admin user or throws an error (no redirect).
- * Use in server actions called from client components.
- */
 export async function requireAdminOrThrow(): Promise<User> {
   const user = await requireUserOrThrow()
   if (user.role !== "ADMIN") {
@@ -91,3 +104,12 @@ export async function requireAdminOrThrow(): Promise<User> {
   }
   return user
 }
+
+export async function requireAdminOrDeanOrThrow(): Promise<User> {
+  const user = await requireUserOrThrow()
+  if (user.role !== "ADMIN" && user.role !== "DEAN") {
+    throw new Error("Forbidden: ADMIN or DEAN role required.")
+  }
+  return user
+}
+

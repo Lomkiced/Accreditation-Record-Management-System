@@ -67,9 +67,18 @@ export const ResetPasswordSchema = z
     path: ["confirmPassword"],
   })
 
+// ─── Forgot Password ──────────────────────────────────────────────────────────
+export const ForgotPasswordSchema = z.object({
+  email: z
+    .string()
+    .min(1, "Email is required")
+    .email("Please enter a valid email address"),
+})
+
 // ─── Exported Types ───────────────────────────────────────────────────────────
 export type LoginValues = z.infer<typeof LoginSchema>
 export type CreateFacultyValues = z.infer<typeof CreateFacultySchema>
 export type UpdateProfileValues = z.infer<typeof UpdateProfileSchema>
 export type ChangePasswordValues = z.infer<typeof ChangePasswordSchema>
 export type ResetPasswordValues = z.infer<typeof ResetPasswordSchema>
+export type ForgotPasswordValues = z.infer<typeof ForgotPasswordSchema>

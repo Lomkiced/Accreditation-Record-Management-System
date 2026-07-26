@@ -73,72 +73,110 @@ export async function uploadAndMapDocument(
     })
     if (!indicator) return { error: "Indicator not found." }
 
-    // Check if the faculty already has a non-returned mapping for this indicator
+    // Check if the faculty already has a mapping for this indicator
     const existingMapping = await prisma.documentMapping.findFirst({
       where: {
         indicatorId: validated.indicatorId,
         userId: currentUser.id,
-        status: { notIn: ["RETURNED"] },
       },
+      include: { document: true }
     })
+
+    let documentId: string
+    let mappingId: string
+
     if (existingMapping) {
-      return {
-        error:
-          "You already have an active submission for this indicator. Delete or wait for it to be returned before resubmitting.",
+      if (existingMapping.status !== "RETURNED") {
+        return {
+          error:
+            "You already have an active submission for this indicator. Delete or wait for it to be returned before resubmitting.",
+        }
       }
+
+      // It IS returned, so we update the document (creates V2)
+      const [doc, map] = await prisma.$transaction(async (tx) => {
+        const d = await tx.document.update({
+          where: { id: existingMapping.documentId },
+          data: {
+            title: validated.title,
+            description: validated.description ?? null,
+            documentDate: new Date(validated.documentDate),
+            fileUrl: validated.fileUrl,
+            fileName: validated.fileName,
+            fileSize: validated.fileSize,
+            version: existingMapping.document.version + 1,
+          },
+        })
+
+        const m = await tx.documentMapping.update({
+          where: { id: existingMapping.id },
+          data: {
+            status: "SUBMITTED",
+            rating: validated.rating ?? null,
+          },
+        })
+
+        return [d, m]
+      })
+      documentId = doc.id
+      mappingId = map.id
+    } else {
+      // Atomic transaction: Document + DocumentMapping together (V1)
+      const [doc, map] = await prisma.$transaction(async (tx) => {
+        const d = await tx.document.create({
+          data: {
+            userId: currentUser.id,
+            title: validated.title,
+            description: validated.description ?? null,
+            documentDate: new Date(validated.documentDate),
+            fileUrl: validated.fileUrl,
+            fileName: validated.fileName,
+            fileSize: validated.fileSize,
+            version: 1,
+          },
+        })
+
+        const m = await tx.documentMapping.create({
+          data: {
+            documentId: d.id,
+            indicatorId: validated.indicatorId,
+            userId: currentUser.id,
+            status: "SUBMITTED",
+            rating: validated.rating ?? null,
+          },
+        })
+
+        return [d, m]
+      })
+      documentId = doc.id
+      mappingId = map.id
     }
-
-    // Atomic transaction: Document + DocumentMapping together
-    const [document, mapping] = await prisma.$transaction(async (tx) => {
-      const doc = await tx.document.create({
-        data: {
-          userId: currentUser.id,
-          title: validated.title,
-          description: validated.description ?? null,
-          documentDate: new Date(validated.documentDate),
-          fileUrl: validated.fileUrl,
-          fileName: validated.fileName,
-          fileSize: validated.fileSize,
-          version: 1,
-        },
-      })
-
-      const map = await tx.documentMapping.create({
-        data: {
-          documentId: doc.id,
-          indicatorId: validated.indicatorId,
-          userId: currentUser.id,
-          status: "SUBMITTED",
-          rating: validated.rating ?? null,
-        },
-      })
-
-      return [doc, map]
-    })
 
     // Audit log (outside transaction — non-critical)
     await prisma.auditLog.create({
       data: {
         userId: currentUser.id,
-        action: "SUBMIT_DOCUMENT",
+        action: existingMapping ? "RESUBMIT_DOCUMENT" : "SUBMIT_DOCUMENT",
         module: "DOCUMENT",
-        targetId: document.id,
+        targetId: documentId,
         details: {
-          documentTitle: document.title,
+          documentTitle: validated.title,
           indicatorId: validated.indicatorId,
           indicatorName: indicator.name,
-          mappingId: mapping.id,
+          mappingId: mappingId,
         },
       },
     })
 
     revalidatePath("/faculty/submissions")
     revalidatePath("/admin/submissions")
+    revalidatePath("/dean/submissions")
     revalidatePath("/admin/dashboard")
+    revalidatePath("/dean/dashboard")
 
     return {
       success: true,
-      data: { documentId: document.id, mappingId: mapping.id },
+      data: { documentId: documentId, mappingId: mappingId },
     }
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -245,16 +283,150 @@ export async function saveDocumentAsDraft(
   }
 }
 
+// ─── ARCHIVE DOCUMENT (Soft Delete) ───────────────────────────────────────────
+
+export async function archiveDocument(documentId: string): Promise<ActionResult> {
+  try {
+    const currentUser = await requireUser()
+
+    const doc = await prisma.document.findUnique({
+      where: { id: documentId },
+    })
+
+    if (!doc) return { error: "Document not found." }
+    if (doc.userId !== currentUser.id && currentUser.role !== "ADMIN") {
+      return { error: "Unauthorized. Only the owner or an admin can archive this document." }
+    }
+
+    await prisma.document.update({
+      where: { id: documentId },
+      data: { isArchived: true },
+    })
+
+    revalidatePath("/faculty/dashboard")
+    revalidatePath("/faculty/submissions")
+    revalidatePath("/faculty/archives")
+
+    return { success: true }
+  } catch (error: any) {
+    console.error("[archiveDocument]", error)
+    return { error: "Failed to archive document." }
+  }
+}
+
+// ─── RESTORE DOCUMENT ─────────────────────────────────────────────────────────
+
+export async function restoreDocument(documentId: string): Promise<ActionResult> {
+  try {
+    const currentUser = await requireUser()
+
+    const doc = await prisma.document.findUnique({
+      where: { id: documentId },
+    })
+
+    if (!doc) return { error: "Document not found." }
+    if (doc.userId !== currentUser.id && currentUser.role !== "ADMIN") {
+      return { error: "Unauthorized. Only the owner or an admin can restore this document." }
+    }
+
+    await prisma.document.update({
+      where: { id: documentId },
+      data: { isArchived: false },
+    })
+
+    revalidatePath("/faculty/dashboard")
+    revalidatePath("/faculty/submissions")
+    revalidatePath("/faculty/archives")
+
+    return { success: true }
+  } catch (error: any) {
+    console.error("[restoreDocument]", error)
+    return { error: "Failed to restore document." }
+  }
+}
+
+// ─── PERMANENTLY DELETE DOCUMENT ──────────────────────────────────────────────
+
+export async function permanentlyDeleteDocument(documentId: string): Promise<ActionResult> {
+  try {
+    const currentUser = await requireUser()
+
+    const doc = await prisma.document.findUnique({
+      where: { id: documentId },
+    })
+
+    if (!doc) return { error: "Document not found." }
+    if (doc.userId !== currentUser.id && currentUser.role !== "ADMIN") {
+      return { error: "Unauthorized. Only the owner or an admin can permanently delete this document." }
+    }
+
+    // In a full implementation, you would also delete the file from Supabase Storage here using `doc.fileUrl`
+    
+    await prisma.document.delete({
+      where: { id: documentId },
+    })
+
+    revalidatePath("/faculty/archives")
+
+    return { success: true }
+  } catch (error: any) {
+    console.error("[permanentlyDeleteDocument]", error)
+    return { error: "Failed to permanently delete document." }
+  }
+}
+
+// ─── GET ARCHIVED DOCUMENTS ───────────────────────────────────────────────────
+
+export async function getArchivedDocuments() {
+  try {
+    const currentUser = await requireUser()
+    const documents = await prisma.document.findMany({
+      where: { 
+        userId: currentUser.id,
+        isArchived: true
+      },
+      include: {
+        mappings: {
+          include: {
+            indicator: {
+              include: {
+                criterion: {
+                  include: {
+                    area: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        tags: {
+          include: {
+            tag: true
+          }
+        }
+      },
+      orderBy: { updatedAt: "desc" }
+    })
+
+    return { success: true, data: documents }
+  } catch (error: any) {
+    console.error("[getArchivedDocuments]", error)
+    return { success: false, error: "Failed to fetch archived documents." }
+  }
+}
+
 // ─── GET MY SUBMISSIONS (Faculty view) ───────────────────────────────────────
-// Returns all DocumentMappings for the current user, fully joined.
 
 export async function getMySubmissions() {
   try {
     const currentUser = await requireUser()
-
     const mappings = await prisma.documentMapping.findMany({
-      where: { userId: currentUser.id },
-      orderBy: { createdAt: "desc" },
+      where: { 
+        userId: currentUser.id,
+        document: {
+          isArchived: false
+        }
+      },
       include: {
         document: {
           select: {
@@ -323,7 +495,7 @@ export type MySubmission = NonNullable<
 
 export async function getAllSubmissions() {
   try {
-    await requireAdmin()
+    await requireAdminOrDean()
 
     const mappings = await prisma.documentMapping.findMany({
       orderBy: { createdAt: "desc" },
@@ -403,7 +575,7 @@ export async function reviewSubmission(
   formData: z.infer<typeof reviewSubmissionSchema>
 ): Promise<ActionResult> {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireAdminOrDean()
     const validated = reviewSubmissionSchema.parse(formData)
 
     if (validated.status === "RETURNED" && (!validated.remarks || validated.remarks.trim() === "")) {
@@ -413,7 +585,7 @@ export async function reviewSubmission(
     const mapping = await prisma.documentMapping.findUnique({
       where: { id: validated.mappingId },
       include: { 
-        document: { select: { title: true } }, 
+        document: true, 
         user: { select: { id: true, name: true } },
         indicator: { select: { name: true } }
       }
@@ -421,12 +593,28 @@ export async function reviewSubmission(
 
     if (!mapping) return { error: "Submission not found." }
 
-    // Update the mapping status and remarks
-    await prisma.documentMapping.update({
-      where: { id: validated.mappingId },
-      data: {
-        status: validated.status,
-        remarks: validated.remarks ?? null
+    await prisma.$transaction(async (tx) => {
+      // Update the mapping status and remarks
+      await tx.documentMapping.update({
+        where: { id: validated.mappingId },
+        data: {
+          status: validated.status,
+          remarks: validated.remarks ?? null
+        }
+      })
+
+      if (validated.status === "RETURNED" && mapping.document.fileUrl) {
+        // Create version snapshot of what was just returned
+        await tx.documentVersion.create({
+          data: {
+            documentId: mapping.documentId,
+            fileUrl: mapping.document.fileUrl,
+            fileName: mapping.document.fileName ?? "Unknown",
+            fileSize: mapping.document.fileSize,
+            version: mapping.document.version,
+            remarks: validated.remarks
+          }
+        })
       }
     })
 
@@ -458,8 +646,10 @@ export async function reviewSubmission(
     })
 
     revalidatePath("/admin/submissions")
+    revalidatePath("/dean/submissions")
     revalidatePath("/faculty/submissions")
     revalidatePath("/admin/dashboard")
+    revalidatePath("/dean/dashboard")
 
     return { success: true }
 

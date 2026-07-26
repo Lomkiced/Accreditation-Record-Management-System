@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Edit, Eye, Power, PowerOff } from "lucide-react"
+import { Edit, Trash2 } from "lucide-react"
 import { DataTable } from "@/components/shared/DataTable"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { AvatarInitials } from "@/components/shared/AvatarInitials"
@@ -19,14 +19,14 @@ import { type UserWithCounts } from "@/actions/user.actions"
 interface UsersTableProps {
   data: UserWithCounts[]
   onEdit: (user: UserWithCounts) => void
-  onToggleStatus: (user: UserWithCounts) => void
+  onDelete: (user: UserWithCounts) => void
 }
 
-export function UsersTable({ data, onEdit, onToggleStatus }: UsersTableProps) {
+export function UsersTable({ data, onEdit, onDelete }: UsersTableProps) {
   const columns: ColumnDef<UserWithCounts>[] = [
     {
       accessorKey: "name",
-      header: "Faculty",
+      header: "User",
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
           <AvatarInitials name={row.original.name} size="md" />
@@ -36,6 +36,19 @@ export function UsersTable({ data, onEdit, onToggleStatus }: UsersTableProps) {
           </div>
         </div>
       ),
+    },
+    {
+      accessorKey: "role",
+      header: "Role",
+      cell: ({ row }) => {
+        const role = row.original.role
+        const color = role === "ADMIN" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
+        return (
+          <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${color}`}>
+            {role}
+          </span>
+        )
+      },
     },
     {
       accessorKey: "department",
@@ -50,17 +63,6 @@ export function UsersTable({ data, onEdit, onToggleStatus }: UsersTableProps) {
       cell: ({ row }) => (
         <span className="text-sm text-slate-500">{row.getValue("designation")}</span>
       ),
-    },
-    {
-      accessorKey: "assignedAreas",
-      header: "Assigned Areas",
-      cell: ({ row }) => {
-        const count = row.getValue("assignedAreas") as number
-        if (count === 0) {
-          return <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-medium">None</span>
-        }
-        return <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-bold">{count}</span>
-      },
     },
     {
       accessorKey: "status",
@@ -85,7 +87,6 @@ export function UsersTable({ data, onEdit, onToggleStatus }: UsersTableProps) {
       id: "actions",
       header: () => <div className="text-right">Actions</div>,
       cell: ({ row }) => {
-        const isActive = row.original.status === "ACTIVE"
         return (
           <div className="flex items-center justify-end gap-1">
             <TooltipProvider>
@@ -95,18 +96,7 @@ export function UsersTable({ data, onEdit, onToggleStatus }: UsersTableProps) {
                     <Edit className="w-4 h-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent><p>Edit Faculty</p></TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600">
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent><p>View Assignments</p></TooltipContent>
+                <TooltipContent><p>Edit User</p></TooltipContent>
               </Tooltip>
             </TooltipProvider>
 
@@ -116,13 +106,13 @@ export function UsersTable({ data, onEdit, onToggleStatus }: UsersTableProps) {
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className={`h-8 w-8 ${isActive ? 'text-slate-400 hover:text-red-600 hover:bg-red-50' : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'}`}
-                    onClick={() => onToggleStatus(row.original)}
+                    className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                    onClick={() => onDelete(row.original)}
                   >
-                    {isActive ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent><p>{isActive ? 'Deactivate' : 'Activate'}</p></TooltipContent>
+                <TooltipContent><p>Delete Account</p></TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>

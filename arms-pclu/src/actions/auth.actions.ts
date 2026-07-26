@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { prisma } from "@/lib/prisma"
-import { requireAdminOrThrow, requireUser } from "@/lib/auth/getUser"
+import { requireAdminOrThrow, requireAdminOrDean, requireUser } from "@/lib/auth/getUser"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import {
@@ -36,13 +36,18 @@ function correlationId(): string {
 
 // ─── CREATE FACULTY ACCOUNT (Admin only) ──────────────────────────────────────
 export async function createFacultyAccount(
-  formData: z.infer<typeof CreateFacultySchema>
+  formData: z.infer<typeof CreateFacultySchema>,
+  targetRole: "FACULTY" | "ADMIN" = "FACULTY"
 ): Promise<ActionResult<{ id: string; name: string; email: string }>> {
   const cid = correlationId()
   let createdAuthUserId: string | null = null
 
   try {
-    const admin = await requireAdminOrThrow()
+    const admin = await requireAdminOrDean()
+    
+    if (targetRole === "ADMIN" && admin.role !== "ADMIN") {
+      return { error: "Insufficient permissions to create an admin account." }
+    }
 
     const validated = CreateFacultySchema.parse({
       ...formData,
@@ -151,7 +156,7 @@ export async function createFacultyAccount(
         authId: authUserId,
         name: validated.name,
         email: validated.email,
-        role: "FACULTY",
+        role: targetRole,
         department: validated.department,
         designation: validated.designation,
         phone: validated.phone ? sanitizeString(validated.phone) : null,

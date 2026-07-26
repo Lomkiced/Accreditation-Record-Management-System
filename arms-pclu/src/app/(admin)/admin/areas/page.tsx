@@ -26,13 +26,7 @@ export default function AreasPage() {
         title="Accreditation Areas"
         subtitle="Manage PACUCOA areas, criteria, and indicators"
         actions={
-          <Button 
-            className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={() => setIsModalOpen(true)}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Area
-          </Button>
+          null
         }
       />
 
@@ -71,7 +65,7 @@ export default function AreasPage() {
             </div>
           ) : (
             filteredAreas.map((area) => (
-              <AreaCard key={area.id} area={area} />
+              <AreaCard key={area.id} area={area} mode="admin" />
             ))
           )}
         </div>

@@ -6,7 +6,7 @@ import { useAuthStore } from "@/store/authStore"
 
 interface AuthGuardProps {
   children: React.ReactNode
-  requiredRole?: "ADMIN" | "FACULTY"
+  requiredRole?: "ADMIN" | "DEAN" | "FACULTY"
 }
 
 export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
@@ -26,7 +26,11 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
 
     if (requiredRole && user.role !== requiredRole) {
       const fallback =
-        user.role === "ADMIN" ? "/admin/dashboard" : "/faculty/dashboard"
+        user.role === "ADMIN"
+          ? "/admin/dashboard"
+          : user.role === "DEAN"
+            ? "/dean/dashboard"
+            : "/faculty/dashboard"
       router.replace(fallback)
       return
     }

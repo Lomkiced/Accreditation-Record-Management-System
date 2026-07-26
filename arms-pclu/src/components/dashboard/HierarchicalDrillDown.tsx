@@ -257,7 +257,7 @@ const AREA_ACCENT_COLORS = [
   { bg: "bg-teal-500",   light: "bg-teal-50",    border: "border-teal-200",   text: "text-teal-700"   },
 ]
 
-export function HierarchicalDrillDown() {
+export function HierarchicalDrillDown({ showPercentages = true }: { showPercentages?: boolean }) {
   const [areas, setAreas] = React.useState<AreaWithHierarchy[]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
@@ -371,7 +371,7 @@ export function HierarchicalDrillDown() {
                         </p>
                       </div>
                     </div>
-                    <ComplianceRing percent={stats.compliancePercent} />
+                    {showPercentages && <ComplianceRing percent={stats.compliancePercent} />}
                   </div>
                 </div>
               </AccordionTrigger>

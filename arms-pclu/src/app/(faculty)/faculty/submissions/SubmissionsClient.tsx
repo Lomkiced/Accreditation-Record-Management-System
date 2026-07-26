@@ -15,6 +15,7 @@ import {
   Tag,
   Loader2,
   Send,
+  Archive,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -24,11 +25,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { DocumentUploadSheet } from "@/components/documents/DocumentUploadSheet"
+import { NewVersionUploadSheet } from "@/components/documents/NewVersionUploadSheet"
 import type { DocumentWithMappings } from "@/types/document.types"
 import { cn } from "@/lib/utils"
-import { deleteDocument } from "@/actions/document.actions"
-import { toast } from "sonner"
 import { useSubmitAllMappings } from "@/hooks/useSubmissions"
+import { useArchiveDocument } from "@/hooks/useArchives"
 
 // ─── Status Badge Configuration ────────────────────────────────────────────────
 const STATUS_CONFIG: Record<
@@ -66,28 +67,21 @@ interface SubmissionsClientProps {
 
 export function SubmissionsClient({ documents }: SubmissionsClientProps) {
   const [isUploadOpen, setIsUploadOpen] = React.useState(false)
+  const [isNewVersionOpen, setIsNewVersionOpen] = React.useState(false)
   const [selectedDocument, setSelectedDocument] = React.useState<DocumentWithMappings | null>(null)
   const [isDeleting, setIsDeleting] = React.useState<string | null>(null)
   
   const submitAllMappings = useSubmitAllMappings()
+  const archiveDocument = useArchiveDocument()
 
-  const handleDelete = async (docId: string) => {
-    if (!window.confirm("Are you sure you want to delete this document? This action cannot be undone.")) {
+  const handleArchive = (docId: string) => {
+    if (!window.confirm("Are you sure you want to archive this document? It will be moved to your Archives vault.")) {
       return
     }
     setIsDeleting(docId)
-    try {
-      const result = await deleteDocument(docId)
-      if (result.error) {
-        toast.error(result.error)
-      } else {
-        toast.success("Document deleted successfully.")
-      }
-    } catch (err) {
-      toast.error("Failed to delete document.")
-    } finally {
-      setIsDeleting(null)
-    }
+    archiveDocument.mutate(docId, {
+      onSettled: () => setIsDeleting(null)
+    })
   }
 
   return (
@@ -259,6 +253,18 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
                                   <span>Submit for Review</span>
                                 </DropdownMenuItem>
                               )}
+                              {doc.mappings.some(m => m.status === "RETURNED") && (
+                                <DropdownMenuItem
+                                  onSelect={() => {
+                                    setSelectedDocument(doc)
+                                    setIsNewVersionOpen(true)
+                                  }}
+                                  className="cursor-pointer font-medium text-amber-600 focus:text-amber-700 focus:bg-amber-50"
+                                >
+                                  <UploadCloud className="mr-2 h-4 w-4" />
+                                  <span>Upload New Version</span>
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem
                                 onSelect={() => {
                                   setSelectedDocument(doc)
@@ -270,11 +276,11 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
                                 <span>Edit Tags / Resume</span>
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onSelect={() => handleDelete(doc.id)}
-                                className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                                onSelect={() => handleArchive(doc.id)}
+                                className="cursor-pointer text-amber-600 focus:text-amber-700 focus:bg-amber-50"
                               >
-                                <Trash className="mr-2 h-4 w-4" />
-                                <span>Delete Document</span>
+                                <Archive className="mr-2 h-4 w-4" />
+                                <span>Archive Document</span>
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -295,6 +301,15 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
         initialDocument={selectedDocument}
         onClose={() => {
           setIsUploadOpen(false)
+          setSelectedDocument(null)
+        }}
+      />
+      
+      <NewVersionUploadSheet
+        open={isNewVersionOpen}
+        document={selectedDocument}
+        onClose={() => {
+          setIsNewVersionOpen(false)
           setSelectedDocument(null)
         }}
       />

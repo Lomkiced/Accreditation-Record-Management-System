@@ -20,9 +20,10 @@ import {
 
 interface CriterionListProps {
   areaId: string
+  mode?: "dean" | "admin"
 }
 
-export function CriterionList({ areaId }: CriterionListProps) {
+export function CriterionList({ areaId, mode = "dean" }: CriterionListProps) {
   const { data: criteria, isLoading, isError } = useCriteria(areaId)
   const deleteCriterion = useDeleteCriterion(areaId)
 
@@ -39,6 +40,7 @@ export function CriterionList({ areaId }: CriterionListProps) {
   }
 
   const getCompletionPill = (completion: number) => {
+    if (mode === "dean") return null
     if (completion === 100)
       return (
         <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium">
@@ -57,6 +59,8 @@ export function CriterionList({ areaId }: CriterionListProps) {
       </span>
     )
   }
+
+
 
   if (isLoading) {
     return (
@@ -99,29 +103,33 @@ export function CriterionList({ areaId }: CriterionListProps) {
 
                   <div className="h-4 w-px bg-slate-200 mx-1" />
 
-                  <Link href={`/admin/areas/${areaId}`}>
+                  <Link href={mode === "admin" ? `/admin/areas/${areaId}` : `/dean/areas/${areaId}`}>
                     <span className="text-xs text-blue-600 hover:underline cursor-pointer mr-2 font-medium">
                       View Indicators
                     </span>
                   </Link>
 
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-slate-400 hover:text-blue-600"
-                    onClick={() => setEditTarget(criterion)}
-                  >
-                    <Edit className="w-3 h-3" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-slate-400 hover:text-red-500"
-                    disabled={deleteCriterion.isPending}
-                    onClick={() => setDeleteTarget(criterion)}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
+                  {mode === "dean" && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-slate-400 hover:text-blue-600"
+                        onClick={() => setEditTarget(criterion)}
+                      >
+                        <Edit className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-slate-400 hover:text-red-500"
+                        disabled={deleteCriterion.isPending}
+                        onClick={() => setDeleteTarget(criterion)}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             )
@@ -133,15 +141,17 @@ export function CriterionList({ areaId }: CriterionListProps) {
         )}
       </div>
 
-      <Button
-        variant="outline"
-        size="sm"
-        className="text-blue-600 border-blue-200 hover:bg-blue-50 h-8"
-        onClick={() => setAddOpen(true)}
-      >
-        <Plus className="w-4 h-4 mr-1" />
-        Add Criterion
-      </Button>
+      {mode === "dean" && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-blue-600 border-blue-200 hover:bg-blue-50 h-8"
+          onClick={() => setAddOpen(true)}
+        >
+          <Plus className="w-4 h-4 mr-1" />
+          Add Criterion
+        </Button>
+      )}
 
       {/* Add modal */}
       <CriterionFormModal

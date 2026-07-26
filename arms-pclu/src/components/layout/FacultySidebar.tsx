@@ -6,8 +6,9 @@ import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
   FolderOpen,
-  FileCheck,
+  FileText,
   BookMarked,
+  Archive,
   Bell,
   UserCircle,
   LogOut,
@@ -20,7 +21,8 @@ import type { StoredUser } from "@/store/authStore"
 const navItems = [
   { name: "Dashboard",       href: "/faculty/dashboard",    icon: LayoutDashboard },
   { name: "My Areas",        href: "/faculty/my-areas",     icon: FolderOpen },
-  { name: "My Submissions",  href: "/faculty/submissions",  icon: FileCheck },
+  { name: "My Submissions",  href: "/faculty/submissions",  icon: FileText },
+  { name: "Archives",        href: "/faculty/archives",     icon: Archive },
   { name: "Logbook",         href: "/faculty/logbook",      icon: BookMarked },
   { name: "Notifications",   href: "/faculty/notifications", icon: Bell },
   { name: "Profile",         href: "/faculty/profile",      icon: UserCircle },

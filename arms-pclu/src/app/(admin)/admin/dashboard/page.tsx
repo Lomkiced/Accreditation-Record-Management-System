@@ -69,10 +69,9 @@ export default async function AdminDashboardPage() {
     day: "numeric",
   })
 
-  // Parallel data fetching — all three queries run simultaneously
-  const [stats, pendingSubmissions, recentLogs] = await Promise.all([
+  // Parallel data fetching
+  const [stats, recentLogs] = await Promise.all([
     getDashboardStats(),
-    getPendingSubmissions(),
     getRecentAuditLogs(),
   ])
 
@@ -96,7 +95,7 @@ export default async function AdminDashboardPage() {
         <StatCard
           title="Pending Reviews"
           value={stats.pendingReviews}
-          subtitle="Awaiting your evaluation"
+          subtitle="Awaiting evaluation"
           icon={Clock}
           color="amber"
         />
@@ -112,6 +111,7 @@ export default async function AdminDashboardPage() {
               : undefined
           }
         />
+
         <StatCard
           title="Active Faculty"
           value={stats.activeFaculty}
@@ -136,100 +136,8 @@ export default async function AdminDashboardPage() {
         <HierarchicalDrillDown />
       </div>
 
-      {/* ── Bottom Row: Pending Submissions + Recent Activity ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-
-        {/* Pending Submissions */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-          <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-            <h3 className="text-base font-semibold text-slate-800 flex items-center gap-2">
-              Pending Submissions
-              {stats.pendingReviews > 0 && (
-                <span className="bg-amber-100 text-amber-700 text-xs py-0.5 px-2 rounded-full font-bold">
-                  {stats.pendingReviews}
-                </span>
-              )}
-            </h3>
-          </div>
-
-          <div className="flex-1 overflow-x-auto">
-            {pendingSubmissions.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-                <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mb-3">
-                  <CheckCircle2 className="w-6 h-6 text-emerald-500" />
-                </div>
-                <p className="text-sm font-semibold text-slate-700">All caught up!</p>
-                <p className="text-xs text-slate-400 mt-1">No submissions awaiting review.</p>
-              </div>
-            ) : (
-              <table className="w-full text-sm text-left">
-                <thead className="bg-slate-50 text-slate-500 text-xs uppercase border-b border-slate-100">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Document</th>
-                    <th className="px-4 py-3 font-medium">Faculty</th>
-                    <th className="px-4 py-3 font-medium">Area</th>
-                    <th className="px-4 py-3 font-medium">Status</th>
-                    <th className="px-4 py-3 font-medium">Date</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {pendingSubmissions.map((sub) => (
-                    <tr key={sub.id} className="hover:bg-slate-50 transition-colors">
-                      {/* Document */}
-                      <td className="px-4 py-3 max-w-[180px]">
-                        <div className="flex items-start gap-2">
-                          <FileText className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
-                          <div className="min-w-0">
-                            <p className="font-medium text-slate-900 truncate text-xs">
-                              {sub.document.title}
-                            </p>
-                            <p className="text-[10px] text-slate-400 truncate">
-                              {sub.indicator.criterion.name}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      {/* Faculty */}
-                      <td className="px-4 py-3 text-slate-700 text-xs whitespace-nowrap">
-                        {sub.user.name}
-                      </td>
-                      {/* Area */}
-                      <td className="px-4 py-3 text-xs whitespace-nowrap">
-                        <span className="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full text-[10px] font-semibold">
-                          {sub.indicator.criterion.area.name}
-                        </span>
-                      </td>
-                      {/* Status */}
-                      <td className="px-4 py-3">
-                        <StatusPill status={sub.status} />
-                      </td>
-                      {/* Date */}
-                      <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">
-                        {new Date(sub.createdAt).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-
-          <div className="p-3 border-t border-slate-100 bg-slate-50/50 text-center">
-            <Link
-              href="/admin/submissions"
-              className="text-xs text-blue-600 hover:underline font-medium inline-flex items-center gap-1"
-            >
-              View all submissions
-              <ChevronRight className="w-3 h-3" />
-            </Link>
-          </div>
-        </div>
-
-        {/* Recent System Activity */}
+      {/* ── Bottom Row: Recent Activity ── */}
+      <div className="grid grid-cols-1 gap-4">
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
           <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
             <h3 className="text-base font-semibold text-slate-800 flex items-center gap-2">

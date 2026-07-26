@@ -22,9 +22,10 @@ import { AreaWithHierarchy } from "@/actions/area.actions"
 
 interface AreaCardProps {
   area: AreaWithHierarchy
+  mode?: "dean" | "admin"
 }
 
-export function AreaCard({ area }: AreaCardProps) {
+export function AreaCard({ area, mode = "dean" }: AreaCardProps) {
   const [isExpanded, setIsExpanded] = React.useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
@@ -61,11 +62,18 @@ export function AreaCard({ area }: AreaCardProps) {
 
   const completion = totalIndicators === 0 ? 0 : Math.round((approvedIndicators / totalIndicators) * 100)
 
-  const getCompletionPill = (completion: number) => {
+  const getCompletionPill = () => {
+    if (mode === "admin") {
+      if (totalIndicators === 0) return <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">No Indicators</span>
+      if (completion === 100) return <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">100% Complete</span>
+      if (completion > 0) return <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">{completion}% Partial</span>
+      return <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">0%</span>
+    }
+    
     if (totalIndicators === 0) return <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">No Indicators</span>
-    if (completion === 100) return <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">100% Complete</span>
-    if (completion > 0) return <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">{completion}% Partial</span>
-    return <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">0%</span>
+    if (approvedIndicators === totalIndicators && totalIndicators > 0) return <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">{approvedIndicators}/{totalIndicators} docs</span>
+    if (approvedIndicators > 0) return <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">{approvedIndicators}/{totalIndicators} docs</span>
+    return <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">0/{totalIndicators} docs</span>
   }
 
   return (
@@ -83,26 +91,28 @@ export function AreaCard({ area }: AreaCardProps) {
         </span>
         
         <div className="ml-auto flex items-center gap-3">
-          {getCompletionPill(completion)}
+          {getCompletionPill()}
           
-          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8 text-slate-400 hover:text-blue-600"
-              onClick={() => setIsEditModalOpen(true)}
-            >
-              <Edit className="w-4 h-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8 text-slate-400 hover:text-red-500"
-              onClick={() => setIsDeleteDialogOpen(true)}
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
+          {mode === "dean" && (
+            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 text-slate-400 hover:text-blue-600"
+                onClick={() => setIsEditModalOpen(true)}
+              >
+                <Edit className="w-4 h-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 text-slate-400 hover:text-red-500"
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
 
           <motion.div
             animate={{ rotate: isExpanded ? 180 : 0 }}
@@ -126,7 +136,7 @@ export function AreaCard({ area }: AreaCardProps) {
             transition={{ duration: 0.2, ease: "easeInOut" }}
           >
             <div className="bg-[#F8FAFC] border-t border-slate-200 p-4">
-              <CriterionList areaId={area.id} />
+              <CriterionList areaId={area.id} mode={mode} />
             </div>
           </motion.div>
         )}

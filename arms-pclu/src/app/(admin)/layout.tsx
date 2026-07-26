@@ -1,6 +1,6 @@
 import { AuthGuard } from "@/components/auth/AuthGuard"
 import { AuthInitializer } from "@/components/auth/AuthInitializer"
-import { AdminLayoutInner } from "@/components/layout/AdminLayoutInner"
+import { NewAdminLayoutInner } from "@/components/layout/NewAdminLayoutInner"
 
 export default function AdminLayout({
   children,
@@ -10,7 +10,7 @@ export default function AdminLayout({
   return (
     <AuthInitializer>
       <AuthGuard requiredRole="ADMIN">
-        <AdminLayoutInner>{children}</AdminLayoutInner>
+        <NewAdminLayoutInner>{children}</NewAdminLayoutInner>
       </AuthGuard>
     </AuthInitializer>
   )

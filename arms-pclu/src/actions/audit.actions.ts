@@ -1,7 +1,7 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { requireAdmin } from "@/lib/auth/getUser"
+import { requireAdminOrDeanOrThrow } from "@/lib/auth/getUser"
 
 type ActionResult<T = undefined> =
   | { success: true; data?: T; error?: never }
@@ -14,11 +14,12 @@ export type AuditLogWithUser = {
   action: string
   module: string
   details: string
+  rawDate: string
 }
 
 export async function getAuditLogs(): Promise<ActionResult<AuditLogWithUser[]>> {
   try {
-    await requireAdmin()
+    await requireAdminOrDeanOrThrow()
 
     const logs = await prisma.auditLog.findMany({
       include: {
@@ -58,6 +59,7 @@ export async function getAuditLogs(): Promise<ActionResult<AuditLogWithUser[]>> 
         action: log.action.replace(/_/g, " "),
         module: log.module.replace(/_/g, " "),
         details: detailsString,
+        rawDate: log.createdAt.toISOString(),
       }
     })
 
