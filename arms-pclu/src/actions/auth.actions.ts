@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { prisma } from "@/lib/prisma"
-import { requireAdminOrThrow, requireAdminOrDean, requireUser } from "@/lib/auth/getUser"
+import { requireAdminOrThrow, requireAdminOrDean, requireUser, requireAdminOrDeanOrThrow } from "@/lib/auth/getUser"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import {
@@ -45,8 +45,8 @@ export async function createFacultyAccount(
   try {
     const admin = await requireAdminOrDean()
     
-    if (targetRole === "ADMIN" && admin.role !== "ADMIN") {
-      return { error: "Insufficient permissions to create an admin account." }
+    if (targetRole !== "FACULTY" && admin.role !== "ADMIN") {
+      return { error: "Insufficient permissions to create this account type." }
     }
 
     const validated = CreateFacultySchema.parse({
@@ -182,6 +182,7 @@ export async function createFacultyAccount(
     })
 
     revalidatePath("/admin/users")
+    revalidatePath("/dean/users")
     return {
       success: true,
       data: { id: newUser.id, name: newUser.name, email: newUser.email },
@@ -238,12 +239,16 @@ export async function toggleFacultyStatus(
   const cid = correlationId()
 
   try {
-    const admin = await requireAdminOrThrow()
+    const admin = await requireAdminOrDeanOrThrow()
 
     const targetUser = await prisma.user.findUnique({
       where: { id: userId },
     })
     if (!targetUser) return { error: "User not found." }
+    
+    if (admin.role === "DEAN" && targetUser.role !== "FACULTY") {
+      return { error: "Insufficient permissions to modify this account type." }
+    }
 
     let adminSupabase
     try {
@@ -284,6 +289,7 @@ export async function toggleFacultyStatus(
     })
 
     revalidatePath("/admin/users")
+    revalidatePath("/dean/users")
     return { success: true }
   } catch (error) {
     if (isNextRedirectError(error)) throw error
@@ -420,7 +426,7 @@ export async function resetFacultyPassword(
   const cid = correlationId()
 
   try {
-    const admin = await requireAdminOrThrow()
+    const admin = await requireAdminOrDeanOrThrow()
 
     if (newPassword.length < 8) {
       return { error: "Password must be at least 8 characters." }
@@ -430,6 +436,10 @@ export async function resetFacultyPassword(
       where: { id: userId },
     })
     if (!targetUser) return { error: "User not found." }
+
+    if (admin.role === "DEAN" && targetUser.role !== "FACULTY") {
+      return { error: "Insufficient permissions to modify this account type." }
+    }
 
     let adminSupabase
     try {
@@ -489,7 +499,16 @@ export async function updateFacultyProfile(
   const cid = correlationId()
 
   try {
-    const admin = await requireAdminOrThrow()
+    const admin = await requireAdminOrDeanOrThrow()
+    
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+    })
+    if (!targetUser) return { error: "User not found." }
+
+    if (admin.role === "DEAN" && targetUser.role !== "FACULTY") {
+      return { error: "Insufficient permissions to modify this account type." }
+    }
 
     const validated = UpdateProfileSchema.parse({
       name: sanitizeName(formData.name),
@@ -519,6 +538,7 @@ export async function updateFacultyProfile(
     })
 
     revalidatePath("/admin/users")
+    revalidatePath("/dean/users")
     return { success: true }
   } catch (error) {
     if (isNextRedirectError(error)) throw error

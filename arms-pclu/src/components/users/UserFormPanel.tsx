@@ -35,12 +35,14 @@ interface UserFormPanelProps {
   open: boolean
   onClose: () => void
   user?: UserWithCounts
+  allowedRoles?: Array<"ADMIN" | "DEAN" | "FACULTY">
 }
 
-export function UserFormPanel({ open, onClose, user }: UserFormPanelProps) {
+export function UserFormPanel({ open, onClose, user, allowedRoles = ["ADMIN", "DEAN", "FACULTY"] }: UserFormPanelProps) {
   const isEdit = !!user
   const [showPassword, setShowPassword] = React.useState(false)
-  const [selectedRole, setSelectedRole] = React.useState<"ADMIN" | "DEAN" | "FACULTY">(user?.role ?? "DEAN")
+  const defaultRole = allowedRoles.length === 1 ? allowedRoles[0] : "FACULTY"
+  const [selectedRole, setSelectedRole] = React.useState<"ADMIN" | "DEAN" | "FACULTY">(user?.role ?? defaultRole)
   
   // Password Reset State
   const [isResettingPassword, setIsResettingPassword] = React.useState(false)
@@ -76,7 +78,7 @@ export function UserFormPanel({ open, onClose, user }: UserFormPanelProps) {
           password: "",
         })
       } else {
-        setSelectedRole("DEAN")
+        setSelectedRole(defaultRole)
         form.reset({
           name: "",
           email: "",
@@ -87,7 +89,7 @@ export function UserFormPanel({ open, onClose, user }: UserFormPanelProps) {
         })
       }
     }
-  }, [open, user, form])
+  }, [open, user, form, defaultRole])
 
   const generatePassword = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*"
@@ -179,13 +181,14 @@ export function UserFormPanel({ open, onClose, user }: UserFormPanelProps) {
             {!isEdit && (
               <div className="space-y-2">
                 <Label>Role <span className="text-red-500">*</span></Label>
-                <Select value={selectedRole} onValueChange={(v: any) => setSelectedRole(v)}>
-                  <SelectTrigger className="w-full bg-white border-slate-200">
+                <Select value={selectedRole} onValueChange={(v: any) => setSelectedRole(v)} disabled={allowedRoles.length === 1}>
+                  <SelectTrigger className="w-full bg-white border-slate-200 disabled:opacity-75 disabled:bg-slate-50">
                     <SelectValue placeholder="Select Role" />
                   </SelectTrigger>
                   <SelectContent className="bg-white shadow-lg border-slate-200">
-                    <SelectItem value="ADMIN">Administrator</SelectItem>
-                    <SelectItem value="DEAN">Dean</SelectItem>
+                    {allowedRoles.includes("ADMIN") && <SelectItem value="ADMIN">Administrator</SelectItem>}
+                    {allowedRoles.includes("DEAN") && <SelectItem value="DEAN">Dean</SelectItem>}
+                    {allowedRoles.includes("FACULTY") && <SelectItem value="FACULTY">Faculty</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>

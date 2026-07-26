@@ -1,7 +1,7 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { requireAdminOrDean, requireAdminOrThrow } from "@/lib/auth/getUser"
+import { requireAdminOrDean, requireAdminOrDeanOrThrow } from "@/lib/auth/getUser"
 import { Role } from "@prisma/client"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
@@ -46,11 +46,20 @@ export async function getUsers(roles: Role[] = ["FACULTY"]): Promise<UserWithCou
 
 export async function deleteUserAccount(userId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const admin = await requireAdminOrThrow()
+    const admin = await requireAdminOrDeanOrThrow()
     
-    const targetUser = await prisma.user.findUnique({ where: { id: userId } })
-    if (!targetUser) return { success: false, error: "User not found." }
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId }
+    })
     
+    if (!targetUser) {
+      return { success: false, error: "User not found in database." }
+    }
+    
+    // Deans can only delete Faculty
+    if (admin.role === "DEAN" && targetUser.role !== "FACULTY") {
+      return { success: false, error: "Insufficient permissions to delete this account type." }
+    }
     // Do not allow admin to delete themselves
     if (targetUser.id === admin.id) {
       return { success: false, error: "You cannot delete your own account." }

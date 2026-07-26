@@ -96,6 +96,7 @@ export default function UsersPage() {
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         user={editingUser}
+        allowedRoles={["FACULTY"]}
       />
 
       <ConfirmDialog 
