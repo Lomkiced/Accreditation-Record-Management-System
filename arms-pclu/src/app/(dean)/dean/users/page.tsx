@@ -8,17 +8,17 @@ import { Input } from "@/components/ui/input"
 import { UsersTable } from "@/components/users/UsersTable"
 import { UserFormPanel } from "@/components/users/UserFormPanel"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
-import { useUsers, useToggleUserStatus } from "@/hooks/useUsers"
+import { useUsers, useDeleteUser } from "@/hooks/useUsers"
 import type { UserWithCounts } from "@/actions/user.actions"
 import { toast } from "sonner"
 
 export default function UsersPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false)
   const [editingUser, setEditingUser] = React.useState<UserWithCounts | undefined>()
-  const [togglingUser, setTogglingUser] = React.useState<UserWithCounts | null>(null)
+  const [deletingUser, setDeletingUser] = React.useState<UserWithCounts | null>(null)
   
-  const { data: users = [], isLoading } = useUsers()
-  const { mutateAsync: toggleStatus, isPending: isToggling } = useToggleUserStatus()
+  const { data: users = [], isLoading } = useUsers(["FACULTY"])
+  const { mutateAsync: deleteUser, isPending: isDeleting } = useDeleteUser()
 
   const handleAdd = () => {
     setEditingUser(undefined)
@@ -30,19 +30,18 @@ export default function UsersPage() {
     setIsModalOpen(true)
   }
 
-  const handleToggleConfirm = async () => {
-    if (!togglingUser) return
+  const handleDeleteConfirm = async () => {
+    if (!deletingUser) return
     
-    const activate = togglingUser.status === "INACTIVE"
-    const result = await toggleStatus({ userId: togglingUser.id, activate })
+    const result = await deleteUser(deletingUser.id)
     
-    if (result.error) {
-      toast.error(result.error)
+    if (result && !result.success) {
+      toast.error(result.error || "Failed to delete user.")
     } else {
-      toast.success(`User successfully ${activate ? "activated" : "deactivated"}.`)
+      toast.success(`User ${deletingUser.name} has been permanently deleted.`)
     }
     
-    setTogglingUser(null)
+    setDeletingUser(null)
   }
 
   return (
@@ -88,7 +87,7 @@ export default function UsersPage() {
           <UsersTable 
             data={users} 
             onEdit={handleEdit}
-            onToggleStatus={setTogglingUser}
+            onDelete={setDeletingUser}
           />
         )}
       </div>
@@ -100,15 +99,13 @@ export default function UsersPage() {
       />
 
       <ConfirmDialog 
-        open={!!togglingUser}
-        onClose={() => setTogglingUser(null)}
-        onConfirm={handleToggleConfirm}
-        isPending={isToggling}
-        title={togglingUser?.status === "ACTIVE" ? `Deactivate ${togglingUser.name}?` : `Activate ${togglingUser?.name}?`}
-        description={togglingUser?.status === "ACTIVE" 
-          ? "They will lose access immediately but their data will be preserved." 
-          : "They will be able to log in and access their assignments again."}
-        type={togglingUser?.status === "ACTIVE" ? "warning" : "info"}
+        open={!!deletingUser}
+        onClose={() => setDeletingUser(null)}
+        onConfirm={handleDeleteConfirm}
+        isPending={isDeleting}
+        title={`Permanently delete ${deletingUser?.name}?`}
+        description="This action cannot be undone. This will permanently delete the faculty account from the database and authentication system."
+        type="warning"
       />
     </>
   )

@@ -85,7 +85,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
             </div>
           ) : results.length === 0 ? (
             <div className="py-14 text-center text-sm text-slate-500">
-              No documents found matching "{debouncedQuery}"
+              No documents found matching &quot;{debouncedQuery}&quot;
             </div>
           ) : (
             <div className="flex flex-col gap-1">

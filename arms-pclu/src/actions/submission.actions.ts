@@ -1,7 +1,7 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { requireUser, requireAdmin } from "@/lib/auth/getUser"
+import { requireUser, requireAdmin, requireAdminOrDean } from "@/lib/auth/getUser"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { sanitizeString } from "@/lib/sanitize"

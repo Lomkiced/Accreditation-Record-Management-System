@@ -57,7 +57,7 @@ export function NewVersionUploadSheet({
       form.reset({
         title: document.title,
         description: document.description ?? "",
-        documentDate: new Date(document.documentDate).toISOString().split("T")[0],
+        documentDate: new Date(document.documentDate || new Date()).toISOString().split("T")[0],
       })
       setSelectedFile(null)
       setUploadProgress(0)
