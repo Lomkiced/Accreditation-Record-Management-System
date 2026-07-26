@@ -123,10 +123,10 @@ export function AssignmentModal({
                   setSelectedCriterionIds([]) // reset criteria when area changes
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full bg-white border-slate-200">
                   <SelectValue placeholder="Choose an area..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white shadow-lg border-slate-200">
                   {areas?.map((area) => (
                     <SelectItem key={area.id} value={area.id}>
                       Area {area.order + 1}: {area.name}
