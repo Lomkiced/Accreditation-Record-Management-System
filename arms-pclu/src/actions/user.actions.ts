@@ -75,11 +75,25 @@ export async function deleteUserAccount(userId: string): Promise<{ success: bool
     
     const { error: authError } = await adminSupabase.auth.admin.deleteUser(targetUser.authId)
     if (authError) {
-      console.error("[deleteUserAccount] Supabase delete error:", authError.message)
-      return { success: false, error: "Failed to delete user from authentication provider." }
+      console.warn("[deleteUserAccount] Supabase Auth delete error (proceeding anyway):", authError.message)
     }
 
-    // 2. Delete from Prisma
+    // 2. Delete all documents from Supabase Storage
+    try {
+      const bucket = process.env.NEXT_PUBLIC_SUPABASE_BUCKET ?? "documents"
+      const { data: files } = await adminSupabase.storage.from(bucket).list(userId)
+      if (files && files.length > 0) {
+        const pathsToRemove = files.map(f => `${userId}/${f.name}`)
+        const { error: storageError } = await adminSupabase.storage.from(bucket).remove(pathsToRemove)
+        if (storageError) {
+          console.error("[deleteUserAccount] Storage removal error:", storageError.message)
+        }
+      }
+    } catch (storageErr) {
+      console.error("[deleteUserAccount] Failed to clear user storage:", storageErr)
+    }
+
+    // 3. Delete from Prisma (Cascades to Document, DocumentMapping, DocumentVersion, etc.)
     await prisma.user.delete({ where: { id: userId } })
     
     // Log audit

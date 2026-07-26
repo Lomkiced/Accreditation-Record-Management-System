@@ -105,7 +105,7 @@ export default function UsersPage() {
         onConfirm={handleDeleteConfirm}
         isPending={isDeleting}
         title={`Permanently delete ${deletingUser?.name}?`}
-        description={`This action cannot be undone. This will permanently delete the ${deletingUser?.role} account from the database and authentication system. All their associated audit logs will also be deleted.`}
+        description={`This action cannot be undone. This will permanently delete the ${deletingUser?.role} account from the database and authentication system. ALL uploaded documents provided by this user will also be permanently removed from the system.`}
         type="warning"
       />
     </>
