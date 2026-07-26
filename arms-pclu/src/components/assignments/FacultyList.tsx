@@ -18,9 +18,10 @@ interface FacultyListProps {
   faculties: Faculty[]
   selectedId: string | null
   onSelect: (faculty: Faculty) => void
+  isLoading?: boolean
 }
 
-export function FacultyList({ faculties, selectedId, onSelect }: FacultyListProps) {
+export function FacultyList({ faculties, selectedId, onSelect, isLoading }: FacultyListProps) {
   const [searchTerm, setSearchTerm] = React.useState("")
 
   const filtered = faculties.filter((f) => 
@@ -79,11 +80,16 @@ export function FacultyList({ faculties, selectedId, onSelect }: FacultyListProp
               )}
             </div>
           ))}
-          {filtered.length === 0 && (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-10 text-slate-500 space-y-3">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              <p className="text-sm">Loading faculty...</p>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="text-center py-6 text-sm text-slate-500">
               No faculty found.
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

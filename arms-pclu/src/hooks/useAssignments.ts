@@ -69,7 +69,11 @@ export function useCreateAssignment() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: Parameters<typeof createAssignment>[0]) => createAssignment({ ...data }),
+    mutationFn: async (data: Parameters<typeof createAssignment>[0]) => {
+      const result = await createAssignment({ ...data })
+      if (!result.success) throw new Error(result.error)
+      return result.data
+    },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: assignmentKeys.forFaculty(variables.userId),
@@ -94,7 +98,11 @@ export function useDeleteAssignment(userId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: deleteAssignment,
+    mutationFn: async (assignmentId: string) => {
+      const result = await deleteAssignment(assignmentId)
+      if (!result.success) throw new Error(result.error)
+      return result.data
+    },
     onMutate: async (assignmentId: string) => {
       await queryClient.cancelQueries({
         queryKey: assignmentKeys.forFaculty(userId),

@@ -66,32 +66,28 @@ export function AssignmentModal({
   const handleAssign = async () => {
     if (!selectedAreaId) return
 
-    // If no specific criteria selected, create an area-level assignment (criterionId: null)
-    if (selectedCriterionIds.length === 0) {
-      const result = await createAssignment.mutateAsync({
-        userId: facultyId,
-        areaId: selectedAreaId,
-        notes: notes || undefined,
-      })
-      if (result?.success) onClose()
-      return
-    }
-
-    // Create one assignment per selected criterion
-    const results = await Promise.all(
-      selectedCriterionIds.map((criterionId) =>
-        createAssignment.mutateAsync({
+    try {
+      if (selectedCriterionIds.length === 0) {
+        await createAssignment.mutateAsync({
           userId: facultyId,
           areaId: selectedAreaId,
-          criterionId,
           notes: notes || undefined,
         })
-      )
-    )
-
-    // Close if all succeeded
-    if (results.every((r) => r?.success)) {
+      } else {
+        await Promise.all(
+          selectedCriterionIds.map((criterionId) =>
+            createAssignment.mutateAsync({
+              userId: facultyId,
+              areaId: selectedAreaId,
+              criterionId,
+              notes: notes || undefined,
+            })
+          )
+        )
+      }
       onClose()
+    } catch (error) {
+      // Error is handled by onError in useCreateAssignment
     }
   }
 

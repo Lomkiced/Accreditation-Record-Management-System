@@ -26,6 +26,7 @@ export default function AssignmentsPage() {
             faculties={faculties}
             selectedId={selectedFaculty?.id || null}
             onSelect={setSelectedFaculty}
+            isLoading={isLoading}
           />
         </div>
         
