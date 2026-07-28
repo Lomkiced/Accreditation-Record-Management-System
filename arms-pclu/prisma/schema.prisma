@@ -95,6 +95,8 @@ model Document {
   user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  // Composite index for archive/submission filters
+  @@index([isArchived, userId])      // getArchivedDocuments + getDocumentsForRepository
   @@map("documents")
 }
 
@@ -119,6 +121,9 @@ model DocumentMapping {
   @@index([indicatorId])
   @@index([userId])
   @@index([status])
+  // Composite indexes for common query patterns
+  @@index([status, createdAt])      // getAllSubmissions order + filter
+  @@index([userId, status])          // getMySubmissions user + status filter
   @@map("document_mappings")
 }
 
@@ -213,6 +218,9 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  // Composite index for unread notification badge counts
+  @@index([userId, isRead])          // Count unread per user
+  @@index([userId, createdAt])       // Sort notifications by time per user
   @@map("notifications")
 }
 
@@ -228,6 +236,9 @@ model AuditLog {
 
   @@index([userId])
   @@index([targetId])
+  // Composite index for recent activity dashboard queries
+  @@index([createdAt])               // Dashboard recent activity sorted by time
+  @@index([userId, createdAt])       // Per-user audit log pagination
   @@map("audit_logs")
 }
 

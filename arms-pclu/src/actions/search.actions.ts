@@ -46,24 +46,31 @@ export async function searchDocuments(query: string, areaId?: string): Promise<S
 
   const mappings = await prisma.documentMapping.findMany({
     where: whereClause,
-    include: {
+    take: 20, // Limit to 20 results for quick search
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      status: true,
       document: {
-        include: {
-          user: { select: { name: true } }
-        }
+        select: {
+          id: true,
+          title: true,
+          fileName: true,
+          fileUrl: true,
+          createdAt: true,
+          user: { select: { name: true } },
+        },
       },
       indicator: {
-        include: {
+        select: {
           criterion: {
-            include: {
-              area: { select: { name: true } }
-            }
-          }
-        }
-      }
+            select: {
+              area: { select: { name: true } },
+            },
+          },
+        },
+      },
     },
-    take: 20, // Limit to 20 results for quick search
-    orderBy: { createdAt: 'desc' }
   })
 
   // Map to distinct SearchResult

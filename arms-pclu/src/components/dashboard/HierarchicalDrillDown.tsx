@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useQuery } from "@tanstack/react-query"
 import {
   ChevronRight,
   FileText,
@@ -25,6 +26,10 @@ import { cn } from "@/lib/utils"
 import { getAreasWithHierarchy } from "@/actions/document.actions"
 import type { AreaWithHierarchy, MappingStatus } from "@/types/document.types"
 import type { MappingStatus as PrismaMappingStatus } from "@prisma/client"
+
+// ─── React Query key ─────────────────────────────────────────────────────────
+const HIERARCHY_QUERY_KEY = ["areas", "hierarchy"] as const
+
 
 // ─── Status Badge helper ───────────────────────────────────────────────────────
 
@@ -258,25 +263,17 @@ const AREA_ACCENT_COLORS = [
 ]
 
 export function HierarchicalDrillDown({ showPercentages = true }: { showPercentages?: boolean }) {
-  const [areas, setAreas] = React.useState<AreaWithHierarchy[]>([])
-  const [loading, setLoading] = React.useState(true)
-  const [error, setError] = React.useState<string | null>(null)
-
-  React.useEffect(() => {
-    const load = async () => {
-      setLoading(true)
+  const { data: areas = [], isLoading, error } = useQuery({
+    queryKey: HIERARCHY_QUERY_KEY,
+    queryFn: async () => {
       const result = await getAreasWithHierarchy()
-      if (result.success && result.data) {
-        setAreas(result.data)
-      } else {
-        setError(result.error ?? "Failed to load hierarchy.")
-      }
-      setLoading(false)
-    }
-    load()
-  }, [])
+      if (!result.success || !result.data) throw new Error(result.error ?? "Failed to load hierarchy.")
+      return result.data as AreaWithHierarchy[]
+    },
+    staleTime: 1000 * 60 * 3, // 3 minutes — hierarchy changes infrequently
+  })
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-10 flex items-center justify-center">
         <Loader2 className="w-5 h-5 animate-spin text-slate-400 mr-2" />
@@ -289,7 +286,7 @@ export function HierarchicalDrillDown({ showPercentages = true }: { showPercenta
     return (
       <div className="bg-white rounded-xl border border-red-200 shadow-sm p-6 flex items-center gap-3">
         <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
-        <p className="text-sm text-red-600">{error}</p>
+        <p className="text-sm text-red-600">{error instanceof Error ? error.message : "Failed to load hierarchy."}</p>
       </div>
     )
   }

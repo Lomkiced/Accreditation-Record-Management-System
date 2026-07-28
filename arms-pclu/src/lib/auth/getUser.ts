@@ -1,3 +1,4 @@
+import { cache } from "react"
 import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
@@ -6,8 +7,9 @@ import type { User } from "@prisma/client"
 /**
  * Reads the current Supabase session and returns the
  * matching Prisma User record, or null if not authenticated.
+ * Wrapped in cache() to deduplicate requests within a single execution.
  */
-export async function getCurrentUser(): Promise<User | null> {
+export const getCurrentUser = cache(async (): Promise<User | null> => {
   try {
     const supabase = await createClient()
     const {
@@ -25,7 +27,7 @@ export async function getCurrentUser(): Promise<User | null> {
   } catch {
     return null
   }
-}
+})
 
 /**
  * Like getCurrentUser, but redirects to /login if not authenticated.
@@ -112,4 +114,3 @@ export async function requireAdminOrDeanOrThrow(): Promise<User> {
   }
   return user
 }
-

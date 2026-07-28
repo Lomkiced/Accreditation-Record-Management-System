@@ -499,15 +499,33 @@ export async function getAreasWithHierarchy(): Promise<
 
     const areas = await prisma.area.findMany({
       orderBy: { order: "asc" },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        order: true,
         criteria: {
           orderBy: { order: "asc" },
-          include: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            order: true,
             indicators: {
               orderBy: { order: "asc" },
-              include: {
+              select: {
+                id: true,
+                name: true,
+                requiredDocs: true,
+                ratingScale: true,
+                order: true,
                 mappings: {
-                  include: {
+                  select: {
+                    id: true,
+                    status: true,
+                    rating: true,
+                    remarks: true,
+                    createdAt: true,
                     document: {
                       select: {
                         id: true,
@@ -558,12 +576,33 @@ export async function getDocumentsForRepository(opts?: {
     const documents = await prisma.document.findMany({
       where: whereClause,
       orderBy: { createdAt: "desc" },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        fileUrl: true,
+        fileName: true,
+        fileSize: true,
+        documentDate: true,
+        version: true,
+        isArchived: true,
+        createdAt: true,
+        updatedAt: true,
+        userId: true,
         user: {
           select: { id: true, name: true, email: true, department: true },
         },
         mappings: {
-          include: {
+          select: {
+            id: true,
+            status: true,
+            rating: true,
+            remarks: true,
+            createdAt: true,
+            updatedAt: true,
+            indicatorId: true,
+            documentId: true,
+            userId: true,
             indicator: {
               select: {
                 id: true,
@@ -586,7 +625,10 @@ export async function getDocumentsForRepository(opts?: {
           },
         },
         tags: {
-          include: {
+          select: {
+            id: true,
+            tagId: true,
+            documentId: true,
             tag: { select: { id: true, name: true, color: true } },
           },
         },
@@ -707,15 +749,17 @@ export async function getIndicatorsForSelector(): Promise<
     // Base query constraints
     let areaWhereClause: any = {}
 
-    // If the user is FACULTY, enforce strictly scoped Area assignments
+    // For FACULTY: fetch assignments ONCE and reuse to avoid duplicate DB calls
+    let facultyAssignments: { areaId: string; criterionId: string | null }[] = []
+
     if (currentUser.role === "FACULTY") {
-      const assignments = await prisma.assignment.findMany({
+      facultyAssignments = await prisma.assignment.findMany({
         where: { userId: currentUser.id },
         select: { areaId: true, criterionId: true },
       })
-      
-      const assignedAreaIds = Array.from(new Set(assignments.map(a => a.areaId)))
-      
+
+      const assignedAreaIds = Array.from(new Set(facultyAssignments.map((a) => a.areaId)))
+
       // If no assignments, they shouldn't be able to tag anything
       if (assignedAreaIds.length === 0) {
         return { success: true, data: [] }
@@ -751,34 +795,27 @@ export async function getIndicatorsForSelector(): Promise<
       },
     })
 
-    // If FACULTY, further filter criteria based on specific criterion assignments
+    // If FACULTY, further filter criteria using the already-fetched assignments
     let filteredAreas = areas
     if (currentUser.role === "FACULTY") {
-      const assignments = await prisma.assignment.findMany({
-        where: { userId: currentUser.id },
-        select: { areaId: true, criterionId: true },
-      })
+      filteredAreas = areas
+        .map((area) => {
+          const areaAssignments = facultyAssignments.filter((a) => a.areaId === area.id)
 
-      filteredAreas = areas.map(area => {
-        // Find assignments for this specific area
-        const areaAssignments = assignments.filter(a => a.areaId === area.id)
-        
-        // If there is ANY assignment for this area that has criterionId === null, 
-        // it means they are assigned to the ENTIRE area. They get all criteria.
-        const hasFullAreaAccess = areaAssignments.some(a => a.criterionId === null)
-        
-        if (hasFullAreaAccess) {
-          return area
-        }
+          // Full area access if any assignment has criterionId === null
+          const hasFullAreaAccess = areaAssignments.some((a) => a.criterionId === null)
+          if (hasFullAreaAccess) return area
 
-        // Otherwise, they only get the explicitly assigned criteria
-        const assignedCriterionIds = new Set(areaAssignments.map(a => a.criterionId).filter(Boolean))
-        
-        return {
-          ...area,
-          criteria: area.criteria.filter(crit => assignedCriterionIds.has(crit.id))
-        }
-      }).filter(area => area.criteria.length > 0)
+          // Otherwise only assigned criteria
+          const assignedCriterionIds = new Set(
+            areaAssignments.map((a) => a.criterionId).filter(Boolean)
+          )
+          return {
+            ...area,
+            criteria: area.criteria.filter((crit) => assignedCriterionIds.has(crit.id)),
+          }
+        })
+        .filter((area) => area.criteria.length > 0)
     }
 
     return { success: true, data: filteredAreas }

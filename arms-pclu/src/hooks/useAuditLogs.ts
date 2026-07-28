@@ -42,12 +42,10 @@ export function useAuditLogs() {
       if (!result.success) throw new Error(result.error)
       return result.data
     },
-    // The data is considered fresh for 30 seconds.
-    // However, if the Realtime WebSocket pushes an event, this is bypassed.
+    // Fresh for 30 seconds; Realtime WebSocket bypasses this on INSERT.
     staleTime: 1000 * 30,
-    
-    // Robust Fallback: Poll every 10 seconds in case Supabase Replication 
-    // is disabled on the AuditLog table or WebSocket connection drops.
-    refetchInterval: 10000,
+    // Longer fallback poll (60s) only if Realtime is unavailable.
+    // The Supabase channel subscription above handles real-time pushes.
+    refetchInterval: 60_000,
   })
 }

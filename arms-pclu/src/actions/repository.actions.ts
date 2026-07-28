@@ -37,21 +37,28 @@ export async function getApprovedDocumentsByArea(): Promise<AreaWithApprovedDocu
   // Fetch all APPROVED document mappings with their related data
   const approvedMappings = await prisma.documentMapping.findMany({
     where: { status: "APPROVED" },
-    include: {
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
       document: {
-        include: {
-          user: { select: { name: true } }
-        }
+        select: {
+          id: true,
+          title: true,
+          fileName: true,
+          fileUrl: true,
+          createdAt: true,
+          user: { select: { name: true } },
+        },
       },
       indicator: {
-        include: {
+        select: {
+          name: true,
           criterion: {
-            select: { name: true, areaId: true }
-          }
-        }
-      }
+            select: { name: true, areaId: true },
+          },
+        },
+      },
     },
-    orderBy: { createdAt: 'desc' }
   })
 
   // Group mappings by area, and then group by document within that area

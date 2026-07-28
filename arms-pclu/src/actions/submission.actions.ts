@@ -381,31 +381,66 @@ export async function getArchivedDocuments() {
   try {
     const currentUser = await requireUser()
     const documents = await prisma.document.findMany({
-      where: { 
+      where: {
         userId: currentUser.id,
-        isArchived: true
+        isArchived: true,
       },
-      include: {
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        fileUrl: true,
+        fileName: true,
+        fileSize: true,
+        documentDate: true,
+        version: true,
+        isArchived: true,
+        createdAt: true,
+        updatedAt: true,
+        userId: true,
         mappings: {
-          include: {
+          select: {
+            id: true,
+            status: true,
+            rating: true,
+            remarks: true,
+            createdAt: true,
+            updatedAt: true,
+            indicatorId: true,
+            documentId: true,
+            userId: true,
             indicator: {
-              include: {
+              select: {
+                id: true,
+                name: true,
+                requiredDocs: true,
+                order: true,
+                criterionId: true,
                 criterion: {
-                  include: {
-                    area: true
-                  }
-                }
-              }
-            }
-          }
+                  select: {
+                    id: true,
+                    name: true,
+                    order: true,
+                    areaId: true,
+                    area: {
+                      select: { id: true, name: true, order: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
         tags: {
-          include: {
-            tag: true
-          }
-        }
+          select: {
+            id: true,
+            tagId: true,
+            documentId: true,
+            tag: { select: { id: true, name: true, color: true } },
+          },
+        },
       },
-      orderBy: { updatedAt: "desc" }
     })
 
     return { success: true, data: documents }
@@ -421,13 +456,21 @@ export async function getMySubmissions() {
   try {
     const currentUser = await requireUser()
     const mappings = await prisma.documentMapping.findMany({
-      where: { 
+      where: {
         userId: currentUser.id,
-        document: {
-          isArchived: false
-        }
+        document: { isArchived: false },
       },
-      include: {
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        status: true,
+        rating: true,
+        remarks: true,
+        createdAt: true,
+        updatedAt: true,
+        documentId: true,
+        indicatorId: true,
+        userId: true,
         document: {
           select: {
             id: true,
@@ -452,7 +495,10 @@ export async function getMySubmissions() {
               },
             },
             tags: {
-              include: {
+              select: {
+                id: true,
+                tagId: true,
+                documentId: true,
                 tag: { select: { id: true, name: true, color: true } },
               },
             },
@@ -499,7 +545,16 @@ export async function getAllSubmissions() {
 
     const mappings = await prisma.documentMapping.findMany({
       orderBy: { createdAt: "desc" },
-      include: {
+      select: {
+        id: true,
+        status: true,
+        rating: true,
+        remarks: true,
+        createdAt: true,
+        updatedAt: true,
+        documentId: true,
+        indicatorId: true,
+        userId: true,
         user: { select: { name: true } },
         document: {
           select: {
@@ -525,7 +580,10 @@ export async function getAllSubmissions() {
               },
             },
             tags: {
-              include: {
+              select: {
+                id: true,
+                tagId: true,
+                documentId: true,
                 tag: { select: { id: true, name: true, color: true } },
               },
             },
