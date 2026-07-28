@@ -1,7 +1,7 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { requireAdmin, requireUser } from "@/lib/auth/getUser"
+import { requireAdminOrDeanOrThrow, requireUser } from "@/lib/auth/getUser"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { sanitizeString } from "@/lib/sanitize"
@@ -66,7 +66,7 @@ export async function createCriterion(
   formData: z.infer<typeof CriterionSchema>
 ): Promise<ActionResult<{ id: string }>> {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireAdminOrDeanOrThrow()
 
     const validated = CriterionSchema.parse({
       areaId: formData.areaId,
@@ -129,7 +129,7 @@ export async function updateCriterion(
   formData: z.infer<typeof UpdateCriterionSchema>
 ): Promise<ActionResult> {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireAdminOrDeanOrThrow()
 
     const validated = UpdateCriterionSchema.parse({
       name: sanitizeString(formData.name),
@@ -183,7 +183,7 @@ export async function deleteCriterion(
   criterionId: string
 ): Promise<ActionResult> {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireAdminOrDeanOrThrow()
 
     const existing = await prisma.criterion.findUnique({
       where: { id: criterionId },

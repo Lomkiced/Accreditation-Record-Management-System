@@ -1,7 +1,7 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { requireAdmin, requireUser } from "@/lib/auth/getUser"
+import { requireAdminOrDeanOrThrow, requireUser } from "@/lib/auth/getUser"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { sanitizeString } from "@/lib/sanitize"
@@ -71,7 +71,7 @@ export async function createIndicator(
   formData: z.infer<typeof IndicatorSchema>
 ): Promise<ActionResult<{ id: string }>> {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireAdminOrDeanOrThrow()
 
     const validated = IndicatorSchema.parse({
       criterionId: formData.criterionId,
@@ -141,7 +141,7 @@ export async function updateIndicator(
   formData: z.infer<typeof UpdateIndicatorSchema>
 ): Promise<ActionResult> {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireAdminOrDeanOrThrow()
 
     const validated = UpdateIndicatorSchema.parse({
       name: sanitizeString(formData.name),
@@ -197,7 +197,7 @@ export async function deleteIndicator(
   indicatorId: string
 ): Promise<ActionResult> {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireAdminOrDeanOrThrow()
 
     const existing = await prisma.indicator.findUnique({
       where: { id: indicatorId },

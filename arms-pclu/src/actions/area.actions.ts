@@ -1,7 +1,7 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { requireAdmin, requireUser } from "@/lib/auth/getUser"
+import { requireAdminOrDeanOrThrow, requireUser } from "@/lib/auth/getUser"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { sanitizeString } from "@/lib/sanitize"
@@ -88,7 +88,7 @@ export async function createArea(
   formData: z.infer<typeof AreaSchema>
 ): Promise<ActionResult<{ id: string }>> {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireAdminOrDeanOrThrow()
 
     const validated = AreaSchema.parse({
       name: sanitizeString(formData.name),
@@ -142,7 +142,7 @@ export async function updateArea(
   formData: z.infer<typeof AreaSchema>
 ): Promise<ActionResult> {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireAdminOrDeanOrThrow()
 
     const validated = AreaSchema.parse({
       name: sanitizeString(formData.name),
@@ -192,7 +192,7 @@ export async function updateArea(
 
 export async function deleteArea(areaId: string): Promise<ActionResult> {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireAdminOrDeanOrThrow()
 
     const existing = await prisma.area.findUnique({ where: { id: areaId } })
     if (!existing) return { error: "Area not found." }
@@ -227,7 +227,7 @@ export async function reorderAreas(
   orderedIds: string[]
 ): Promise<ActionResult> {
   try {
-    const admin = await requireAdmin()
+    const admin = await requireAdminOrDeanOrThrow()
 
     const validated = ReorderSchema.parse({ orderedIds })
 
