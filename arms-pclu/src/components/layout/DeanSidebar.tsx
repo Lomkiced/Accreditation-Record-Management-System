@@ -22,7 +22,7 @@ import type { StoredUser } from "@/store/authStore"
 
 const navItems = [
   { name: "Dashboard",       href: "/dean/dashboard",    icon: LayoutDashboard },
-  { name: "Areas & Criteria", href: "/dean/areas",       icon: BookOpen },
+  { name: "Areas & Sub-Areas", href: "/dean/areas",       icon: BookOpen },
   { name: "Assignments",     href: "/dean/assignments",   icon: UserCheck },
   { name: "Submissions",     href: "/dean/submissions",   icon: FileText },
   { name: "Repository",      href: "/dean/repository",    icon: Archive },

@@ -104,7 +104,7 @@ export default function MyAreaDetailPage({ params }: { params: { id: string } })
         {visibleCriteria.length === 0 ? (
           <div className="p-12 text-center text-slate-500 bg-white rounded-xl border border-slate-200 shadow-sm">
             <AlertCircle className="w-8 h-8 text-slate-300 mx-auto mb-3" />
-            <p>You have no criteria assigned in this area.</p>
+            <p>You have no sub-areas assigned in this area.</p>
           </div>
         ) : (
           visibleCriteria.map((criterion) => (
@@ -200,7 +200,7 @@ export default function MyAreaDetailPage({ params }: { params: { id: string } })
                                     }
                                   })}
                                 >
-                                  {submission.status === "DRAFT" ? "Continue Draft" : "Update Document"}
+                                  {submission.status === "DRAFT" ? "Continue Draft" : "Update Evidence"}
                                 </Button>
                               )}
                             </div>
@@ -219,7 +219,7 @@ export default function MyAreaDetailPage({ params }: { params: { id: string } })
                                 existingSubmission: null
                               })}
                             >
-                              <Upload className="w-4 h-4 mr-2" /> Upload Document
+                              <Upload className="w-4 h-4 mr-2" /> Upload Evidence
                             </Button>
                           </div>
                         )}

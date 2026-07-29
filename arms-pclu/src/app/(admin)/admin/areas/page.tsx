@@ -24,7 +24,7 @@ export default function AreasPage() {
     <>
       <PageHeader
         title="Accreditation Areas"
-        subtitle="Manage PACUCOA areas, criteria, and indicators"
+        subtitle="Manage PACUCOA areas, sub-areas, and indicators"
         actions={
           null
         }

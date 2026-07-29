@@ -72,7 +72,7 @@ export function AreaCard({ area, mode = "dean" }: AreaCardProps) {
       >
         <h3 className="font-semibold text-slate-800">{area.name}</h3>
         <span className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full ml-2 font-medium">
-          {criteriaCount} Criteria
+          {criteriaCount} Sub-Areas
         </span>
         
         <div className="ml-auto flex items-center gap-3">
@@ -140,7 +140,7 @@ export function AreaCard({ area, mode = "dean" }: AreaCardProps) {
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the area
-              <strong> {area.name}</strong> and all its associated criteria and indicators.
+              <strong> {area.name}</strong> and all its associated sub-areas and indicators.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

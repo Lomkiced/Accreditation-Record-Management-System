@@ -137,7 +137,7 @@ export function AssignmentModal({
           {selectedArea && selectedArea.criteria.length > 0 && (
             <div className="space-y-3">
               <Label>
-                Select Specific Criteria{" "}
+                Select Specific Sub-Areas{" "}
                 <span className="text-slate-400 font-normal">
                   (leave empty to assign entire area)
                 </span>
@@ -166,7 +166,7 @@ export function AssignmentModal({
               </div>
               {selectedCriterionIds.length === 0 && (
                 <p className="text-xs text-amber-600">
-                  No criteria selected — this will assign the entire area.
+                  No sub-areas selected — this will assign the entire area.
                 </p>
               )}
             </div>

@@ -78,8 +78,8 @@ export function SubmissionsTable({ data, onRowClick }: SubmissionsTableProps) {
       },
     },
     {
-      id: "criterion",
-      header: "Criterion",
+      id: "sub-area",
+      header: "Sub-Area",
       cell: ({ row }) => (
         <span className="text-sm text-slate-500 truncate max-w-[150px] inline-block">
           {row.original.indicator.criterion.name}

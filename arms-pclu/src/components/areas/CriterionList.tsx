@@ -66,7 +66,7 @@ export function CriterionList({ areaId, mode = "dean" }: CriterionListProps) {
     return (
       <div className="flex items-center gap-2 py-4 text-sm text-slate-500">
         <Loader2 className="w-4 h-4 animate-spin" />
-        Loading criteria...
+        Loading sub-areas...
       </div>
     )
   }
@@ -74,7 +74,7 @@ export function CriterionList({ areaId, mode = "dean" }: CriterionListProps) {
   if (isError) {
     return (
       <p className="text-sm text-red-500 py-4">
-        Failed to load criteria. Please try again.
+        Failed to load sub-areas. Please try again.
       </p>
     )
   }
@@ -136,7 +136,7 @@ export function CriterionList({ areaId, mode = "dean" }: CriterionListProps) {
           })
         ) : (
           <p className="text-sm text-slate-500 py-2">
-            No criteria yet. Add one below.
+            No sub-areas yet. Add one below.
           </p>
         )}
       </div>
@@ -149,7 +149,7 @@ export function CriterionList({ areaId, mode = "dean" }: CriterionListProps) {
           onClick={() => setAddOpen(true)}
         >
           <Plus className="w-4 h-4 mr-1" />
-          Add Criterion
+          Add Sub-Area
         </Button>
       )}
 
@@ -180,7 +180,7 @@ export function CriterionList({ areaId, mode = "dean" }: CriterionListProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the criterion
+              This action cannot be undone. This will permanently delete the sub-area
               <strong> {deleteTarget?.name}</strong> and all its associated indicators.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -198,7 +198,7 @@ export function CriterionList({ areaId, mode = "dean" }: CriterionListProps) {
                 }
               }}
             >
-              {deleteCriterion.isPending ? "Deleting..." : "Delete Criterion"}
+              {deleteCriterion.isPending ? "Deleting..." : "Delete Sub-Area"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

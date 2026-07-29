@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useCreateCriterion, useUpdateCriterion } from "@/hooks/useAreas"
 
 const criterionSchema = z.object({
-  name: z.string().min(1, "Criterion Name is required"),
+  name: z.string().min(1, "Sub-Area Name is required"),
   description: z.string().optional(),
 })
 
@@ -77,14 +77,14 @@ export function CriterionFormModal({
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? "Edit Criterion" : "Add Criterion"}
+            {isEditing ? "Edit Sub-Area" : "Add Sub-Area"}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
           <div className="space-y-2">
             <Label htmlFor="name">
-              Criterion Name <span className="text-red-500">*</span>
+              Sub-Area Name <span className="text-red-500">*</span>
             </Label>
             <Input
               id="name"
@@ -102,7 +102,7 @@ export function CriterionFormModal({
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
-              placeholder="Brief description of this criterion..."
+              placeholder="Brief description of this sub-area..."
               {...form.register("description")}
             />
           </div>
@@ -127,7 +127,7 @@ export function CriterionFormModal({
                   Saving...
                 </>
               ) : (
-                "Save Criterion"
+                "Save Sub-Area"
               )}
             </Button>
           </DialogFooter>

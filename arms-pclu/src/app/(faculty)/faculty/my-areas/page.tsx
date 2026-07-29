@@ -60,11 +60,18 @@ export default function MyAreasPage() {
 
   const isLoading = loadingAssignments || loadingAreas
 
+  React.useEffect(() => {
+    console.log("[MyAreasPage Debug] User:", user?.id, user?.name);
+    console.log("[MyAreasPage Debug] Assignments:", assignments);
+    console.log("[MyAreasPage Debug] Grouped:", groupedAssignments);
+    console.log("[MyAreasPage Debug] Loading state:", { loadingAssignments, loadingAreas, isLoading });
+  }, [user, assignments, groupedAssignments, loadingAssignments, loadingAreas, isLoading]);
+
   return (
     <>
       <PageHeader
         title="My Assigned Areas"
-        subtitle="Manage and upload documents for your assigned PACUCOA areas"
+        subtitle="Manage and upload evidence for your assigned PACUCOA areas"
       />
 
       <div className="space-y-4">
@@ -141,13 +148,13 @@ export default function MyAreasPage() {
                           {group.areaName}
                         </h3>
                         <p className="text-sm text-slate-500 mt-1">
-                          {group.criteriaAssigned.length === 0 ? "All Criteria Assigned" : `${group.criteriaAssigned.length} Criteria Assigned`}
+                          {group.criteriaAssigned.length === 0 ? "All Sub-Areas Assigned" : `${group.criteriaAssigned.length} Sub-Areas Assigned`}
                         </p>
                       </div>
                     </div>
 
                     <div className="bg-slate-50 rounded-lg p-3 mb-4 flex-1">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Assigned Scope:</p>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Assigned Sub-Areas:</p>
                       <ul className="space-y-1">
                         {group.criteriaAssigned.length === 0 ? (
                            <li className="text-sm text-slate-700 truncate flex items-center gap-2">

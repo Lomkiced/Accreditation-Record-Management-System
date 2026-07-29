@@ -103,7 +103,7 @@ function IndicatorFormModal({
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="ind-docs">Required Documents</Label>
+            <Label htmlFor="ind-docs">Required Evidence</Label>
             <Textarea
               id="ind-docs"
               placeholder="e.g., Board Resolution, Institutional Manual"
@@ -176,7 +176,7 @@ export default function AreaDetailPage({ params }: { params: { id: string } }) {
       <PageHeader
         title={area.name}
         breadcrumbs={[
-          { label: "Areas", href: "/admin/areas" },
+          { label: "Areas", href: "/dean/areas" },
           { label: area.name },
         ]}
       />
@@ -218,7 +218,7 @@ export default function AreaDetailPage({ params }: { params: { id: string } }) {
 
         {area.criteria.length === 0 && (
           <div className="text-center py-16 text-slate-500">
-            No criteria in this area yet. Go back and add criteria first.
+            No sub-areas in this area yet. Go back and add sub-areas first.
           </div>
         )}
       </div>
