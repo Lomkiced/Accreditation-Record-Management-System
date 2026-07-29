@@ -12,6 +12,17 @@ import { StatusBadge } from "@/components/shared/StatusBadge"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { VersionHistory } from "./VersionHistory"
 import { AdminSubmission } from "@/actions/submission.actions"
 import { useReviewSubmission } from "@/hooks/useSubmissions"
@@ -199,20 +210,43 @@ export function SubmissionReviewPanel({ open, onClose, submission }: SubmissionR
                   <CheckCircle className="w-4 h-4 mr-2" />
                   Approve Document
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full border-red-500 text-red-600 hover:bg-red-50" 
-                  disabled={reviewMutation.isPending}
-                  onClick={() => {
-                    reviewMutation.mutate(
-                      { mappingId: submission.id, status: "RETURNED", remarks },
-                      { onSuccess: () => onClose() }
-                    )
-                  }}
-                >
-                  <CornerUpLeft className="w-4 h-4 mr-2" />
-                  Return with Remarks
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      className="w-full border-red-500 text-red-600 hover:bg-red-50" 
+                      disabled={reviewMutation.isPending || remarks.trim() === ""}
+                    >
+                      <CornerUpLeft className="w-4 h-4 mr-2" />
+                      Return with Remarks
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Return Document</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to return this document to the faculty? They will be notified to upload a new version based on your remarks.
+                        <div className="mt-4 p-3 bg-red-50 text-red-700 rounded-md text-sm italic border border-red-100">
+                          "{remarks}"
+                        </div>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-red-600 hover:bg-red-700 text-white"
+                        onClick={() => {
+                          reviewMutation.mutate(
+                            { mappingId: submission.id, status: "RETURNED", remarks },
+                            { onSuccess: () => onClose() }
+                          )
+                        }}
+                      >
+                        Confirm Return
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </div>
           ) : (

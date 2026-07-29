@@ -715,7 +715,9 @@ export async function reviewSubmission(
     await prisma.notification.create({
       data: {
         userId: mapping.user.id,
-        message: `Your submission "${mapping.document.title}" for "${mapping.indicator.name}" has been ${validated.status.toLowerCase()}.${validated.remarks ? ' See remarks.' : ''}`,
+        message: validated.status === "RETURNED" 
+          ? `Your document "${mapping.document.title}" was returned with remarks: "${validated.remarks}". Please upload a new version.`
+          : `Your submission "${mapping.document.title}" for "${mapping.indicator.name}" has been ${validated.status.toLowerCase()}.`,
         type: "REVIEW",
         link: `/faculty/submissions`
       }

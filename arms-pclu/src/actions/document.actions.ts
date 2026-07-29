@@ -438,7 +438,9 @@ export async function reviewMapping(
     await prisma.notification.create({
       data: {
         userId: mapping.userId,
-        message: `Your document "${mapping.document.title}" mapped to "${mapping.indicator.name}" has been ${validated.status.toLowerCase().replace("_", " ")}.`,
+        message: validated.status === "RETURNED"
+          ? `Your document "${mapping.document.title}" mapped to "${mapping.indicator.name}" was returned with remarks: "${validated.remarks}".`
+          : `Your document "${mapping.document.title}" mapped to "${mapping.indicator.name}" has been ${validated.status.toLowerCase().replace("_", " ")}.`,
         type: "MAPPING_REVIEW",
         link: `/faculty/submissions`,
       },
