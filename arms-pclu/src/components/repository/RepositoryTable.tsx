@@ -168,35 +168,6 @@ export function RepositoryTable({ data, onRowClick }: RepositoryTableProps) {
       ),
     },
     {
-      accessorKey: "tags",
-      header: "Labels",
-      cell: ({ row }) => {
-        const tags = row.original.tags
-        return (
-          <div className="flex flex-wrap gap-1">
-            {tags.slice(0, 2).map((tag) => (
-              <span
-                key={tag.id}
-                className="text-[10px] font-medium px-2 py-0.5 rounded-full"
-                style={{
-                  backgroundColor: `${tag.color}20`,
-                  color: tag.color,
-                  border: `1px solid ${tag.color}40`,
-                }}
-              >
-                {tag.name}
-              </span>
-            ))}
-            {tags.length > 2 && (
-              <span className="text-[10px] bg-slate-100 text-slate-600 border-slate-200 border px-2 py-0.5 rounded-full font-medium">
-                +{tags.length - 2} more
-              </span>
-            )}
-          </div>
-        )
-      },
-    },
-    {
       accessorKey: "dominantStatus",
       header: "Status",
       cell: ({ row }) => (

@@ -1,19 +1,18 @@
 "use client"
 
 import * as React from "react"
-import { Download, Tag } from "lucide-react"
+
 import { PageHeader } from "@/components/shared/PageHeader"
 import { Button } from "@/components/ui/button"
 import { RepositoryTable, type RepositoryDocument, getDominantStatus } from "@/components/repository/RepositoryTable"
 import { DocumentDetailPanel } from "@/components/repository/DocumentDetailPanel"
 import { FilterBar } from "@/components/repository/FilterBar"
-import { useAllSubmissions, useTags, useToggleTag } from "@/hooks/useSubmissions"
+import { useAllSubmissions } from "@/hooks/useSubmissions"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function RepositoryPage() {
   const [selectedDocument, setSelectedDocument] = React.useState<RepositoryDocument | null>(null)
   const [searchQuery, setSearchQuery] = React.useState("")
-  const [selectedTags, setSelectedTags] = React.useState<string[]>([])
   const [selectedAreas, setSelectedAreas] = React.useState<string[]>([])
   const [selectedCriteria, setSelectedCriteria] = React.useState<string[]>([])
   const [selectedFaculties, setSelectedFaculties] = React.useState<string[]>([])
@@ -21,8 +20,7 @@ export default function RepositoryPage() {
   const [dateRange, setDateRange] = React.useState<string>("all")
   
   const { data: submissions = [], isLoading } = useAllSubmissions()
-  const { data: tags = [] } = useTags()
-  const toggleTag = useToggleTag()
+  const { data: submissions = [], isLoading } = useAllSubmissions()
 
   // Group mappings by document ID
   const documents = React.useMemo(() => {
@@ -109,14 +107,6 @@ export default function RepositoryPage() {
       )
     }
 
-    if (selectedTags.length > 0) {
-      result = result.filter(doc => {
-        const isUnlabeled = selectedTags.includes("unlabeled")
-        if (isUnlabeled && doc.tags.length === 0) return true
-        return doc.tags.some(tag => selectedTags.includes(tag.id))
-      })
-    }
-
     if (selectedAreas.length > 0) {
       result = result.filter(doc => doc.mappings.some(m => selectedAreas.includes(m.areaName)))
     }
@@ -144,7 +134,7 @@ export default function RepositoryPage() {
     }
 
     return result
-  }, [documents, searchQuery, selectedTags, selectedAreas, selectedCriteria, selectedFaculties, selectedStatuses, dateRange])
+  }, [documents, searchQuery, selectedAreas, selectedCriteria, selectedFaculties, selectedStatuses, dateRange])
 
   // Update selected document reference if it changes in background
   React.useEffect(() => {
@@ -161,18 +151,7 @@ export default function RepositoryPage() {
       <PageHeader
         title="Document Repository"
         subtitle="Centralized storage of all uploaded accreditation documents"
-        actions={
-          <div className="flex gap-2">
-            <Button variant="outline" className="text-slate-700 bg-white shadow-sm">
-              <Download className="w-4 h-4 mr-2" />
-              Export Selected
-            </Button>
-            <Button variant="outline" className="text-slate-700 bg-white shadow-sm">
-              <Tag className="w-4 h-4 mr-2" />
-              Bulk Tag
-            </Button>
-          </div>
-        }
+        actions={null}
       />
 
       <div className="space-y-4">
@@ -180,9 +159,6 @@ export default function RepositoryPage() {
           totalResults={filteredDocuments.length} 
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          tags={tags}
-          selectedTags={selectedTags}
-          onTagsChange={setSelectedTags}
           filterOptions={filterOptions}
           selectedAreas={selectedAreas}
           onAreasChange={setSelectedAreas}
@@ -217,8 +193,6 @@ export default function RepositoryPage() {
         open={!!selectedDocument}
         onClose={() => setSelectedDocument(null)}
         document={selectedDocument}
-        allTags={tags}
-        onTagChange={(docId, tagId, add) => toggleTag.mutate({ documentId: docId, tagId, add })}
       />
     </>
   )

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Search, Download } from "lucide-react"
+import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,9 +15,7 @@ interface FilterBarProps {
   totalResults: number
   searchQuery: string
   onSearchChange: (val: string) => void
-  tags: { id: string; name: string }[]
-  selectedTags: string[]
-  onTagsChange: (tags: string[]) => void
+
   filterOptions: {
     areas: string[]
     criteria: string[]
@@ -41,9 +39,7 @@ export function FilterBar(props: FilterBarProps) {
     totalResults,
     searchQuery,
     onSearchChange,
-    tags,
-    selectedTags,
-    onTagsChange,
+
     filterOptions,
     selectedAreas,
     onAreasChange,
@@ -59,7 +55,7 @@ export function FilterBar(props: FilterBarProps) {
 
   const hasFilters =
     searchQuery ||
-    selectedTags.length > 0 ||
+
     selectedAreas.length > 0 ||
     selectedCriteria.length > 0 ||
     selectedFaculties.length > 0 ||
@@ -78,10 +74,6 @@ export function FilterBar(props: FilterBarProps) {
             onChange={(e) => onSearchChange(e.target.value)}
           />
         </div>
-        <Button variant="outline" className="text-slate-700">
-          <Download className="w-4 h-4 mr-2" />
-          Export Selected
-        </Button>
       </div>
       
       <div className="flex flex-wrap items-center gap-2">
@@ -206,44 +198,6 @@ export function FilterBar(props: FilterBarProps) {
           </DropdownMenuContent>
         </DropdownMenu>
         
-        {/* CLASSIFICATIONS (TAGS) */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 text-xs text-slate-600 bg-slate-50">
-              Classifications
-              {selectedTags.length > 0 && ` (${selectedTags.length})`}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48 max-h-60 overflow-y-auto">
-            {tags.map((tag) => (
-              <DropdownMenuCheckboxItem
-                key={tag.id}
-                checked={selectedTags.includes(tag.id)}
-                onCheckedChange={(checked) => {
-                  if (checked) {
-                    onTagsChange([...selectedTags, tag.id])
-                  } else {
-                    onTagsChange(selectedTags.filter((id) => id !== tag.id))
-                  }
-                }}
-              >
-                {tag.name}
-              </DropdownMenuCheckboxItem>
-            ))}
-            <DropdownMenuCheckboxItem
-              checked={selectedTags.includes("unlabeled")}
-              onCheckedChange={(checked) => {
-                if (checked) {
-                  onTagsChange([...selectedTags, "unlabeled"])
-                } else {
-                  onTagsChange(selectedTags.filter((id) => id !== "unlabeled"))
-                }
-              }}
-            >
-              Unlabeled
-            </DropdownMenuCheckboxItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
 
         {/* DATE RANGE */}
         <DropdownMenu>
@@ -289,7 +243,7 @@ export function FilterBar(props: FilterBarProps) {
             className="text-xs text-blue-600 hover:underline ml-2 font-medium"
             onClick={() => {
               onSearchChange("")
-              onTagsChange([])
+
               onAreasChange([])
               onCriteriaChange([])
               onFacultiesChange([])

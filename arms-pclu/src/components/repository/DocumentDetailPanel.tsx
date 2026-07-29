@@ -6,8 +6,6 @@ import {
   Download,
   Eye,
   X,
-  Tag as TagIcon,
-  Plus,
   MapPin,
   CheckCircle2,
   Clock,
@@ -69,29 +67,13 @@ interface DocumentDetailPanelProps {
   open: boolean
   onClose: () => void
   document: RepositoryDocument | null
-  /** All available tags for the add-tag picker */
-  allTags?: { id: string; name: string; color: string }[]
-  /** Called when a label tag is added/removed */
-  onTagChange?: (documentId: string, tagId: string, add: boolean) => void
 }
-
-const DEFAULT_ALL_TAGS = [
-  { id: "t1", name: "Priority",  color: "#EF4444" },
-  { id: "t2", name: "For Review",color: "#F59E0B" },
-  { id: "t3", name: "Finalized", color: "#10B981" },
-  { id: "t4", name: "Archived",  color: "#64748B" },
-]
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export function DocumentDetailPanel({
   open,
   onClose,
   document,
-  allTags = DEFAULT_ALL_TAGS,
-  onTagChange,
 }: DocumentDetailPanelProps) {
-  const [showTagAdd, setShowTagAdd] = React.useState(false)
 
   if (!document) return null
 
@@ -104,7 +86,6 @@ export function DocumentDetailPanel({
     return acc
   }, {})
 
-  const tagIds = new Set(document.tags.map((t) => t.id))
 
   return (
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -266,78 +247,6 @@ export function DocumentDetailPanel({
               </div>
             </div>
 
-            {/* ── Label Tags ── */}
-            <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                  <TagIcon className="w-4 h-4 text-slate-400" /> Labels
-                </h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs text-blue-600"
-                  onClick={() => setShowTagAdd(!showTagAdd)}
-                >
-                  <Plus className="w-3 h-3 mr-1" /> Add Label
-                </Button>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {document.tags.map((tag) => (
-                  <span
-                    key={tag.id}
-                    className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full"
-                    style={{
-                      backgroundColor: `${tag.color}20`,
-                      color: tag.color,
-                      border: `1px solid ${tag.color}40`,
-                    }}
-                  >
-                    {tag.name}
-                    <button
-                      className="hover:bg-black/10 rounded-full p-0.5 ml-1 transition-colors"
-                      onClick={() => onTagChange?.(document.id, tag.id, false)}
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-                {document.tags.length === 0 && (
-                  <span className="text-sm text-slate-400 italic">
-                    No labels added.
-                  </span>
-                )}
-              </div>
-
-              {showTagAdd && (
-                <div className="mt-4 pt-4 border-t border-slate-100">
-                  <p className="text-xs font-medium text-slate-500 mb-2">
-                    Add a label:
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {allTags
-                      .filter((t) => !tagIds.has(t.id))
-                      .map((tag) => (
-                        <span
-                          key={tag.id}
-                          className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full cursor-pointer hover:opacity-80 transition-opacity"
-                          style={{
-                            backgroundColor: `${tag.color}10`,
-                            color: tag.color,
-                            border: `1px solid ${tag.color}30`,
-                          }}
-                          onClick={() => {
-                            onTagChange?.(document.id, tag.id, true)
-                            setShowTagAdd(false)
-                          }}
-                        >
-                          {tag.name}
-                        </span>
-                      ))}
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         </ScrollArea>
       </SheetContent>
