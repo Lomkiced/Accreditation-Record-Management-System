@@ -181,19 +181,27 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
                             {doc.mappings.map((mapping) => (
                               <div
                                 key={mapping.id}
-                                className="flex items-center gap-3 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-sm w-max max-w-md"
+                                className="flex flex-col bg-white border border-slate-200 rounded-lg p-3 shadow-sm w-max max-w-md"
                               >
-                                <div className="min-w-0">
-                                  <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
-                                    {mapping.indicator.criterion.area.name}
-                                  </p>
-                                  <p className="text-xs text-slate-700 font-medium truncate mt-0.5">
-                                    {mapping.indicator.name}
-                                  </p>
+                                <div className="flex items-center gap-3">
+                                  <div className="min-w-0">
+                                    <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                                      {mapping.indicator.criterion.area.name}
+                                    </p>
+                                    <p className="text-xs text-slate-700 font-medium truncate mt-0.5">
+                                      {mapping.indicator.name}
+                                    </p>
+                                  </div>
+                                  <div className="ml-auto shrink-0 pl-4 border-l border-slate-100">
+                                    <MappingBadge status={mapping.status} />
+                                  </div>
                                 </div>
-                                <div className="ml-auto shrink-0 pl-4 border-l border-slate-100">
-                                  <MappingBadge status={mapping.status} />
-                                </div>
+                                {mapping.status === "RETURNED" && mapping.remarks && (
+                                  <div className="mt-2 text-xs bg-red-50 text-red-700 border border-red-100 rounded p-2 flex items-start gap-1.5 w-full">
+                                    <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                                    <span className="leading-relaxed break-words">{mapping.remarks}</span>
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>

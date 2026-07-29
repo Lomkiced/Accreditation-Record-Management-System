@@ -301,8 +301,24 @@ export async function submitMapping(
 
     await prisma.documentMapping.update({
       where: { id: mappingId },
-      data: { status: "SUBMITTED" },
+      data: { status: "SUBMITTED", remarks: null },
     })
+
+    const reviewers = await prisma.user.findMany({
+      where: { role: { in: ["ADMIN", "DEAN"] }, isActive: true },
+      select: { id: true, role: true },
+    })
+
+    if (reviewers.length > 0) {
+      await prisma.notification.createMany({
+        data: reviewers.map((r) => ({
+          userId: r.id,
+          message: `${currentUser.name} has submitted a mapping for review.`,
+          type: "SUBMISSION",
+          link: r.role === "ADMIN" ? "/admin/submissions" : "/dean/submissions",
+        })),
+      })
+    }
 
     await prisma.auditLog.create({
       data: {
@@ -347,8 +363,24 @@ export async function submitAllMappings(
         documentId,
         status: { in: ["DRAFT", "RETURNED"] },
       },
-      data: { status: "SUBMITTED" },
+      data: { status: "SUBMITTED", remarks: null },
     })
+
+    const reviewers = await prisma.user.findMany({
+      where: { role: { in: ["ADMIN", "DEAN"] }, isActive: true },
+      select: { id: true, role: true },
+    })
+
+    if (reviewers.length > 0) {
+      await prisma.notification.createMany({
+        data: reviewers.map((r) => ({
+          userId: r.id,
+          message: `${currentUser.name} has submitted "${document.title}" for review.`,
+          type: "SUBMISSION",
+          link: r.role === "ADMIN" ? "/admin/submissions" : "/dean/submissions",
+        })),
+      })
+    }
 
     await prisma.auditLog.create({
       data: {

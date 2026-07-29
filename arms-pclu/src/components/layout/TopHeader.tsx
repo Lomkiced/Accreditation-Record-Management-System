@@ -25,7 +25,7 @@ import { useRouter } from "next/navigation"
 import { GlobalSearchDialog } from "./GlobalSearchDialog"
 
 interface TopHeaderProps {
-  role: "admin" | "faculty"
+  role: "admin" | "faculty" | "dean"
   /** Optional server-prefetched user — falls back to Zustand store */
   user?: Pick<StoredUser, "name" | "role" | "email"> | null
 }
@@ -34,11 +34,11 @@ export function TopHeader({ role, user: serverUser }: TopHeaderProps) {
   const { user: storeUser, signOut } = useAuth()
 
   const displayUser = serverUser ?? storeUser
-  const displayName = displayUser?.name ?? (role === "admin" ? "Admin" : "Faculty")
+  const displayName = displayUser?.name ?? (role === "admin" ? "Admin" : role === "dean" ? "Dean" : "Faculty")
   const displayEmail = displayUser?.email ?? ""
 
-  const profileHref = role === "admin" ? "/admin/profile" : "/faculty/profile"
-  const notifHref = role === "admin" ? "/admin/notifications" : "/faculty/notifications"
+  const profileHref = role === "admin" ? "/admin/profile" : role === "dean" ? "/dean/profile" : "/faculty/profile"
+  const notifHref = role === "admin" ? "/admin/notifications" : role === "dean" ? "/dean/notifications" : "/faculty/notifications"
 
   const { data: notifications = [] } = useNotifications()
   const { mutate: markAsRead } = useMarkAsRead()

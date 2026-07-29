@@ -10,7 +10,7 @@ export function DeanLayoutInner({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative min-h-screen bg-[#F8FAFC]">
       <DeanSidebar user={user} />
-      <TopHeader role="admin" user={user} />
+      <TopHeader role="dean" user={user} />
       <main className="ml-[240px] pt-16 min-h-screen">
         <div className="p-6">{children}</div>
       </main>
