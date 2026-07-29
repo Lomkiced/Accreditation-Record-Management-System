@@ -151,6 +151,23 @@ export async function uploadNewVersion(
       },
     })
 
+    // Notify all admins and deans about the new version
+    const reviewers = await prisma.user.findMany({
+      where: { role: { in: ["ADMIN", "DEAN"] }, isActive: true },
+      select: { id: true, role: true },
+    })
+
+    if (reviewers.length > 0) {
+      await prisma.notification.createMany({
+        data: reviewers.map((r) => ({
+          userId: r.id,
+          message: `${currentUser.name} has uploaded a new version for "${updatedDoc.title}".`,
+          type: "SUBMISSION",
+          link: r.role === "ADMIN" ? "/admin/submissions" : "/dean/submissions",
+        })),
+      })
+    }
+
     revalidatePath("/faculty/submissions")
     revalidatePath("/admin/submissions")
     revalidatePath("/dean/submissions")
