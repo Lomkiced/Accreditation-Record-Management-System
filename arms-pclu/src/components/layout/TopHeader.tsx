@@ -108,7 +108,7 @@ export function TopHeader({ role, user: serverUser }: TopHeaderProps) {
                       {notif.message}
                     </p>
                     <p className="text-xs text-slate-500 mt-1">
-                      {new Date(notif.createdAt).toLocaleDateString()}
+                      {new Date(notif.createdAt).toLocaleString("en-US", { timeZone: "Asia/Manila", dateStyle: "medium", timeStyle: "short" })}
                     </p>
                   </div>
                 ))

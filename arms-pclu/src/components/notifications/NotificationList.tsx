@@ -76,7 +76,7 @@ export function NotificationList({ notifications, onMarkAsRead, onMarkAllAsRead 
                   </h4>
                   <span className="text-xs text-slate-400 whitespace-nowrap flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
-                    {new Date(notif.createdAt).toLocaleDateString()}
+                    {new Date(notif.createdAt).toLocaleString("en-US", { timeZone: "Asia/Manila", dateStyle: "medium", timeStyle: "short" })}
                   </span>
                 </div>
                 <p className="text-sm text-slate-600 leading-snug">
