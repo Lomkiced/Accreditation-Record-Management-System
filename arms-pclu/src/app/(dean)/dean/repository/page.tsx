@@ -20,7 +20,6 @@ export default function RepositoryPage() {
   const [dateRange, setDateRange] = React.useState<string>("all")
   
   const { data: submissions = [], isLoading } = useAllSubmissions()
-  const { data: submissions = [], isLoading } = useAllSubmissions()
 
   // Group mappings by document ID
   const documents = React.useMemo(() => {
