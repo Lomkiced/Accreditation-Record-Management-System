@@ -227,7 +227,7 @@ export function SubmissionReviewPanel({ open, onClose, submission }: SubmissionR
                       <AlertDialogDescription>
                         Are you sure you want to return this document to the faculty? They will be notified to upload a new version based on your remarks.
                         <div className="mt-4 p-3 bg-red-50 text-red-700 rounded-md text-sm italic border border-red-100">
-                          "{remarks}"
+                          &quot;{remarks}&quot;
                         </div>
                       </AlertDialogDescription>
                     </AlertDialogHeader>
