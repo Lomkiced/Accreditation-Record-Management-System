@@ -65,7 +65,7 @@ export function SubmissionReviewPanel({ open, onClose, submission }: SubmissionR
             </div>
             <div className="grid grid-cols-3 gap-2">
               <span className="text-xs text-slate-400 uppercase tracking-wide">Area</span>
-              <span className="col-span-2 text-sm text-slate-700 font-medium">Area {(submission.indicator.criterion.area.order ?? 0) + 1}: {submission.indicator.criterion.area.name}</span>
+              <span className="col-span-2 text-sm text-slate-700 font-medium">{submission.indicator.criterion.area.name}</span>
             </div>
             <div className="grid grid-cols-3 gap-2">
               <span className="text-xs text-slate-400 uppercase tracking-wide">Criterion</span>

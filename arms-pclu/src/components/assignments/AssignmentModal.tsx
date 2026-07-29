@@ -125,7 +125,7 @@ export function AssignmentModal({
                 <SelectContent className="bg-white shadow-lg border-slate-200">
                   {areas?.map((area) => (
                     <SelectItem key={area.id} value={area.id}>
-                      Area {area.order + 1}: {area.name}
+                      {area.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

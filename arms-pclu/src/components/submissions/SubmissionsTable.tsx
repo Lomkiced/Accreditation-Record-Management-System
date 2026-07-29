@@ -17,17 +17,7 @@ interface SubmissionsTableProps {
 }
 
 export function SubmissionsTable({ data, onRowClick }: SubmissionsTableProps) {
-  // Cycling colors for the number badge
-  const COLORS = [
-    "bg-blue-100 text-blue-700",
-    "bg-violet-100 text-violet-700",
-    "bg-emerald-100 text-emerald-700",
-    "bg-amber-100 text-amber-700",
-    "bg-rose-100 text-rose-700",
-    "bg-cyan-100 text-cyan-700",
-    "bg-orange-100 text-orange-700",
-    "bg-teal-100 text-teal-700",
-  ]
+
 
   const columns: ColumnDef<AdminSubmission>[] = [
     {
@@ -80,11 +70,9 @@ export function SubmissionsTable({ data, onRowClick }: SubmissionsTableProps) {
       header: "Area",
       cell: ({ row }) => {
         const area = row.original.indicator.criterion.area
-        const number = (area.order ?? 0) + 1
-        const colorClass = COLORS[(number - 1) % COLORS.length]
         return (
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colorClass}`}>
-            Area {number}
+          <span className="text-xs text-slate-700 font-medium truncate max-w-[150px] inline-block" title={area.name}>
+            {area.name}
           </span>
         )
       },

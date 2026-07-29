@@ -31,19 +31,7 @@ export function AreaCard({ area, mode = "dean" }: AreaCardProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
   const deleteArea = useDeleteArea()
 
-  // Cycling colors for the number badge
-  const COLORS = [
-    "bg-blue-100 text-blue-700",
-    "bg-violet-100 text-violet-700",
-    "bg-emerald-100 text-emerald-700",
-    "bg-amber-100 text-amber-700",
-    "bg-rose-100 text-rose-700",
-    "bg-cyan-100 text-cyan-700",
-    "bg-orange-100 text-orange-700",
-    "bg-teal-100 text-teal-700",
-  ]
-  const number = (area.order ?? 0) + 1
-  const colorClass = COLORS[(number - 1) % COLORS.length]
+
 
   // Calculate dynamic stats
   const criteriaCount = area.criteria.length
@@ -82,10 +70,7 @@ export function AreaCard({ area, mode = "dean" }: AreaCardProps) {
         className="flex items-center p-4 cursor-pointer hover:bg-slate-50 transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${colorClass}`}>
-          {number}
-        </div>
-        <h3 className="font-semibold text-slate-800 ml-3">{area.name}</h3>
+        <h3 className="font-semibold text-slate-800">{area.name}</h3>
         <span className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full ml-2 font-medium">
           {criteriaCount} Criteria
         </span>

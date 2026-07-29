@@ -110,9 +110,6 @@ export default function MyAreasPage() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {groupedAssignments.map((group) => {
-              const number = group.areaOrder + 1
-              const colorClass = COLORS[(number - 1) % COLORS.length]
-              
               // Calculate completion
               let totalIndicators = 0
               let approvedIndicators = 0
@@ -138,9 +135,7 @@ export default function MyAreasPage() {
                 <Link key={group.areaId} href={`/faculty/my-areas/${group.areaId}`} className="block">
                   <div className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all p-5 hover:border-blue-300 group h-full flex flex-col">
                     <div className="flex items-start gap-4 mb-4">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg shrink-0 ${colorClass}`}>
-                        {number}
-                      </div>
+
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-slate-900 text-lg group-hover:text-blue-600 transition-colors truncate">
                           {group.areaName}

@@ -25,7 +25,6 @@ import { z } from "zod"
 const indicatorSchema = z.object({
   name: z.string().min(1, "Indicator name is required"),
   requiredDocs: z.string().optional(),
-  ratingScale: z.coerce.number().int().min(1).max(10).default(5),
 })
 type IndicatorFormValues = z.infer<typeof indicatorSchema>
 
@@ -50,7 +49,6 @@ function IndicatorFormModal({
     defaultValues: {
       name: indicator?.name ?? "",
       requiredDocs: indicator?.requiredDocs ?? "",
-      ratingScale: indicator?.ratingScale ?? 5,
     },
   })
 
@@ -59,20 +57,20 @@ function IndicatorFormModal({
       form.reset({
         name: indicator?.name ?? "",
         requiredDocs: indicator?.requiredDocs ?? "",
-        ratingScale: indicator?.ratingScale ?? 5,
       })
     }
   }, [open, indicator, form])
 
   const onSubmit = (data: IndicatorFormValues) => {
+    const payload = { ...data, ratingScale: 5 };
     if (indicator) {
       updateIndicator.mutate(
-        { id: indicator.id, data },
+        { id: indicator.id, data: payload },
         { onSuccess: () => onClose() }
       )
     } else {
       createIndicator.mutate(
-        { criterionId, ...data },
+        { criterionId, ...payload },
         { onSuccess: () => onClose() }
       )
     }
@@ -112,16 +110,7 @@ function IndicatorFormModal({
               {...form.register("requiredDocs")}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="ind-scale">Rating Scale (1–10)</Label>
-            <Input
-              id="ind-scale"
-              type="number"
-              min={1}
-              max={10}
-              {...form.register("ratingScale")}
-            />
-          </div>
+
           <DialogFooter className="mt-6">
             <Button type="button" variant="ghost" onClick={onClose} disabled={isPending}>
               Cancel

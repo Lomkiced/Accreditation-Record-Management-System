@@ -28,7 +28,6 @@ const SubmissionSchema = z.object({
   title: z.string().min(1, "Document title is required"),
   description: z.string().optional(),
   documentDate: z.string().min(1, "Document date is required"),
-  rating: z.number().min(1).max(5).optional(),
 })
 
 type SubmissionFormValues = z.infer<typeof SubmissionSchema>
@@ -50,7 +49,6 @@ interface SubmissionUploadFormProps {
     description: string | null
     status: string
     version: number
-    rating: number | null
     versions: Array<{
       version: number
       fileUrl: string
@@ -71,9 +69,6 @@ export function SubmissionUploadForm({
   existingSubmission,
 }: SubmissionUploadFormProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [selectedRating, setSelectedRating] = useState<number>(
-    existingSubmission?.rating ?? 0
-  )
   const [uploadProgress, setUploadProgress] = useState<number>(0)
   const [isUploading, setIsUploading] = useState(false)
 
@@ -89,14 +84,12 @@ export function SubmissionUploadForm({
       title: existingSubmission?.title ?? "",
       description: existingSubmission?.description ?? "",
       documentDate: "",
-      rating: existingSubmission?.rating ?? undefined,
     },
   })
 
   const handleClose = () => {
     form.reset()
     setSelectedFile(null)
-    setSelectedRating(0)
     setUploadProgress(0)
     onClose()
   }
@@ -159,7 +152,6 @@ export function SubmissionUploadForm({
       fileUrl: fileMeta?.fileUrl,
       fileName: fileMeta?.fileName,
       fileSize: fileMeta?.fileSize,
-      rating: selectedRating > 0 ? selectedRating : undefined,
     })
 
     if (result?.success) handleClose()
@@ -193,7 +185,6 @@ export function SubmissionUploadForm({
       fileUrl: fileMeta.fileUrl,
       fileName: fileMeta.fileName,
       fileSize: fileMeta.fileSize,
-      rating: selectedRating > 0 ? selectedRating : undefined,
     })
 
     if (result?.success) handleClose()
@@ -247,58 +238,7 @@ export function SubmissionUploadForm({
             </div>
           )}
 
-          {/* Self-survey rating */}
-          {!isApproved && (
-            <div>
-              <Label className="text-sm font-medium text-slate-700 mb-2 block">
-                Self-Survey Rating
-                <span className="text-slate-400 font-normal ml-1">
-                  (1–{indicator?.ratingScale ?? 5})
-                </span>
-              </Label>
-              <div className="flex items-center gap-2">
-                {Array.from({ length: indicator?.ratingScale ?? 5 }).map(
-                  (_, i) => {
-                    const rating = i + 1
-                    return (
-                      <button
-                        key={rating}
-                        type="button"
-                        onClick={() => setSelectedRating(rating)}
-                        className={cn(
-                          "w-10 h-10 rounded-lg border-2",
-                          "text-sm font-semibold",
-                          "transition-all duration-150",
-                          selectedRating === rating
-                            ? "border-blue-500 bg-blue-600 text-white shadow-sm"
-                            : "border-slate-200 bg-white text-slate-600 hover:border-blue-300"
-                        )}
-                      >
-                        {rating}
-                      </button>
-                    )
-                  }
-                )}
-                {selectedRating > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedRating(0)}
-                    className="ml-1 p-1 text-slate-400 hover:text-red-400 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-              {selectedRating > 0 && (
-                <p className="text-xs text-slate-400 mt-1.5">
-                  Selected rating:{" "}
-                  <span className="font-semibold text-blue-600">
-                    {selectedRating} / {indicator?.ratingScale ?? 5}
-                  </span>
-                </p>
-              )}
-            </div>
-          )}
+
 
           {/* File upload */}
           {!isApproved && (
@@ -450,7 +390,7 @@ export function SubmissionUploadForm({
 
           {/* Version history */}
           {existingSubmission &&
-            existingSubmission.versions.length > 0 && (
+            existingSubmission.versions?.length > 0 && (
               <div className="border-t border-slate-200 pt-4">
                 <p className="text-sm font-semibold text-slate-700 mb-3">
                   Submission History

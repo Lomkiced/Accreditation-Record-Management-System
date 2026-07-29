@@ -304,9 +304,7 @@ export default function FacultyDashboardPage() {
                     return (
                       <Link href={`/faculty/my-areas/${group.areaId}`} key={group.areaId} className="block group">
                         <div className="flex items-start gap-5 p-5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-100 hover:border-blue-200 hover:shadow-md transition-all">
-                          <div className="w-14 h-14 rounded-[1.2rem] bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200/60 flex items-center justify-center font-black text-xl text-slate-700 shrink-0 shadow-sm group-hover:scale-105 group-hover:from-blue-50 group-hover:to-indigo-50 group-hover:text-blue-700 group-hover:border-blue-200 transition-all">
-                            {group.areaOrder + 1}
-                          </div>
+
                           <div className="flex-1 min-w-0 pt-0.5">
                             <div className="flex justify-between items-center mb-3">
                               <div className="pr-4 overflow-hidden">

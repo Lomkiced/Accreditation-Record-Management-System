@@ -21,17 +21,7 @@ export function AssignmentPanel({ selectedFaculty }: AssignmentPanelProps) {
   )
   const deleteAssignment = useDeleteAssignment(selectedFaculty?.id ?? "")
 
-  // Cycling colors for the area order badge
-  const COLORS = [
-    "bg-blue-100 text-blue-700",
-    "bg-violet-100 text-violet-700",
-    "bg-emerald-100 text-emerald-700",
-    "bg-amber-100 text-amber-700",
-    "bg-rose-100 text-rose-700",
-    "bg-cyan-100 text-cyan-700",
-    "bg-orange-100 text-orange-700",
-    "bg-teal-100 text-teal-700",
-  ]
+
 
   if (!selectedFaculty) {
     return (
@@ -95,23 +85,14 @@ export function AssignmentPanel({ selectedFaculty }: AssignmentPanelProps) {
         ) : assignments && assignments.length > 0 ? (
           <div className="space-y-3">
             {assignments.map((assignment) => {
-              const colorClass =
-                COLORS[(assignment.area.order ?? 0) % COLORS.length]
-              const areaNum = (assignment.area.order ?? 0) + 1
               return (
                 <div
                   key={assignment.id}
                   className="bg-white rounded-lg border border-slate-200 p-3 flex items-center hover:border-slate-300 transition-colors"
                 >
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${colorClass}`}
-                  >
-                    {areaNum}
-                  </div>
-
-                  <div className="ml-3 flex-1 min-w-0">
+                  <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-slate-900 truncate">
-                      Area {areaNum}: {assignment.area.name}
+                      {assignment.area.name}
                     </p>
                     <p className="text-xs text-slate-500 truncate">
                       {assignment.criterion

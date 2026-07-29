@@ -183,7 +183,21 @@ export default function MyAreaDetailPage({ params }: { params: { id: string } })
                                     indicator: ind,
                                     areaName: area.name,
                                     criterionName: criterion.name,
-                                    existingSubmission: submission
+                                    existingSubmission: {
+                                      id: submission.documentId,
+                                      title: submission.document.title,
+                                      description: submission.document.description,
+                                      status: submission.status,
+                                      version: submission.document.version,
+                                      versions: (submission.document.versions || []).map((v: any) => ({
+                                        version: v.version,
+                                        fileUrl: v.fileUrl,
+                                        fileName: v.fileName,
+                                        createdAt: v.createdAt.toString(),
+                                        status: submission.status,
+                                        remarks: v.remarks
+                                      }))
+                                    }
                                   })}
                                 >
                                   {submission.status === "DRAFT" ? "Continue Draft" : "Update Document"}
