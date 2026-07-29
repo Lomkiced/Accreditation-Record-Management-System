@@ -47,7 +47,23 @@ export default function SubmissionsPage() {
         subtitle="Review and manage faculty document submissions"
       />
 
-      <div className="space-y-4">
+      {isLoading ? (
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white rounded-lg border border-slate-200 px-4 py-2 flex items-center gap-2 shadow-sm w-36 h-10 animate-pulse">
+                <div className="w-4 h-4 rounded-full bg-slate-200"></div>
+                <div className="h-4 bg-slate-200 rounded w-16"></div>
+              </div>
+            ))}
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm h-[600px] flex flex-col items-center justify-center">
+             <div className="w-12 h-12 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin"></div>
+             <p className="mt-4 text-slate-500 font-medium text-sm animate-pulse">Loading submissions...</p>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
         <div className="flex flex-wrap gap-3">
           <div className="bg-white rounded-lg border border-slate-200 px-4 py-2 flex items-center gap-2 shadow-sm">
             <Archive className="w-4 h-4 text-slate-400" />
@@ -103,7 +119,8 @@ export default function SubmissionsPage() {
           </div>
         </div>
         <SubmissionsTable data={filtered} onRowClick={setSelectedSubmission} />
-      </div>
+        </div>
+      )}
       <SubmissionReviewPanel 
         open={!!selectedSubmission}
         onClose={() => setSelectedSubmission(null)}
