@@ -173,12 +173,6 @@ export function SubmissionReviewPanel({ open, onClose, submission }: SubmissionR
           {isReviewable ? (
             <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-4 shadow-sm border-t-4 border-t-blue-500">
               <h3 className="text-sm font-semibold text-slate-800">Review Action</h3>
-              <Textarea 
-                placeholder="Add feedback or remarks (required for return)..." 
-                value={remarks}
-                onChange={(e) => setRemarks(e.target.value)}
-                className="resize-none"
-              />
               <div className="flex flex-col gap-2">
                 <div className="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg mb-2">
                   <Checkbox 
@@ -202,7 +196,7 @@ export function SubmissionReviewPanel({ open, onClose, submission }: SubmissionR
                   disabled={reviewMutation.isPending || !hasConfirmedReview}
                   onClick={() => {
                     reviewMutation.mutate(
-                      { mappingId: submission.id, status: "APPROVED", remarks },
+                      { mappingId: submission.id, status: "APPROVED", remarks: "" },
                       { onSuccess: () => onClose() }
                     )
                   }}
@@ -210,12 +204,13 @@ export function SubmissionReviewPanel({ open, onClose, submission }: SubmissionR
                   <CheckCircle className="w-4 h-4 mr-2" />
                   Approve Document
                 </Button>
+                
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button 
                       variant="outline" 
                       className="w-full border-red-500 text-red-600 hover:bg-red-50" 
-                      disabled={reviewMutation.isPending || remarks.trim() === ""}
+                      disabled={reviewMutation.isPending}
                     >
                       <CornerUpLeft className="w-4 h-4 mr-2" />
                       Return with Remarks
@@ -225,17 +220,29 @@ export function SubmissionReviewPanel({ open, onClose, submission }: SubmissionR
                     <AlertDialogHeader>
                       <AlertDialogTitle>Return Document</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Are you sure you want to return this document to the faculty? They will be notified to upload a new version based on your remarks.
-                        <div className="mt-4 p-3 bg-red-50 text-red-700 rounded-md text-sm italic border border-red-100">
-                          &quot;{remarks}&quot;
-                        </div>
+                        Please provide the reason for returning this document. The faculty member will be notified to upload a new version based on your feedback.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
+                    
+                    <div className="my-4">
+                      <Textarea 
+                        placeholder="Type your return remarks here (required)..." 
+                        value={remarks}
+                        onChange={(e) => setRemarks(e.target.value)}
+                        className="resize-none min-h-[100px]"
+                      />
+                    </div>
+
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogCancel onClick={() => setRemarks("")}>Cancel</AlertDialogCancel>
                       <AlertDialogAction
                         className="bg-red-600 hover:bg-red-700 text-white"
-                        onClick={() => {
+                        disabled={remarks.trim() === ""}
+                        onClick={(e) => {
+                          if (remarks.trim() === "") {
+                            e.preventDefault()
+                            return
+                          }
                           reviewMutation.mutate(
                             { mappingId: submission.id, status: "RETURNED", remarks },
                             { onSuccess: () => onClose() }
