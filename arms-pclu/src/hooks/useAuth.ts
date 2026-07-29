@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { useAuthStore } from "@/store/authStore"
+import { useQueryClient } from "@tanstack/react-query"
 import { 
   checkRateLimit, 
   clearRateLimit 
@@ -11,6 +12,7 @@ import {
 
 export function useAuth() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const supabase = useRef(createClient()).current
   const {
     user,
@@ -236,6 +238,7 @@ export function useAuth() {
   const signOut = useCallback(async () => {
     try {
       clearUser()
+      queryClient.clear() // Clear React Query cache across the board
       await supabase.auth.signOut()
       router.push("/login")
       router.refresh()
@@ -243,7 +246,7 @@ export function useAuth() {
       console.error("[useAuth] signOut error:", error)
       router.push("/login")
     }
-  }, [clearUser, router, supabase])
+  }, [clearUser, queryClient, router, supabase])
 
   const requestPasswordReset = useCallback(
     async (email: string) => {
