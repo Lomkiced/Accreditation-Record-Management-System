@@ -23,7 +23,6 @@ const navItems = [
   { name: "Dashboard",       href: "/admin/dashboard",    icon: LayoutDashboard },
   { name: "Areas & Criteria", href: "/admin/areas",       icon: BookOpen },
   { name: "Repository",      href: "/admin/repository",  icon: FileText },
-  { name: "Logbook",         href: "/admin/logbook",       icon: BookMarked },
   { name: "Reports",         href: "/admin/reports",       icon: BarChart3 },
   { name: "Users",           href: "/admin/users",         icon: Users },
   { name: "Audit Logs",      href: "/admin/audit-logs",    icon: Shield },

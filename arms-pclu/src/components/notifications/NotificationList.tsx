@@ -18,7 +18,7 @@ export function NotificationList({ notifications, onMarkAsRead, onMarkAllAsRead 
     switch (type) {
       case "ASSIGNMENT": return { icon: <FileText className="w-5 h-5 text-blue-500" />, title: "New Assignment" }
       case "REVIEW": return { icon: <CheckCircle className="w-5 h-5 text-emerald-500" />, title: "Document Reviewed" }
-      case "LOGBOOK": return { icon: <FileText className="w-5 h-5 text-amber-500" />, title: "Logbook Update" }
+      case "SYSTEM": return { icon: <Bell className="w-5 h-5 text-amber-500" />, title: "System Notification" }
       default: return { icon: <Bell className="w-5 h-5 text-slate-500" />, title: "Notification" }
     }
   }

@@ -7,7 +7,7 @@ import {
   FileText, Clock, AlertCircle, TrendingUp, CheckCircle2, 
   ChevronRight, ArrowRight, BookOpen, Activity, AlertTriangle 
 } from "lucide-react"
-import { useLogbook } from "@/hooks/useLogbook"
+
 import { useAuthStore } from "@/store/authStore"
 import { useAssignments } from "@/hooks/useAssignments"
 import { useAreas } from "@/hooks/useAreas"
@@ -33,14 +33,10 @@ export default function FacultyDashboardPage() {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   })
   
-  const { data: logbook = [], isLoading: isLogbookLoading } = useLogbook()
   const { data: assignments = [], isLoading: isAssignmentsLoading } = useAssignments(user?.id ?? "")
   const { data: areas = [], isLoading: isAreasLoading } = useAreas()
   const { data: submissions = [], isLoading: isSubmissionsLoading } = useMySubmissions()
 
-  const pendingLogbooks = logbook.filter(e => e.status === "PENDING" && e.type === "INCOMING")
-  const pendingCount = pendingLogbooks.length
-  
   const myAreasCount = new Set(assignments.map(a => a.areaId)).size
   const underReviewCount = submissions.filter(s => s.status === "SUBMITTED").length
   const approvedDocsCount = submissions.filter(s => s.status === "APPROVED").length
@@ -98,17 +94,6 @@ export default function FacultyDashboardPage() {
       id: string; type: string; title: string; status: string; date: Date; link: string; isPending: boolean;
     }[] = []
     
-    logbook.forEach(l => {
-      activity.push({
-        id: `log-${l.id}`,
-        type: 'logbook',
-        title: l.title,
-        status: l.status,
-        date: new Date(l.createdAt),
-        link: '/faculty/logbook',
-        isPending: l.status === "PENDING" && l.type === "INCOMING"
-      })
-    })
     submissions.forEach(s => {
       activity.push({
         id: `sub-${s.id}`,
@@ -121,9 +106,9 @@ export default function FacultyDashboardPage() {
       })
     })
     return activity.sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 10)
-  }, [logbook, submissions])
+  }, [submissions])
 
-  const isLoading = isLogbookLoading || isAssignmentsLoading || isAreasLoading || isSubmissionsLoading
+  const isLoading = isAssignmentsLoading || isAreasLoading || isSubmissionsLoading
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-slate-50/50 p-4 md:p-6 lg:p-8">
@@ -146,7 +131,7 @@ export default function FacultyDashboardPage() {
                 Welcome back, {user?.name?.split(' ')[0] ?? "Faculty"}
               </h1>
               <p className="text-blue-100/90 max-w-xl text-base md:text-lg leading-relaxed mt-2 font-light">
-                You have <strong className="text-white font-semibold">{pendingCount} pending logbook entries</strong> and <strong className="text-white font-semibold">{underReviewCount} documents</strong> currently under review.
+                You have <strong className="text-white font-semibold">{underReviewCount} documents</strong> currently under review.
               </p>
             </div>
             
@@ -191,13 +176,12 @@ export default function FacultyDashboardPage() {
           </div>
           
           <div className="bg-white rounded-[1.5rem] p-6 border border-slate-200/60 shadow-sm flex flex-col justify-between group hover:border-amber-300 transition-all hover:shadow-md relative overflow-hidden">
-            {pendingCount > 0 && <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-bl-full -z-0"></div>}
             <div className="flex justify-between items-start relative z-10">
               <div>
-                <p className="text-sm font-semibold text-slate-500 mb-1">Action Required</p>
-                <h3 className="text-4xl font-black text-slate-800 tracking-tight">{pendingCount}</h3>
+                <p className="text-sm font-semibold text-slate-500 mb-1">Under Review</p>
+                <h3 className="text-4xl font-black text-slate-800 tracking-tight">{underReviewCount}</h3>
               </div>
-              <div className={`p-3.5 rounded-2xl transition-all shadow-sm ${pendingCount > 0 ? 'bg-amber-100 text-amber-600 group-hover:bg-amber-500 group-hover:text-white animate-pulse' : 'bg-slate-50 text-slate-400 group-hover:bg-slate-200'}`}>
+              <div className="p-3.5 bg-amber-50 text-amber-600 rounded-2xl group-hover:bg-amber-500 group-hover:text-white transition-all shadow-sm">
                 <AlertTriangle size={24} />
               </div>
             </div>

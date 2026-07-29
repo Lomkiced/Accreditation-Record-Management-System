@@ -23,7 +23,6 @@ const navItems = [
   { name: "My Areas",        href: "/faculty/my-areas",     icon: FolderOpen },
   { name: "My Submissions",  href: "/faculty/submissions",  icon: FileText },
   { name: "Archives",        href: "/faculty/archives",     icon: Archive },
-  { name: "Logbook",         href: "/faculty/logbook",      icon: BookMarked },
   { name: "Notifications",   href: "/faculty/notifications", icon: Bell },
   { name: "Profile",         href: "/faculty/profile",      icon: UserCircle },
 ]

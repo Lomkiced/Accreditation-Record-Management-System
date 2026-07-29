@@ -73,7 +73,6 @@ export function ActivityFeed() {
                     "w-2 h-2 rounded-full flex-shrink-0 mt-1.5",
                     log.module === "DOCUMENT" && "bg-blue-500",
                     log.module === "REVIEW" && "bg-emerald-500",
-                    log.module === "LOGBOOK" && "bg-violet-500",
                     log.module === "USER" && "bg-amber-500",
                     log.module === "AUTH" && "bg-slate-400"
                   )}

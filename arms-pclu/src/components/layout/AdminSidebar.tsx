@@ -28,7 +28,6 @@ const navItems = [
   { name: "Submissions",    href: "/admin/submissions",  icon: FileText },
   { name: "Repository",     href: "/admin/repository",   icon: Archive },
   { name: "Tags",           href: "/admin/tags",         icon: Tag },
-  { name: "Logbook",        href: "/admin/logbook",      icon: BookMarked },
   { name: "Reports",        href: "/admin/reports",      icon: BarChart3 },
   { name: "Users",          href: "/admin/users",        icon: Users },
   { name: "Audit Logs",     href: "/admin/audit-logs",   icon: Shield },

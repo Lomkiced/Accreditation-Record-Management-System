@@ -24,7 +24,6 @@ model User {
   auditLogs      AuditLog[]
   mappings       DocumentMapping[]
   documents      Document[]
-  logbookEntries LogbookEntry[]
   notifications  Notification[]
 
   @@map("users")
@@ -185,27 +184,7 @@ model Assignment {
   @@map("assignments")
 }
 
-model LogbookEntry {
-  id             String        @id @default(uuid())
-  userId         String        @map("user_id")
-  type           LogbookType
-  title          String
-  date           DateTime
-  fromTo         String        @map("from_to")
-  purpose        String
-  refNo          String?       @map("ref_no")
-  fileUrl        String?       @map("file_url")
-  fileName       String?       @map("file_name")
-  status         LogbookStatus @default(PENDING)
-  adminRemarks   String?       @map("admin_remarks")
-  acknowledgedAt DateTime?     @map("acknowledged_at")
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
-  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
-  @@map("logbook_entries")
-}
 
 model Notification {
   id        String   @id @default(uuid())
@@ -263,13 +242,4 @@ enum TagType {
   CUSTOM
 }
 
-enum LogbookType {
-  INCOMING
-  OUTGOING
-}
 
-enum LogbookStatus {
-  PENDING
-  ACKNOWLEDGED
-  REJECTED
-}

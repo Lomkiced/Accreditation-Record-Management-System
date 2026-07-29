@@ -489,7 +489,7 @@ export const PageSkeleton = {
   Notifications: NotificationSkeleton,
   Profile: ProfileSkeleton,
   Dashboard: DashboardSkeleton,
-  Logbook: LogbookSkeleton,
+
   Repository: RepositorySkeleton,
   Reports: ReportsSkeleton,
   Tags: TagsSkeleton,

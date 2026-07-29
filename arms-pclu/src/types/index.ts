@@ -9,7 +9,6 @@ import type {
   DocumentMapping,
   Tag,
   DocumentTag,
-  LogbookEntry,
   Notification,
   AuditLog,
 } from "@prisma/client"
@@ -18,8 +17,6 @@ import {
   Role,
   MappingStatus,
   TagType,
-  LogbookType,
-  LogbookStatus,
 } from "@prisma/client"
 
 export type {
@@ -33,7 +30,6 @@ export type {
   DocumentMapping,
   Tag,
   DocumentTag,
-  LogbookEntry,
   Notification,
   AuditLog,
 }
@@ -42,6 +38,4 @@ export {
   Role,
   MappingStatus,
   TagType,
-  LogbookType,
-  LogbookStatus,
 }

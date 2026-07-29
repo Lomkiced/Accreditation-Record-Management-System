@@ -20,7 +20,7 @@ const REPORT_TYPES = [
   { value: "compliance", label: "Compliance Summary Report" },
   { value: "document-package", label: "Document Package Export" },
   { value: "faculty-contribution", label: "Faculty Contribution Report" },
-  { value: "logbook-summary", label: "Logbook Summary Report" },
+
 ]
 
 export function ReportConfigPanel() {

@@ -11,6 +11,7 @@ import {
   BookMarked,
   BarChart3,
   Users,
+  Archive,
   Shield,
   LogOut,
 } from "lucide-react"
@@ -24,7 +25,7 @@ const navItems = [
   { name: "Areas & Criteria", href: "/dean/areas",       icon: BookOpen },
   { name: "Assignments",     href: "/dean/assignments",   icon: UserCheck },
   { name: "Submissions",     href: "/dean/submissions",   icon: FileText },
-  { name: "Logbook",         href: "/dean/logbook",       icon: BookMarked },
+  { name: "Repository",      href: "/dean/repository",    icon: Archive },
   { name: "Reports",         href: "/dean/reports",       icon: BarChart3 },
   { name: "Users",           href: "/dean/users",         icon: Users },
   { name: "Audit Logs",      href: "/dean/audit-logs",    icon: Shield },

@@ -4,7 +4,7 @@ import {
   FileText,
   CheckCircle,
   XCircle,
-  BookMarked,
+  Settings,
   UserCheck,
   Bell,
 } from "lucide-react"
@@ -16,7 +16,7 @@ type NotificationType =
   | "submission"
   | "approval"
   | "returned"
-  | "logbook"
+  | "system"
   | "assignment"
   | "general"
 
@@ -56,8 +56,8 @@ const typeConfig: Record<NotificationType, {
     iconColor: "text-red-600",
     borderColor: "border-l-red-500",
   },
-  logbook: {
-    icon: BookMarked,
+  system: {
+    icon: Settings,
     iconBg: "bg-amber-100",
     iconColor: "text-amber-600",
     borderColor: "border-l-amber-500",
