@@ -33,11 +33,12 @@ export default function FacultyDashboardPage() {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   })
   
-  const { data: assignments = [], isLoading: isAssignmentsLoading } = useAssignments(user?.id ?? "")
-  const { data: areas = [], isLoading: isAreasLoading } = useAreas()
-  const { data: submissions = [], isLoading: isSubmissionsLoading } = useMySubmissions()
+  const { data: assignments = [], isPending: pendingAssignments, isFetching: fetchingAssignments } = useAssignments(user?.id ?? "")
+  const { data: areas = [], isPending: pendingAreas, isFetching: fetchingAreas } = useAreas()
+  const { data: submissions = [], isPending: pendingSubmissions, isFetching: fetchingSubmissions } = useMySubmissions()
 
   const myAreasCount = new Set(assignments.map(a => a.areaId)).size
+  const pendingDraftsCount = submissions.filter(s => s.status === "DRAFT" || s.status === "RETURNED").length
   const underReviewCount = submissions.filter(s => s.status === "SUBMITTED").length
   const approvedDocsCount = submissions.filter(s => s.status === "APPROVED").length
 
@@ -118,7 +119,10 @@ export default function FacultyDashboardPage() {
     return activity.sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 10)
   }, [submissions])
 
-  const isLoading = isAssignmentsLoading || isAreasLoading || isSubmissionsLoading
+  const isLoading = 
+    (pendingAssignments && fetchingAssignments) || 
+    (pendingAreas && fetchingAreas) || 
+    (pendingSubmissions && fetchingSubmissions)
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-slate-50/50 p-4 md:p-6 lg:p-8">
@@ -188,22 +192,22 @@ export default function FacultyDashboardPage() {
           <div className="bg-white rounded-[1.5rem] p-6 border border-slate-200/60 shadow-sm flex flex-col justify-between group hover:border-amber-300 transition-all hover:shadow-md relative overflow-hidden">
             <div className="flex justify-between items-start relative z-10">
               <div>
-                <p className="text-sm font-semibold text-slate-500 mb-1">Drafts</p>
-                <h3 className="text-4xl font-black text-slate-800 tracking-tight">{underReviewCount}</h3>
+                <p className="text-sm font-semibold text-slate-500 mb-1">Pending Drafts</p>
+                <h3 className="text-4xl font-black text-slate-800 tracking-tight">{pendingDraftsCount}</h3>
               </div>
               <div className="p-3.5 bg-amber-50 text-amber-600 rounded-2xl group-hover:bg-amber-500 group-hover:text-white transition-all shadow-sm">
                 <AlertTriangle size={24} />
               </div>
             </div>
             <p className="text-xs text-slate-500 mt-5 font-medium relative z-10">
-              Pending drafts
+              Needs your action
             </p>
           </div>
 
           <div className="bg-white rounded-[1.5rem] p-6 border border-slate-200/60 shadow-sm flex flex-col justify-between group hover:border-violet-300 transition-all hover:shadow-md">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-semibold text-slate-500 mb-1">Under Review</p>
+                <p className="text-sm font-semibold text-slate-500 mb-1">Drafts</p>
                 <h3 className="text-4xl font-black text-slate-800 tracking-tight">{underReviewCount}</h3>
               </div>
               <div className="p-3.5 bg-violet-50 text-violet-600 rounded-2xl group-hover:bg-violet-600 group-hover:text-white transition-all shadow-sm">

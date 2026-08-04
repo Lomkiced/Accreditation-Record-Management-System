@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Search, Bell, ChevronDown, LogOut, UserCircle } from "lucide-react"
+import { Search, Bell, ChevronDown, LogOut, UserCircle, MoreVertical, Trash } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { AvatarInitials } from "../shared/AvatarInitials"
 import { useAuth } from "@/hooks/useAuth"
-import { useNotifications, useMarkAsRead } from "@/hooks/useNotifications"
+import { useNotifications, useMarkAsRead, useDeleteNotification } from "@/hooks/useNotifications"
 import type { StoredUser } from "@/store/authStore"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
@@ -49,6 +49,7 @@ export function TopHeader({ role, user: serverUser }: TopHeaderProps) {
 
   const { data: notifications = [] } = useNotifications()
   const { mutate: markAsRead } = useMarkAsRead()
+  const { mutate: deleteNotification } = useDeleteNotification()
   const router = useRouter()
   const [searchOpen, setSearchOpen] = React.useState(false)
 
@@ -108,17 +109,40 @@ export function TopHeader({ role, user: serverUser }: TopHeaderProps) {
                 topNotifications.map((notif) => (
                   <div
                     key={notif.id}
-                    onClick={() => handleNotificationClick(notif.id, notif.link)}
-                    className={`p-3 text-sm border-b cursor-pointer hover:bg-slate-50 transition-colors ${
+                    className={`p-3 text-sm border-b hover:bg-slate-50 transition-colors flex gap-2 ${
                       !notif.isRead ? "bg-blue-50/30" : ""
                     }`}
                   >
-                    <p className="font-medium text-slate-800 line-clamp-2">
-                      {notif.message}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      {new Date(notif.createdAt).toLocaleString("en-US", { timeZone: "Asia/Manila", dateStyle: "medium", timeStyle: "short" })}
-                    </p>
+                    <div className="flex-1 cursor-pointer" onClick={() => handleNotificationClick(notif.id, notif.link)}>
+                      <p className="font-medium text-slate-800 line-clamp-2">
+                        {notif.message}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {new Date(notif.createdAt).toLocaleString("en-US", { timeZone: "Asia/Manila", dateStyle: "medium", timeStyle: "short" })}
+                      </p>
+                    </div>
+                    <div className="shrink-0">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-6 w-6 p-0 text-slate-400 hover:text-slate-600">
+                            <span className="sr-only">Menu</span>
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem 
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              deleteNotification(notif.id);
+                            }}
+                            className="text-red-600 focus:bg-red-50 cursor-pointer"
+                          >
+                            <Trash className="w-4 h-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 ))
               ) : (

@@ -63,6 +63,7 @@ export async function uploadAndMapDocument(
       select: {
         id: true,
         name: true,
+        requiredDocs: true,
         criterion: {
           select: {
             name: true,
@@ -73,30 +74,28 @@ export async function uploadAndMapDocument(
     })
     if (!indicator) return { error: "Indicator not found." }
 
-    // Check if the faculty already has a mapping for this indicator
-    const existingMapping = await prisma.documentMapping.findFirst({
+    // Find how many approved/submitted documents this faculty has for this indicator
+    const allUserMappingsForIndicator = await prisma.documentMapping.findMany({
       where: {
         indicatorId: validated.indicatorId,
         userId: currentUser.id,
       },
       include: { document: true }
-    })
+    });
 
+    // Check if they are returning an existing draft/returned document
+    // We only update an existing mapping if it's RETURNED or DRAFT. 
+    // If they are uploading a completely new file for multiple requirements, we create a new one.
+    const returnedMapping = allUserMappingsForIndicator.find(m => m.status === "RETURNED" || m.status === "DRAFT");
+    
     let documentId: string
     let mappingId: string
 
-    if (existingMapping) {
-      if (existingMapping.status !== "RETURNED") {
-        return {
-          error:
-            "You already have an active submission for this indicator. Delete or wait for it to be returned before resubmitting.",
-        }
-      }
-
-      // It IS returned, so we update the document (creates V2)
+    if (returnedMapping) {
+      // It IS returned or draft, so we update the document (creates V2)
       const [doc, map] = await prisma.$transaction(async (tx) => {
         const d = await tx.document.update({
-          where: { id: existingMapping.documentId },
+          where: { id: returnedMapping.documentId },
           data: {
             title: validated.title,
             description: validated.description ?? null,
@@ -104,12 +103,12 @@ export async function uploadAndMapDocument(
             fileUrl: validated.fileUrl,
             fileName: validated.fileName,
             fileSize: validated.fileSize,
-            version: existingMapping.document.version + 1,
+            version: returnedMapping.document.version + 1,
           },
         })
 
         const m = await tx.documentMapping.update({
-          where: { id: existingMapping.id },
+          where: { id: returnedMapping.id },
           data: {
             status: "SUBMITTED",
             rating: validated.rating ?? null,
@@ -122,6 +121,23 @@ export async function uploadAndMapDocument(
       documentId = doc.id
       mappingId = map.id
     } else {
+      // Check if they exceed the requiredDocs limit
+      let reqCount = 1;
+      if (indicator.requiredDocs) {
+        if (!isNaN(Number(indicator.requiredDocs))) {
+          reqCount = Math.max(1, Number(indicator.requiredDocs));
+        } else {
+          reqCount = indicator.requiredDocs.split(',').filter(s => s.trim().length > 0).length || 1;
+        }
+      }
+
+      const activeMappings = allUserMappingsForIndicator.filter(m => m.status !== "RETURNED" && m.status !== "DRAFT");
+      if (activeMappings.length >= reqCount) {
+        return {
+          error: "You have already submitted the required number of documents for this indicator.",
+        }
+      }
+
       // Atomic transaction: Document + DocumentMapping together (V1)
       const [doc, map] = await prisma.$transaction(async (tx) => {
         const d = await tx.document.create({
@@ -157,7 +173,7 @@ export async function uploadAndMapDocument(
     await prisma.auditLog.create({
       data: {
         userId: currentUser.id,
-        action: existingMapping ? "RESUBMIT_DOCUMENT" : "SUBMIT_DOCUMENT",
+        action: returnedMapping ? "RESUBMIT_DOCUMENT" : "SUBMIT_DOCUMENT",
         module: "DOCUMENT",
         targetId: documentId,
         details: {
