@@ -9,7 +9,7 @@ import {
   getAllSubmissions,
   reviewSubmission,
 } from "@/actions/submission.actions"
-import { submitAllMappings } from "@/actions/document.actions"
+import { submitAllMappings, deleteDocument } from "@/actions/document.actions"
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
 
@@ -145,6 +145,25 @@ export function useToggleTag() {
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to update tags.")
+    },
+  })
+}
+
+// ─── DELETE DOCUMENT ─────────────────────────────────────────────────────────
+
+export function useDeleteDocument() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (documentId: string) => deleteDocument(documentId),
+    onSuccess: (result) => {
+      if (!result.success) throw new Error(result.error)
+      queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
+      queryClient.invalidateQueries({ queryKey: submissionKeys.all })
+      toast.success("Document deleted successfully.")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete document.")
     },
   })
 }

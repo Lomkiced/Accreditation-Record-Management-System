@@ -28,7 +28,7 @@ import { DocumentUploadSheet } from "@/components/documents/DocumentUploadSheet"
 import { NewVersionUploadSheet } from "@/components/documents/NewVersionUploadSheet"
 import type { DocumentWithMappings } from "@/types/document.types"
 import { cn } from "@/lib/utils"
-import { useSubmitAllMappings } from "@/hooks/useSubmissions"
+import { useSubmitAllMappings, useDeleteDocument } from "@/hooks/useSubmissions"
 import { useArchiveDocument } from "@/hooks/useArchives"
 
 // ─── Status Badge Configuration ────────────────────────────────────────────────
@@ -73,6 +73,7 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
   
   const submitAllMappings = useSubmitAllMappings()
   const archiveDocument = useArchiveDocument()
+  const deleteDocument = useDeleteDocument()
 
   const handleArchive = (docId: string) => {
     if (!window.confirm("Are you sure you want to archive this document? It will be moved to your Archives vault.")) {
@@ -80,6 +81,16 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
     }
     setIsDeleting(docId)
     archiveDocument.mutate(docId, {
+      onSettled: () => setIsDeleting(null)
+    })
+  }
+
+  const handleDeleteUntagged = (docId: string) => {
+    if (!window.confirm("Are you sure you want to permanently delete this untagged document?")) {
+      return
+    }
+    setIsDeleting(docId)
+    deleteDocument.mutate(docId, {
       onSettled: () => setIsDeleting(null)
     })
   }
@@ -283,6 +294,15 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
                                 <Tag className="mr-2 h-4 w-4" />
                                 <span>Edit Tags / Resume</span>
                               </DropdownMenuItem>
+                              {doc.mappings.length === 0 && (
+                                <DropdownMenuItem
+                                  onSelect={() => handleDeleteUntagged(doc.id)}
+                                  className="cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50"
+                                >
+                                  <Trash className="mr-2 h-4 w-4" />
+                                  <span>Delete Untagged</span>
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem
                                 onSelect={() => handleArchive(doc.id)}
                                 className="cursor-pointer text-amber-600 focus:text-amber-700 focus:bg-amber-50"

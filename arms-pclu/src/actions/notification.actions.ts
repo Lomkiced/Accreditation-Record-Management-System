@@ -63,3 +63,21 @@ export async function markAllAsRead(): Promise<ActionResult> {
   }
 }
 
+export async function deleteNotification(id: string): Promise<ActionResult> {
+  try {
+    const user = await requireUser()
+    const notif = await prisma.notification.findUnique({ where: { id } })
+    if (!notif || notif.userId !== user.id) return { error: "Not found." }
+
+    await prisma.notification.delete({
+      where: { id },
+    })
+
+    revalidatePath("/faculty/notifications")
+    revalidatePath("/admin/notifications")
+    return { success: true }
+  } catch (error) {
+    return { error: "Failed to delete notification." }
+  }
+}
+

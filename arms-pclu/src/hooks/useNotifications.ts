@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { getNotifications, markAsRead, markAllAsRead } from "@/actions/notification.actions"
+import { getNotifications, markAsRead, markAllAsRead, deleteNotification } from "@/actions/notification.actions"
 import { toast } from "sonner"
 
 export const notificationKeys = {
@@ -49,3 +49,17 @@ export function useMarkAllAsRead() {
   })
 }
 
+export function useDeleteNotification() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => deleteNotification(id),
+    onSuccess: (result) => {
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all })
+      toast.success("Notification deleted.")
+    },
+  })
+}

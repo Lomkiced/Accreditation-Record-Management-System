@@ -1,8 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { Bell, CheckCircle, FileText, AlertCircle, Calendar } from "lucide-react"
+import { Bell, CheckCircle, FileText, AlertCircle, Calendar, MoreVertical, Trash } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
 import type { NotificationItem } from "@/actions/notification.actions"
@@ -11,9 +17,10 @@ interface NotificationListProps {
   notifications: NotificationItem[]
   onMarkAsRead: (id: string) => void
   onMarkAllAsRead: () => void
+  onDelete?: (id: string) => void
 }
 
-export function NotificationList({ notifications, onMarkAsRead, onMarkAllAsRead }: NotificationListProps) {
+export function NotificationList({ notifications, onMarkAsRead, onMarkAllAsRead, onDelete }: NotificationListProps) {
   const getIconAndTitle = (type: string) => {
     switch (type) {
       case "ASSIGNMENT": return { icon: <FileText className="w-5 h-5 text-blue-500" />, title: "New Assignment" }
@@ -86,6 +93,26 @@ export function NotificationList({ notifications, onMarkAsRead, onMarkAllAsRead 
               {!notif.isRead && (
                 <div className="shrink-0 flex items-center">
                   <div className="w-2 h-2 rounded-full bg-blue-500" />
+                </div>
+              )}
+              {onDelete && (
+                <div className="shrink-0 flex items-center ml-2" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem 
+                        onSelect={() => onDelete(notif.id)}
+                        className="text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer"
+                      >
+                        <Trash className="w-4 h-4 mr-2" />
+                        Delete Notification
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               )}
             </div>

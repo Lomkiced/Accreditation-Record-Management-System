@@ -69,22 +69,32 @@ export default function FacultyDashboardPage() {
     return Array.from(map.values()).sort((a, b) => a.areaOrder - b.areaOrder)
   }, [assignments])
 
-  groupedAssignments.forEach(group => {
-    const fullArea = areas.find(a => a.id === group.areaId)
-    if (fullArea) {
-      fullArea.criteria.forEach(c => {
-        if (group.criteriaAssigned.length === 0 || group.criteriaAssigned.some(assigned => assigned.id === c.id)) {
-          totalIndicators += c.indicators.length
-          c.indicators.forEach(ind => {
-            const hasApproved = submissions.some(sub => sub.indicator.id === ind.id && sub.status === "APPROVED")
-            const hasSubmitted = submissions.some(sub => sub.indicator.id === ind.id && sub.status === "SUBMITTED")
-            if (hasApproved) approvedIndicators++
-            if (hasSubmitted) submittedIndicators++
-          })
-        }
-      })
-    }
-  })
+    groupedAssignments.forEach(group => {
+      const fullArea = areas.find(a => a.id === group.areaId)
+      if (fullArea) {
+        fullArea.criteria.forEach(c => {
+          if (group.criteriaAssigned.length === 0 || group.criteriaAssigned.some(assigned => assigned.id === c.id)) {
+            c.indicators.forEach(ind => {
+              let reqCount = 1;
+              if (ind.requiredDocs) {
+                if (!isNaN(Number(ind.requiredDocs))) {
+                  reqCount = Math.max(1, Number(ind.requiredDocs));
+                } else {
+                  reqCount = ind.requiredDocs.split(',').filter(s => s.trim().length > 0).length || 1;
+                }
+              }
+              totalIndicators += reqCount;
+              
+              const approvedCount = submissions.filter(sub => sub.indicator.id === ind.id && sub.status === "APPROVED").length;
+              const submittedCount = submissions.filter(sub => sub.indicator.id === ind.id && sub.status === "SUBMITTED").length;
+              
+              approvedIndicators += Math.min(approvedCount, reqCount);
+              submittedIndicators += Math.min(submittedCount, reqCount);
+            })
+          }
+        })
+      }
+    })
 
   const completionRate = totalIndicators === 0 ? 0 : Math.round((approvedIndicators / totalIndicators) * 100)
   
@@ -178,7 +188,7 @@ export default function FacultyDashboardPage() {
           <div className="bg-white rounded-[1.5rem] p-6 border border-slate-200/60 shadow-sm flex flex-col justify-between group hover:border-amber-300 transition-all hover:shadow-md relative overflow-hidden">
             <div className="flex justify-between items-start relative z-10">
               <div>
-                <p className="text-sm font-semibold text-slate-500 mb-1">Under Review</p>
+                <p className="text-sm font-semibold text-slate-500 mb-1">Drafts</p>
                 <h3 className="text-4xl font-black text-slate-800 tracking-tight">{underReviewCount}</h3>
               </div>
               <div className="p-3.5 bg-amber-50 text-amber-600 rounded-2xl group-hover:bg-amber-500 group-hover:text-white transition-all shadow-sm">
@@ -186,7 +196,7 @@ export default function FacultyDashboardPage() {
               </div>
             </div>
             <p className="text-xs text-slate-500 mt-5 font-medium relative z-10">
-              Pending logbooks/returns
+              Pending drafts
             </p>
           </div>
 
@@ -273,10 +283,22 @@ export default function FacultyDashboardPage() {
                     if (fullArea) {
                       fullArea.criteria.forEach(c => {
                         if (group.criteriaAssigned.length === 0 || group.criteriaAssigned.some(assigned => assigned.id === c.id)) {
-                          localTotal += c.indicators.length
                           c.indicators.forEach(ind => {
-                            if (submissions.some(sub => sub.indicator.id === ind.id && sub.status === "APPROVED")) localApproved++
-                            if (submissions.some(sub => sub.indicator.id === ind.id && sub.status === "SUBMITTED")) localSubmitted++
+                            let reqCount = 1;
+                            if (ind.requiredDocs) {
+                              if (!isNaN(Number(ind.requiredDocs))) {
+                                reqCount = Math.max(1, Number(ind.requiredDocs));
+                              } else {
+                                reqCount = ind.requiredDocs.split(',').filter(s => s.trim().length > 0).length || 1;
+                              }
+                            }
+                            localTotal += reqCount;
+                            
+                            const approvedCount = submissions.filter(sub => sub.indicator.id === ind.id && sub.status === "APPROVED").length;
+                            const submittedCount = submissions.filter(sub => sub.indicator.id === ind.id && sub.status === "SUBMITTED").length;
+                            
+                            localApproved += Math.min(approvedCount, reqCount);
+                            localSubmitted += Math.min(submittedCount, reqCount);
                           })
                         }
                       })

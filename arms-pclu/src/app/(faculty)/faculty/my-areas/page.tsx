@@ -126,11 +126,18 @@ export default function MyAreasPage() {
                 fullArea.criteria.forEach(c => {
                   // Only count if assigned all criteria OR this specific criterion
                   if (group.criteriaAssigned.length === 0 || group.criteriaAssigned.some(assigned => assigned.id === c.id)) {
-                    totalIndicators += c.indicators.length
                     c.indicators.forEach(ind => {
-                      // Check if there's an APPROVED mapping for this indicator in my submissions
-                      const isApproved = submissions.some(sub => sub.indicator.id === ind.id && sub.status === "APPROVED")
-                      if (isApproved) approvedIndicators++
+                      let reqCount = 1;
+                      if (ind.requiredDocs) {
+                        if (!isNaN(Number(ind.requiredDocs))) {
+                          reqCount = Math.max(1, Number(ind.requiredDocs));
+                        } else {
+                          reqCount = ind.requiredDocs.split(',').filter(s => s.trim().length > 0).length || 1;
+                        }
+                      }
+                      totalIndicators += reqCount;
+                      const approvedCount = submissions.filter(sub => sub.indicator.id === ind.id && sub.status === "APPROVED").length;
+                      approvedIndicators += Math.min(approvedCount, reqCount);
                     })
                   }
                 })
@@ -148,13 +155,13 @@ export default function MyAreasPage() {
                           {group.areaName}
                         </h3>
                         <p className="text-sm text-slate-500 mt-1">
-                          {group.criteriaAssigned.length === 0 ? "All Sub-Areas Assigned" : `${group.criteriaAssigned.length} Sub-Areas Assigned`}
+                          {group.criteriaAssigned.length === 0 ? "All Criteria Assigned" : `${group.criteriaAssigned.length} Criteria Assigned`}
                         </p>
                       </div>
                     </div>
 
                     <div className="bg-slate-50 rounded-lg p-3 mb-4 flex-1">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Assigned Sub-Areas:</p>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Criteria Assigned:</p>
                       <ul className="space-y-1">
                         {group.criteriaAssigned.length === 0 ? (
                            <li className="text-sm text-slate-700 truncate flex items-center gap-2">
