@@ -122,7 +122,7 @@ export function TopHeader({ role, user: serverUser }: TopHeaderProps) {
                       </p>
                     </div>
                     <div className="shrink-0">
-                      <DropdownMenu>
+                      <DropdownMenu modal={false}>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" className="h-6 w-6 p-0 text-slate-400 hover:text-slate-600">
                             <span className="sr-only">Menu</span>
@@ -161,7 +161,7 @@ export function TopHeader({ role, user: serverUser }: TopHeaderProps) {
 
         <div className="w-px h-6 bg-slate-200 mx-1"></div>
 
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
