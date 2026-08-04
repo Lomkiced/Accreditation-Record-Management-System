@@ -15,8 +15,8 @@ import { useMySubmissions } from "@/hooks/useSubmissions"
 
 export default function MyAreasPage() {
   const { user } = useAuthStore()
-  const { data: assignments = [], isPending: pendingAssignments, isFetching: fetchingAssignments } = useAssignments(user?.id ?? "")
-  const { data: areas = [], isPending: pendingAreas, isFetching: fetchingAreas } = useAreas()
+  const { data: assignments = [], isLoading: loadingAssignments } = useAssignments(user?.id ?? "")
+  const { data: areas = [], isLoading: loadingAreas } = useAreas()
   const { data: submissions = [] } = useMySubmissions()
   const [searchQuery, setSearchQuery] = React.useState("")
   const COLORS = [
@@ -58,16 +58,15 @@ export default function MyAreasPage() {
     ).sort((a, b) => a.areaOrder - b.areaOrder)
   }, [assignments, searchQuery])
 
-  // In React Query v5, a disabled query has isPending: true but isFetching: false.
   // We only want to show the loading skeleton when the queries are actively fetching data for the first time.
-  const isLoading = (pendingAssignments && fetchingAssignments) || (pendingAreas && fetchingAreas)
+  const isLoading = loadingAssignments || loadingAreas
 
   React.useEffect(() => {
     console.log("[MyAreasPage Debug] User:", user?.id, user?.name);
     console.log("[MyAreasPage Debug] Assignments:", assignments);
     console.log("[MyAreasPage Debug] Grouped:", groupedAssignments);
-    console.log("[MyAreasPage Debug] Loading state:", { pendingAssignments, fetchingAssignments, pendingAreas, fetchingAreas, isLoading });
-  }, [user, assignments, groupedAssignments, pendingAssignments, fetchingAssignments, pendingAreas, fetchingAreas, isLoading]);
+    console.log("[MyAreasPage Debug] Loading state:", { loadingAssignments, loadingAreas, isLoading });
+  }, [user, assignments, groupedAssignments, loadingAssignments, loadingAreas, isLoading]);
 
   return (
     <>

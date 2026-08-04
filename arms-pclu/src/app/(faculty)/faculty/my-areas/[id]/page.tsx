@@ -10,22 +10,19 @@ import { SubmissionUploadForm } from "@/components/submissions/SubmissionUploadF
 import { useAreas } from "@/hooks/useAreas"
 import { useAssignments } from "@/hooks/useAssignments"
 import { useMySubmissions } from "@/hooks/useSubmissions"
-import { useAuth } from "@/hooks/useAuth"
+import { useAuthStore } from "@/store/authStore"
 import Link from "next/link"
 
 export default function MyAreaDetailPage({ params }: { params: { id: string } }) {
   const areaId = params.id
-  const { user } = useAuth()
+  const { user } = useAuthStore()
 
   // Queries
-  const { data: areas = [], isPending: pendingAreas, isFetching: fetchingAreas } = useAreas()
-  const { data: assignments = [], isPending: pendingAssignments, isFetching: fetchingAssignments } = useAssignments(user?.id ?? "")
-  const { data: submissions = [], isPending: pendingSubmissions, isFetching: fetchingSubmissions } = useMySubmissions()
+  const { data: areas = [], isLoading: loadingAreas } = useAreas()
+  const { data: assignments = [], isLoading: loadingAssignments } = useAssignments(user?.id ?? "")
+  const { data: submissions = [], isLoading: loadingSubmissions } = useMySubmissions()
 
-  const isLoading = 
-    (pendingAreas && fetchingAreas) || 
-    (pendingAssignments && fetchingAssignments) || 
-    (pendingSubmissions && fetchingSubmissions)
+  const isLoading = loadingAreas || loadingAssignments || loadingSubmissions
 
   // State for Upload Modal
   const [uploadModalData, setUploadModalData] = React.useState<{
