@@ -43,7 +43,7 @@ export function useAreas() {
       if (!result.success) throw new Error(result.error)
       return result.data
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 10, // 10 minutes — structure rarely changes
   })
 }
 
@@ -147,7 +147,7 @@ export function useCriteria(areaId: string) {
       return result.data
     },
     enabled: !!areaId,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 10, // 10 minutes
   })
 }
 

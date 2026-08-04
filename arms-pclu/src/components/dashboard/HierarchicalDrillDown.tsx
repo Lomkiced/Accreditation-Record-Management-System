@@ -270,7 +270,7 @@ export function HierarchicalDrillDown({ showPercentages = true }: { showPercenta
       if (!result.success || !result.data) throw new Error(result.error ?? "Failed to load hierarchy.")
       return result.data as AreaWithHierarchy[]
     },
-    staleTime: 1000 * 60 * 3, // 3 minutes — hierarchy changes infrequently
+    staleTime: 1000 * 60 * 5, // 5 minutes \u2014 server-side cache handles heavy refetches
   })
 
   if (isLoading) {

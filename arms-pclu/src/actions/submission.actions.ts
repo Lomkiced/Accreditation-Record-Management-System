@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { requireUser, requireAdmin, requireAdminOrDean } from "@/lib/auth/getUser"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 import { z } from "zod"
 import { sanitizeString } from "@/lib/sanitize"
 
@@ -191,6 +191,7 @@ export async function uploadAndMapDocument(
     revalidatePath("/dean/submissions")
     revalidatePath("/admin/dashboard")
     revalidatePath("/dean/dashboard")
+    revalidateTag("areas-hierarchy")
 
     return {
       success: true,
@@ -728,6 +729,7 @@ export async function reviewSubmission(
     revalidatePath("/faculty/submissions")
     revalidatePath("/admin/dashboard")
     revalidatePath("/dean/dashboard")
+    revalidateTag("areas-hierarchy")
 
     return { success: true }
 

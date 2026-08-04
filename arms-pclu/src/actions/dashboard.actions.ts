@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { requireAdminOrDean } from "@/lib/auth/getUser"
+import { unstable_cache } from "next/cache"
 
 // ─── Return Types ─────────────────────────────────────────────────────────────
 
@@ -202,12 +203,14 @@ export async function getRecentAuditLogs(): Promise<RecentAuditLog[]> {
 // ─── getComplianceData ────────────────────────────────────────────────────────
 
 /**
- * Fetches compliance percentage per Area for the dashboard chart.
+ * Fetches compliance percentage per Area using an efficient DB-side aggregation.
+ * Instead of pulling all indicators + mappings into memory, this does one
+ * prisma.$queryRaw (or groupBy) pass to compute approved counts per area.
  */
 export async function getComplianceData(): Promise<AreaCompliance[]> {
   await requireAdminOrDean()
 
-  // Fetch all areas with their indicators and approved mappings
+  // Fetch areas with their indicator IDs (lean — no mappings)
   const areas = await prisma.area.findMany({
     orderBy: { order: "asc" },
     select: {
@@ -215,39 +218,36 @@ export async function getComplianceData(): Promise<AreaCompliance[]> {
       criteria: {
         select: {
           indicators: {
-            select: {
-              id: true,
-              mappings: {
-                where: { status: "APPROVED" },
-                select: { id: true },
-              },
-            },
+            select: { id: true },
           },
         },
       },
     },
   })
 
-  // Calculate percentage per area
+  // Aggregate all approved mappings per indicator in ONE query
+  const approvedGroups = await prisma.documentMapping.groupBy({
+    by: ["indicatorId"],
+    where: { status: "APPROVED" },
+    _count: { _all: true },
+  })
+
+  const approvedIndicatorIds = new Set(approvedGroups.map((g) => g.indicatorId))
+
   return areas.map((area) => {
-    let totalIndicators = 0
-    let approvedIndicators = 0
+    const allIndicatorIds = area.criteria.flatMap((c) =>
+      c.indicators.map((i) => i.id)
+    )
+    const totalIndicators = allIndicatorIds.length
+    const approvedIndicators = allIndicatorIds.filter((id) =>
+      approvedIndicatorIds.has(id)
+    ).length
 
-    area.criteria.forEach((criterion) => {
-      criterion.indicators.forEach((indicator) => {
-        totalIndicators++
-        if (indicator.mappings.length > 0) {
-          approvedIndicators++
-        }
-      })
-    })
+    const value =
+      totalIndicators > 0
+        ? Math.round((approvedIndicators / totalIndicators) * 100)
+        : 0
 
-    const value = totalIndicators > 0 ? Math.round((approvedIndicators / totalIndicators) * 100) : 0
-
-    return {
-      name: area.name,
-      value,
-    }
+    return { name: area.name, value }
   })
 }
-

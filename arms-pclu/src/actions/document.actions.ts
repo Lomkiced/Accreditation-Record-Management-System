@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { requireUser, requireAdmin } from "@/lib/auth/getUser"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache"
 import { z } from "zod"
 import {
   uploadDocumentSchema,
@@ -67,6 +67,7 @@ export async function uploadDocument(
 
     revalidatePath("/admin/repository")
     revalidatePath("/faculty/submissions")
+    revalidateTag("areas-hierarchy")
 
     return { success: true, data: { documentId: document.id } }
   } catch (error) {
@@ -173,6 +174,7 @@ export async function uploadNewVersion(
     revalidatePath("/dean/submissions")
     revalidatePath("/admin/dashboard")
     revalidatePath("/dean/dashboard")
+    revalidateTag("areas-hierarchy")
 
     return { success: true, data: { documentId: updatedDoc.id, newVersion: updatedDoc.version } }
   } catch (error) {
@@ -272,6 +274,7 @@ export async function createEvidenceMappings(
     revalidatePath("/admin/repository")
     revalidatePath("/admin/dashboard")
     revalidatePath("/faculty/submissions")
+    revalidateTag("areas-hierarchy")
 
     return {
       success: true,
@@ -348,6 +351,7 @@ export async function submitMapping(
 
     revalidatePath("/admin/submissions")
     revalidatePath("/faculty/submissions")
+    revalidateTag("areas-hierarchy")
 
     return { success: true }
   } catch (error) {
@@ -538,17 +542,16 @@ export async function deleteMapping(mappingId: string): Promise<ActionResult> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GET AREAS WITH FULL HIERARCHY — For the hierarchical drill-down dashboard.
-// Returns: Area → Criteria → Indicators → Mappings → Document
-// ─────────────────────────────────────────────────────────────────────────────
-export async function getAreasWithHierarchy(): Promise<
-  ActionResult<AreaWithHierarchy[]>
-> {
-  try {
-    await requireUser()
 
-    const areas = await prisma.area.findMany({
+// ─────────────────────────────────────────────────────────────────────────────
+// GET AREAS WITH FULL HIERARCHY — Cached server-side for fast dashboard loads.
+// Revalidated via revalidateTag("areas-hierarchy") on any document write.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Internal cached fetcher — not a Server Action, called within getAreasWithHierarchy.
+const _fetchAreasHierarchyCached = unstable_cache(
+  async () =>
+    prisma.area.findMany({
       orderBy: { order: "asc" },
       select: {
         id: true,
@@ -595,8 +598,17 @@ export async function getAreasWithHierarchy(): Promise<
           },
         },
       },
-    })
+    }),
+  ["areas-hierarchy"],
+  { revalidate: 60, tags: ["areas-hierarchy"] }
+)
 
+export async function getAreasWithHierarchy(): Promise<
+  ActionResult<AreaWithHierarchy[]>
+> {
+  try {
+    await requireUser()
+    const areas = await _fetchAreasHierarchyCached()
     return { success: true, data: areas as AreaWithHierarchy[] }
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("Unauthorized")) {

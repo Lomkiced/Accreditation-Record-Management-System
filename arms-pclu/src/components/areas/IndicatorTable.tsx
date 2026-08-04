@@ -12,8 +12,18 @@ import {
 import { useDeleteIndicator } from "@/hooks/useAreas"
 import type { IndicatorWithMappings } from "@/actions/indicator.actions"
 
+// Flexible indicator type — mappings may be absent for lean list views
+type IndicatorRow = {
+  id: string
+  name: string
+  requiredDocs?: string | null
+  ratingScale: number
+  order: number
+  mappings?: IndicatorWithMappings["mappings"]
+}
+
 interface IndicatorTableProps {
-  indicators: IndicatorWithMappings[]
+  indicators: IndicatorRow[]
   criterionId: string
   /** Called when the edit button is clicked for an indicator */
   onEdit?: (indicator: IndicatorWithMappings) => void
@@ -36,7 +46,10 @@ export function IndicatorTable({
     )
   }
 
-  const renderEvidence = (mappings: IndicatorWithMappings["mappings"]) => {
+  const renderEvidence = (mappings: IndicatorWithMappings["mappings"] | undefined) => {
+    if (!mappings || mappings.length === 0) {
+      return <span className="text-xs text-slate-400 italic">No evidence</span>
+    }
     // Prefer APPROVED, otherwise fallback to the most recent SUBMITTED/UNDER_REVIEW
     const approved = mappings.find(m => m.status === "APPROVED")
     const latest = approved || mappings.find(m => m.status !== "DRAFT" && m.status !== "RETURNED")
@@ -112,7 +125,7 @@ export function IndicatorTable({
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-slate-400 hover:text-blue-600"
-                        onClick={() => onEdit(ind)}
+                        onClick={() => onEdit(ind as IndicatorWithMappings)}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>

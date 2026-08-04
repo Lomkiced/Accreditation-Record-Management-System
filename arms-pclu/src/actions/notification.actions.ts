@@ -38,8 +38,6 @@ export async function markAsRead(id: string): Promise<ActionResult> {
       data: { isRead: true },
     })
 
-    revalidatePath("/faculty/notifications")
-    revalidatePath("/admin/notifications")
     return { success: true }
   } catch (error) {
     return { error: "Failed to mark as read." }
@@ -55,8 +53,6 @@ export async function markAllAsRead(): Promise<ActionResult> {
       data: { isRead: true },
     })
 
-    revalidatePath("/faculty/notifications")
-    revalidatePath("/admin/notifications")
     return { success: true }
   } catch (error) {
     return { error: "Failed to mark all as read." }

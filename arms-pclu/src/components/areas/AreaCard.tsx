@@ -42,8 +42,9 @@ export function AreaCard({ area, mode = "dean" }: AreaCardProps) {
   area.criteria.forEach(criterion => {
     totalIndicators += criterion.indicators.length
     criterion.indicators.forEach(indicator => {
-      // If there is any approved mapping for this indicator, it counts as fulfilled
-      const isApproved = indicator.mappings.some(m => m.status === "APPROVED")
+      // mappings may be omitted depending on which getAreas variant was called
+      const mappings = (indicator as any).mappings ?? []
+      const isApproved = mappings.some((m: any) => m.status === "APPROVED")
       if (isApproved) approvedIndicators++
     })
   })

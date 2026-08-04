@@ -22,7 +22,14 @@ import { useAuth } from "@/hooks/useAuth"
 import { useNotifications, useMarkAsRead } from "@/hooks/useNotifications"
 import type { StoredUser } from "@/store/authStore"
 import { useRouter } from "next/navigation"
-import { GlobalSearchDialog } from "./GlobalSearchDialog"
+import dynamic from "next/dynamic"
+
+// Lazy-load the search dialog — not needed until user clicks the search button.
+// This removes its code from the initial JS bundle for every page.
+const GlobalSearchDialog = dynamic(
+  () => import("./GlobalSearchDialog").then((m) => ({ default: m.GlobalSearchDialog })),
+  { ssr: false }
+)
 
 interface TopHeaderProps {
   role: "admin" | "faculty" | "dean"
@@ -68,7 +75,9 @@ export function TopHeader({ role, user: serverUser }: TopHeaderProps) {
         >
           <Search className="w-5 h-5" />
         </button>
-        <GlobalSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+        {searchOpen && (
+          <GlobalSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+        )}
 
         <Popover>
           <PopoverTrigger asChild>

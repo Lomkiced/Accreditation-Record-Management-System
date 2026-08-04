@@ -24,31 +24,31 @@ const ReorderSchema = z.object({
   orderedIds: z.array(z.string().uuid()).min(1),
 })
 
-// ─── Nested include shape (shared) ────────────────────────────────────────────
+// ─── Lean nested select shape (used for list/dropdown rendering) ─────────────
+// Only pulls names and ordering — NOT the full document/mapping tree.
 
-const AREA_FULL_INCLUDE = {
+const AREA_LEAN_SELECT = {
+  id: true,
+  name: true,
+  description: true,
+  order: true,
+  createdAt: true,
+  updatedAt: true,
   criteria: {
     orderBy: { order: "asc" as const },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      order: true,
       indicators: {
         orderBy: { order: "asc" as const },
-        include: {
-          mappings: {
-            select: {
-              id: true,
-              status: true,
-              rating: true,
-              createdAt: true,
-              document: {
-                select: {
-                  id: true,
-                  title: true,
-                  fileName: true,
-                },
-              },
-            },
-            orderBy: { createdAt: "desc" as const },
-          },
+        select: {
+          id: true,
+          name: true,
+          requiredDocs: true,
+          ratingScale: true,
+          order: true,
         },
       },
     },
@@ -64,7 +64,7 @@ export async function getAreas() {
 
     const areas = await prisma.area.findMany({
       orderBy: { order: "asc" },
-      include: AREA_FULL_INCLUDE,
+      select: AREA_LEAN_SELECT,
     })
 
     return { success: true as const, data: areas }
