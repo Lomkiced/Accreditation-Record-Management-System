@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Plus, Loader2, ArrowLeft } from "lucide-react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { Button } from "@/components/ui/button"
 import { IndicatorTable } from "@/components/areas/IndicatorTable"
@@ -140,6 +141,9 @@ function IndicatorFormModal({
 
 export default function AreaDetailPage({ params }: { params: { id: string } }) {
   const { data: areas, isLoading, isError } = useAreas()
+  const searchParams = useSearchParams()
+  const criterionIdParam = searchParams.get("criterionId")
+
   const [addModal, setAddModal] = React.useState<{ criterionId: string } | null>(null)
   const [editModal, setEditModal] = React.useState<{
     criterionId: string
@@ -147,6 +151,11 @@ export default function AreaDetailPage({ params }: { params: { id: string } }) {
   } | null>(null)
 
   const area = areas?.find((a) => a.id === params.id)
+  const displayCriteria = React.useMemo(() => {
+    if (!area) return []
+    if (criterionIdParam) return area.criteria.filter(c => c.id === criterionIdParam)
+    return area.criteria
+  }, [area, criterionIdParam])
 
   if (isLoading) {
     return (
@@ -182,7 +191,7 @@ export default function AreaDetailPage({ params }: { params: { id: string } }) {
       />
 
       <div className="space-y-4">
-        {area.criteria.map((criterion) => (
+        {displayCriteria.map((criterion) => (
           <div
             key={criterion.id}
             className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
@@ -216,9 +225,9 @@ export default function AreaDetailPage({ params }: { params: { id: string } }) {
           </div>
         ))}
 
-        {area.criteria.length === 0 && (
+        {displayCriteria.length === 0 && (
           <div className="text-center py-16 text-slate-500">
-            No sub-areas in this area yet. Go back and add sub-areas first.
+            No criterias found. {criterionIdParam ? "The specified criteria might not exist." : "Go back and add criterias first."}
           </div>
         )}
       </div>

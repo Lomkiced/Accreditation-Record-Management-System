@@ -96,29 +96,7 @@ export function SubmissionReviewPanel({ open, onClose, submission }: SubmissionR
             )}
           </div>
 
-          {/* Section 2: Document File */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
-                <FileText className="w-6 h-6 text-red-500" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-900 truncate">{submission.document.fileName || 'Document'}</p>
-                <p className="text-xs text-slate-500">
-                  {submission.document.fileSize ? `${(submission.document.fileSize / (1024 * 1024)).toFixed(2)} MB` : 'Unknown size'}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0 ml-4">
-              {submission.document.fileUrl && (
-                <a href={submission.document.fileUrl} target="_blank" rel="noreferrer">
-                  <Button variant="outline" size="icon" className="h-8 w-8 text-blue-600 border-blue-200">
-                    <Download className="w-4 h-4" />
-                  </Button>
-                </a>
-              )}
-            </div>
-          </div>
+
 
           {/* Section 3: History */}
           <div className="bg-white rounded-xl border border-slate-200 px-4">
@@ -126,13 +104,15 @@ export function SubmissionReviewPanel({ open, onClose, submission }: SubmissionR
               version: v.version,
               date: new Date(v.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
               status: v.version === submission.document.version ? submission.status : "SUPERSEDED",
-              remarks: v.remarks
+              remarks: v.remarks,
+              fileUrl: (v as any).fileUrl || submission.document.fileUrl
             })) : [
               { 
                 version: submission.document.version, 
                 date: new Date(submission.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }), 
                 status: submission.status, 
-                remarks: null 
+                remarks: null,
+                fileUrl: submission.document.fileUrl
               }
             ]} />
           </div>

@@ -41,9 +41,17 @@ export function VersionHistory({ versions }: VersionHistoryProps) {
                   </div>
                   <div className="flex items-center gap-3">
                     <StatusBadge status={v.status} size="sm" />
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-slate-700">
-                      <Download className="w-3.5 h-3.5" />
-                    </Button>
+                    {v.fileUrl ? (
+                      <a href={`${v.fileUrl}?download=`} target="_blank" rel="noreferrer" download>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-slate-700">
+                          <Download className="w-3.5 h-3.5" />
+                        </Button>
+                      </a>
+                    ) : (
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-200" disabled>
+                        <Download className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
                   </div>
                 </div>
                 {v.remarks && (

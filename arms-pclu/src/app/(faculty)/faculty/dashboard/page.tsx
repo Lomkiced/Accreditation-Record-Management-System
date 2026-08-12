@@ -215,7 +215,7 @@ export default function FacultyDashboardPage() {
               </div>
             </div>
             <p className="text-xs text-slate-500 mt-5 font-medium">
-              Awaiting admin approval
+              Awaiting dean&apos;s approval
             </p>
           </div>
 

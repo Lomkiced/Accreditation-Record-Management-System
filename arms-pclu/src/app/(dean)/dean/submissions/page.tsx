@@ -14,6 +14,9 @@ export default function SubmissionsPage() {
   const [activeTab, setActiveTab] = React.useState("ALL")
   const [selectedSubmission, setSelectedSubmission] = React.useState<AdminSubmission | null>(null)
   const [searchQuery, setSearchQuery] = React.useState("")
+  const [filterArea, setFilterArea] = React.useState("ALL")
+  const [filterCriterion, setFilterCriterion] = React.useState("ALL")
+  const [filterFaculty, setFilterFaculty] = React.useState("ALL")
   
   const { data: submissions = [], isLoading } = useAllSubmissions()
   
@@ -29,7 +32,12 @@ export default function SubmissionsPage() {
     if (activeTab === "SUBMITTED" && s.status !== "SUBMITTED" && s.status !== "UNDER_REVIEW") return false
     if (activeTab !== "ALL" && activeTab !== "SUBMITTED" && s.status !== activeTab) return false
     
-    // 2. Search filter
+    // 2. Dropdown filters
+    if (filterArea !== "ALL" && s.indicator.criterion.area.name !== filterArea) return false
+    if (filterCriterion !== "ALL" && s.indicator.criterion.name !== filterCriterion) return false
+    if (filterFaculty !== "ALL" && s.user.name !== filterFaculty) return false
+    
+    // 3. Search filter
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
       if (!s.document.title.toLowerCase().includes(q) && 
@@ -39,6 +47,11 @@ export default function SubmissionsPage() {
     }
     return true
   })
+
+  // Compute unique values for dropdowns
+  const uniqueAreas = Array.from(new Set(submissions.map(s => s.indicator.criterion.area.name))).sort()
+  const uniqueCriteria = Array.from(new Set(submissions.map(s => s.indicator.criterion.name))).sort()
+  const uniqueFaculties = Array.from(new Set(submissions.map(s => s.user.name))).sort()
 
   return (
     <>
@@ -109,9 +122,36 @@ export default function SubmissionsPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Button variant="outline" className="h-9 text-slate-600">Area</Button>
-            <Button variant="outline" className="h-9 text-slate-600">Criterion</Button>
-            <Button variant="outline" className="h-9 text-slate-600">Faculty</Button>
+            <select 
+              className="h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-sm text-slate-600 focus:outline-none focus:ring-1 focus:ring-slate-400"
+              value={filterArea}
+              onChange={(e) => setFilterArea(e.target.value)}
+            >
+              <option value="ALL">All Areas</option>
+              {uniqueAreas.map(area => (
+                <option key={area} value={area}>{area}</option>
+              ))}
+            </select>
+            <select 
+              className="h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-sm text-slate-600 focus:outline-none focus:ring-1 focus:ring-slate-400"
+              value={filterCriterion}
+              onChange={(e) => setFilterCriterion(e.target.value)}
+            >
+              <option value="ALL">All Criterias</option>
+              {uniqueCriteria.map(crit => (
+                <option key={crit} value={crit}>{crit}</option>
+              ))}
+            </select>
+            <select 
+              className="h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-sm text-slate-600 focus:outline-none focus:ring-1 focus:ring-slate-400"
+              value={filterFaculty}
+              onChange={(e) => setFilterFaculty(e.target.value)}
+            >
+              <option value="ALL">All Faculties</option>
+              {uniqueFaculties.map(fac => (
+                <option key={fac} value={fac}>{fac}</option>
+              ))}
+            </select>
             
             <div className="ml-auto text-sm text-slate-500">
               {filtered.length} results

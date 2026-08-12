@@ -66,7 +66,7 @@ export function CriterionList({ areaId, mode = "dean" }: CriterionListProps) {
     return (
       <div className="flex items-center gap-2 py-4 text-sm text-slate-500">
         <Loader2 className="w-4 h-4 animate-spin" />
-        Loading sub-areas...
+        Loading criterias...
       </div>
     )
   }
@@ -74,7 +74,7 @@ export function CriterionList({ areaId, mode = "dean" }: CriterionListProps) {
   if (isError) {
     return (
       <p className="text-sm text-red-500 py-4">
-        Failed to load sub-areas. Please try again.
+        Failed to load criterias. Please try again.
       </p>
     )
   }
@@ -103,7 +103,7 @@ export function CriterionList({ areaId, mode = "dean" }: CriterionListProps) {
 
                   <div className="h-4 w-px bg-slate-200 mx-1" />
 
-                  <Link href={mode === "admin" ? `/admin/areas/${areaId}` : `/dean/areas/${areaId}`}>
+                  <Link href={mode === "admin" ? `/admin/areas/${areaId}?criterionId=${criterion.id}` : `/dean/areas/${areaId}?criterionId=${criterion.id}`}>
                     <span className="text-xs text-blue-600 hover:underline cursor-pointer mr-2 font-medium">
                       View Indicators
                     </span>
@@ -136,7 +136,7 @@ export function CriterionList({ areaId, mode = "dean" }: CriterionListProps) {
           })
         ) : (
           <p className="text-sm text-slate-500 py-2">
-            No sub-areas yet. Add one below.
+            No criterias yet. Add one below.
           </p>
         )}
       </div>
@@ -149,7 +149,7 @@ export function CriterionList({ areaId, mode = "dean" }: CriterionListProps) {
           onClick={() => setAddOpen(true)}
         >
           <Plus className="w-4 h-4 mr-1" />
-          Add Sub-Area
+          Add Criteria
         </Button>
       )}
 
@@ -180,7 +180,7 @@ export function CriterionList({ areaId, mode = "dean" }: CriterionListProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the sub-area
+              This action cannot be undone. This will permanently delete the criteria
               <strong> {deleteTarget?.name}</strong> and all its associated indicators.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -198,7 +198,7 @@ export function CriterionList({ areaId, mode = "dean" }: CriterionListProps) {
                 }
               }}
             >
-              {deleteCriterion.isPending ? "Deleting..." : "Delete Sub-Area"}
+              {deleteCriterion.isPending ? "Deleting..." : "Delete Criteria"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

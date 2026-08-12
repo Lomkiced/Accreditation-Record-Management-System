@@ -1,10 +1,18 @@
 "use client"
 
 import * as React from "react"
-import { Search } from "lucide-react"
+import { Search, Upload, ChevronRight, FileText } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { SubmissionUploadForm } from "@/components/submissions/SubmissionUploadForm"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 
@@ -19,6 +27,21 @@ export default function MyAreasPage() {
   const { data: areas = [], isLoading: loadingAreas } = useAreas()
   const { data: submissions = [] } = useMySubmissions()
   const [searchQuery, setSearchQuery] = React.useState("")
+
+  // Upload Evidence picker state
+  const [pickerOpen, setPickerOpen] = React.useState(false)
+  const [pickerStep, setPickerStep] = React.useState<"area" | "criterion" | "indicator">("area")
+  const [selectedArea, setSelectedArea] = React.useState<string | null>(null)
+  const [selectedCriterion, setSelectedCriterion] = React.useState<string | null>(null)
+
+  // Upload form state
+  const [uploadModalData, setUploadModalData] = React.useState<{
+    indicator: any
+    areaName: string
+    criterionName: string
+    existingSubmission: any | null
+  } | null>(null)
+
   const COLORS = [
     "bg-blue-100 text-blue-700",
     "bg-violet-100 text-violet-700",
@@ -58,15 +81,64 @@ export default function MyAreasPage() {
     ).sort((a, b) => a.areaOrder - b.areaOrder)
   }, [assignments, searchQuery])
 
+  // Picker helpers — get criteria for the selected area
+  const pickerCriteria = React.useMemo(() => {
+    if (!selectedArea) return []
+    const group = groupedAssignments.find(g => g.areaId === selectedArea)
+    const fullArea = areas.find(a => a.id === selectedArea)
+    if (!fullArea || !group) return []
+
+    if (group.criteriaAssigned.length === 0) return fullArea.criteria
+    return fullArea.criteria.filter(c => group.criteriaAssigned.some(a => a.id === c.id))
+  }, [selectedArea, groupedAssignments, areas])
+
+  const pickerIndicators = React.useMemo(() => {
+    if (!selectedCriterion) return []
+    const criterion = pickerCriteria.find(c => c.id === selectedCriterion)
+    return criterion?.indicators ?? []
+  }, [selectedCriterion, pickerCriteria])
+
+  const handleOpenPicker = () => {
+    setPickerStep("area")
+    setSelectedArea(null)
+    setSelectedCriterion(null)
+    setPickerOpen(true)
+  }
+
+  const handleSelectArea = (areaId: string) => {
+    setSelectedArea(areaId)
+    setPickerStep("criterion")
+  }
+
+  const handleSelectCriterion = (criterionId: string) => {
+    setSelectedCriterion(criterionId)
+    setPickerStep("indicator")
+  }
+
+  const handleSelectIndicator = (indicator: any) => {
+    const areaName = groupedAssignments.find(g => g.areaId === selectedArea)?.areaName ?? ""
+    const criterionName = pickerCriteria.find(c => c.id === selectedCriterion)?.name ?? ""
+    setPickerOpen(false)
+    setUploadModalData({
+      indicator,
+      areaName,
+      criterionName,
+      existingSubmission: null,
+    })
+  }
+
+  const handlePickerBack = () => {
+    if (pickerStep === "indicator") {
+      setSelectedCriterion(null)
+      setPickerStep("criterion")
+    } else if (pickerStep === "criterion") {
+      setSelectedArea(null)
+      setPickerStep("area")
+    }
+  }
+
   // We only want to show the loading skeleton when the queries are actively fetching data for the first time.
   const isLoading = loadingAssignments || loadingAreas
-
-  React.useEffect(() => {
-    console.log("[MyAreasPage Debug] User:", user?.id, user?.name);
-    console.log("[MyAreasPage Debug] Assignments:", assignments);
-    console.log("[MyAreasPage Debug] Grouped:", groupedAssignments);
-    console.log("[MyAreasPage Debug] Loading state:", { loadingAssignments, loadingAreas, isLoading });
-  }, [user, assignments, groupedAssignments, loadingAssignments, loadingAreas, isLoading]);
 
   return (
     <>
@@ -76,7 +148,7 @@ export default function MyAreasPage() {
       />
 
       <div className="space-y-4">
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex items-center">
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex items-center gap-3">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
             <Input 
@@ -86,6 +158,13 @@ export default function MyAreasPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          <Button
+            onClick={handleOpenPicker}
+            className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm h-9 px-4"
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Upload Evidence
+          </Button>
         </div>
 
         {isLoading ? (
@@ -194,6 +273,150 @@ export default function MyAreasPage() {
           </div>
         )}
       </div>
+
+      {/* Area/Criterion/Indicator Picker Dialog */}
+      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+        <DialogContent className="sm:max-w-[480px] p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-6 py-4 border-b border-slate-200 bg-slate-50">
+            <DialogTitle className="text-base font-semibold text-slate-900">
+              Upload Evidence
+            </DialogTitle>
+            <p className="text-sm text-slate-500 mt-0.5">
+              {pickerStep === "area" && "Select an area to continue"}
+              {pickerStep === "criterion" && "Select a criterion"}
+              {pickerStep === "indicator" && "Select the indicator to upload evidence for"}
+            </p>
+          </DialogHeader>
+
+          <div className="px-4 py-3">
+            {/* Breadcrumb trail */}
+            {pickerStep !== "area" && (
+              <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+                <button
+                  onClick={() => { setSelectedArea(null); setSelectedCriterion(null); setPickerStep("area") }}
+                  className="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                >
+                  Areas
+                </button>
+                {selectedArea && (
+                  <>
+                    <ChevronRight className="w-3 h-3 text-slate-300" />
+                    <button
+                      onClick={pickerStep === "indicator" ? handlePickerBack : undefined}
+                      className={cn(
+                        "text-xs font-medium truncate max-w-[140px]",
+                        pickerStep === "indicator" ? "text-blue-600 hover:text-blue-800 cursor-pointer" : "text-slate-700"
+                      )}
+                    >
+                      {groupedAssignments.find(g => g.areaId === selectedArea)?.areaName}
+                    </button>
+                  </>
+                )}
+                {selectedCriterion && pickerStep === "indicator" && (
+                  <>
+                    <ChevronRight className="w-3 h-3 text-slate-300" />
+                    <span className="text-xs font-medium text-slate-700 truncate max-w-[140px]">
+                      {pickerCriteria.find(c => c.id === selectedCriterion)?.name}
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
+
+            <div className="max-h-[360px] overflow-y-auto space-y-1.5">
+              {/* Area list */}
+              {pickerStep === "area" && groupedAssignments.map((group) => (
+                <button
+                  key={group.areaId}
+                  onClick={() => handleSelectArea(group.areaId)}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl text-left hover:bg-blue-50 border border-transparent hover:border-blue-200 transition-all group"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold shrink-0">
+                    {group.areaOrder}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-blue-700 transition-colors">
+                      {group.areaName}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {group.criteriaAssigned.length === 0 ? "All criteria" : `${group.criteriaAssigned.length} criteria`}
+                    </p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
+                </button>
+              ))}
+
+              {/* Criterion list */}
+              {pickerStep === "criterion" && pickerCriteria.map((criterion) => (
+                <button
+                  key={criterion.id}
+                  onClick={() => handleSelectCriterion(criterion.id)}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl text-left hover:bg-blue-50 border border-transparent hover:border-blue-200 transition-all group"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-violet-100 text-violet-700 flex items-center justify-center shrink-0">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-blue-700 transition-colors">
+                      {criterion.name}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {criterion.indicators.length} indicators
+                    </p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
+                </button>
+              ))}
+
+              {/* Indicator list */}
+              {pickerStep === "indicator" && pickerIndicators.map((indicator: any, idx: number) => (
+                <button
+                  key={indicator.id}
+                  onClick={() => handleSelectIndicator(indicator)}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl text-left hover:bg-emerald-50 border border-transparent hover:border-emerald-200 transition-all group"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold shrink-0">
+                    {idx + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-800 leading-snug group-hover:text-emerald-700 transition-colors">
+                      {indicator.name}
+                    </p>
+                    {indicator.requiredDocs && (
+                      <p className="text-xs text-slate-400 mt-0.5 truncate">
+                        Required: {indicator.requiredDocs}
+                      </p>
+                    )}
+                  </div>
+                  <Upload className="w-4 h-4 text-slate-300 group-hover:text-emerald-500 transition-colors" />
+                </button>
+              ))}
+
+              {/* Empty states */}
+              {pickerStep === "area" && groupedAssignments.length === 0 && (
+                <p className="text-sm text-slate-400 text-center py-8">No areas assigned to you.</p>
+              )}
+              {pickerStep === "criterion" && pickerCriteria.length === 0 && (
+                <p className="text-sm text-slate-400 text-center py-8">No criteria found for this area.</p>
+              )}
+              {pickerStep === "indicator" && pickerIndicators.length === 0 && (
+                <p className="text-sm text-slate-400 text-center py-8">No indicators found for this criterion.</p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Form Sheet */}
+      <SubmissionUploadForm 
+        open={!!uploadModalData}
+        onClose={() => setUploadModalData(null)}
+        indicator={uploadModalData?.indicator || null}
+        areaName={uploadModalData?.areaName || ""}
+        criterionName={uploadModalData?.criterionName || ""}
+        existingSubmission={uploadModalData?.existingSubmission || null}
+      />
     </>
   )
 }
+

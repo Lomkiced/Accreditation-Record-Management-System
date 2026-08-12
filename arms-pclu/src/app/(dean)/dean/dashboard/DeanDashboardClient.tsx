@@ -13,13 +13,11 @@ import {
   FileText,
   ChevronRight,
   BarChart3,
-  TrendingUp,
   ArrowRight
 } from "lucide-react"
 
-import { StatCard } from "@/components/dashboard/StatCard"
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed"
-import { HierarchicalDrillDown } from "@/components/dashboard/HierarchicalDrillDown"
+import { ProgressByArea } from "@/components/dashboard/ProgressByArea"
 
 import type { DashboardStats, PendingSubmission, RecentAuditLog } from "@/actions/dashboard.actions"
 
@@ -85,13 +83,13 @@ export function DeanDashboardClient({
         animate="show"
         className="max-w-[1600px] mx-auto space-y-6"
       >
-        {/* HERO SECTION */}
+        {/* HERO SECTION — No compliance card */}
         <motion.div variants={itemVariants} className="relative overflow-hidden rounded-[2rem] bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-700 text-white shadow-xl shadow-indigo-900/10">
           <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay"></div>
           <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
           <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
           
-          <div className="relative p-8 md:p-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+          <div className="relative p-8 md:p-10">
             <div className="space-y-2">
               <p className="text-blue-100 font-medium tracking-wide text-sm uppercase">{currentDate}</p>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight text-white">
@@ -101,32 +99,11 @@ export function DeanDashboardClient({
                 You have <strong className="text-white font-semibold">{stats.pendingReviews} pending reviews</strong> requiring your evaluation today.
               </p>
             </div>
-            
-            <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 min-w-[280px] lg:min-w-[320px] shadow-2xl">
-              <div className="flex justify-between items-end mb-3">
-                <span className="text-sm font-semibold text-blue-100">Overall Compliance</span>
-                <span className="text-3xl font-black text-white tracking-tighter">{stats.compliancePercent}%</span>
-              </div>
-              <div className="h-2.5 w-full bg-blue-950/40 rounded-full overflow-hidden shadow-inner">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${stats.compliancePercent}%` }}
-                  transition={{ duration: 1.5, ease: "easeOut" }}
-                  className="h-full bg-white rounded-full" 
-                />
-              </div>
-              <div className="mt-4 flex items-center justify-between text-xs font-medium">
-                <div className="flex items-center gap-1.5 text-blue-100">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400"></div> {stats.approvedMappings} Approved
-                </div>
-                <div className="text-blue-200/80">{stats.totalDocuments} Documents</div>
-              </div>
-            </div>
           </div>
         </motion.div>
 
-        {/* STATS ROW */}
-        <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        {/* STATS ROW — 3 cards, no Overall Compliance */}
+        <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
           <div className="bg-white rounded-[1.5rem] p-6 border border-slate-200/60 shadow-sm flex flex-col justify-between group hover:border-blue-300 transition-all hover:shadow-md">
             <div className="flex justify-between items-start">
               <div>
@@ -166,41 +143,25 @@ export function DeanDashboardClient({
             </div>
             <p className="text-xs text-slate-500 mt-5 font-medium">Contributing members</p>
           </div>
-
-          <div className="bg-white rounded-[1.5rem] p-6 border border-slate-200/60 shadow-sm flex flex-col justify-between group hover:border-emerald-300 transition-all hover:shadow-md">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm font-semibold text-slate-500 mb-1">Overall Compliance</p>
-                <h3 className="text-4xl font-black text-slate-800 tracking-tight">{stats.compliancePercent}%</h3>
-              </div>
-              <div className="p-3.5 bg-emerald-50 text-emerald-600 rounded-2xl group-hover:bg-emerald-500 group-hover:text-white transition-all shadow-sm">
-                <CheckCircle2 size={24} />
-              </div>
-            </div>
-            <p className="text-xs text-slate-500 mt-5 font-medium">Target completion</p>
-          </div>
         </motion.div>
 
         {/* MAIN BENTO GRID */}
-        <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        <motion.div variants={itemVariants} className="flex flex-col gap-6">
           
-          {/* Middle Section (Spans 8 cols) - Submissions & Area breakdown */}
-          <div className="lg:col-span-8 flex flex-col gap-6">
+          {/* Progress by Area & Pending Submissions */}
             
-            {/* Hierarchical Drill Down */}
+            {/* Progress by Area — New Component */}
             <div className="bg-white rounded-[2rem] border border-slate-200/60 shadow-sm p-6 lg:p-8 flex-1">
               <div className="mb-6 flex justify-between items-end">
                 <div>
                   <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                     <BarChart3 size={22} className="text-blue-600" />
-                    Compliance Progress
+                    Progress by Area
                   </h3>
                   <p className="text-sm text-slate-500 mt-1 font-medium">Track your department&apos;s compliance per area.</p>
                 </div>
               </div>
-              <div className="bg-slate-50/50 rounded-2xl border border-slate-100 p-2">
-                <HierarchicalDrillDown showPercentages={false} />
-              </div>
+              <ProgressByArea />
             </div>
 
             {/* Pending Submissions */}
@@ -270,84 +231,9 @@ export function DeanDashboardClient({
               </div>
             </div>
 
-          </div>
-
-          {/* Right Section (Spans 4 cols) - Recent Activity & Compliance Chart */}
-          <div className="lg:col-span-4 flex flex-col gap-6">
-            
-            <div className="bg-white rounded-[2rem] border border-slate-200/60 shadow-sm p-6 pb-2">
-               <ActivityFeed />
-            </div>
-
-            {/* Recent System Activity */}
-            <div className="bg-white rounded-[2rem] border border-slate-200/60 shadow-sm flex flex-col flex-1 max-h-[500px]">
-              <div className="p-6 pb-4 border-b border-slate-100">
-                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                  <ActivitySquare className="w-5 h-5 text-indigo-600" />
-                  Recent Activity
-                </h3>
-              </div>
-
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
-                {recentLogs.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center mb-3">
-                      <AlertCircle className="w-6 h-6 text-slate-400" />
-                    </div>
-                    <p className="text-sm font-semibold text-slate-700">No activity yet</p>
-                  </div>
-                ) : (
-                  <ul className="space-y-2 p-2 pt-0">
-                    {recentLogs.map((log) => {
-                      const docTitle = log.details != null && typeof log.details.documentTitle === "string" ? log.details.documentTitle : null
-                      return (
-                      <li key={log.id} className="flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors">
-                        <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center shrink-0 mt-0.5">
-                          <ActivitySquare className="w-4 h-4 text-indigo-500" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-slate-800">
-                            <span className="font-bold">{log.user.name}</span>{" "}
-                            <span className="text-slate-600 text-xs">
-                              {ACTION_LABELS[log.action] ?? log.action.toLowerCase().replace(/_/g, " ")}
-                            </span>
-                          </p>
-                          {docTitle && (
-                            <p className="text-[11px] font-medium text-slate-500 mt-0.5 truncate bg-slate-100 px-2 py-0.5 rounded-md inline-block max-w-full">
-                              {docTitle}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-2 mt-1.5">
-                            <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-md uppercase tracking-widest">
-                              {log.module}
-                            </span>
-                            <span className="text-[10px] font-medium text-slate-400">
-                              {new Date(log.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                            </span>
-                          </div>
-                        </div>
-                      </li>
-                      )
-                    })}
-                  </ul>
-                )}
-              </div>
-              
-              <div className="p-3 border-t border-slate-100 bg-slate-50/50 text-center rounded-b-[2rem]">
-                <Link
-                  href="/dean/audit-logs"
-                  className="text-xs text-indigo-600 hover:text-indigo-800 font-bold tracking-wide uppercase inline-flex items-center gap-1 group transition-colors"
-                >
-                  Full Audit Log
-                  <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </div>
-            </div>
-
-          </div>
-
         </motion.div>
       </motion.div>
     </div>
   )
 }
+

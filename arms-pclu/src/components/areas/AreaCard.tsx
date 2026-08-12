@@ -36,33 +36,43 @@ export function AreaCard({ area, mode = "dean" }: AreaCardProps) {
   // Calculate dynamic stats
   const criteriaCount = area.criteria.length
   
-  let totalIndicators = 0
-  let approvedIndicators = 0
+  let draftCount = 0
+  let pendingCount = 0
+  let approvedCount = 0
+  let totalDocsCount = 0
   
   area.criteria.forEach(criterion => {
-    totalIndicators += criterion.indicators.length
     criterion.indicators.forEach(indicator => {
-      // mappings may be omitted depending on which getAreas variant was called
       const mappings = (indicator as any).mappings ?? []
-      const isApproved = mappings.some((m: any) => m.status === "APPROVED")
-      if (isApproved) approvedIndicators++
+      mappings.forEach((m: any) => {
+        totalDocsCount++
+        if (m.status === "DRAFT") draftCount++
+        else if (m.status === "APPROVED") approvedCount++
+        else pendingCount++ // SUBMITTED, UNDER_REVIEW, RETURNED
+      })
     })
   })
 
-  const completion = totalIndicators === 0 ? 0 : Math.round((approvedIndicators / totalIndicators) * 100)
-
   const getCompletionPill = () => {
     if (mode === "admin") {
-      if (totalIndicators === 0) return <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">No Indicators</span>
+      if (totalDocsCount === 0) return <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">No Documents</span>
+      const completion = Math.round((approvedCount / totalDocsCount) * 100)
       if (completion === 100) return <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">100% Complete</span>
       if (completion > 0) return <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">{completion}% Partial</span>
       return <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">0%</span>
     }
     
-    if (totalIndicators === 0) return <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">No Indicators</span>
-    if (approvedIndicators === totalIndicators && totalIndicators > 0) return <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">{approvedIndicators}/{totalIndicators} docs</span>
-    if (approvedIndicators > 0) return <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">{approvedIndicators}/{totalIndicators} docs</span>
-    return <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">0/{totalIndicators} docs</span>
+    if (totalDocsCount === 0) return <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">No Documents</span>
+    
+    return (
+      <span className="text-xs flex items-center gap-2 font-medium bg-white border border-slate-200 px-2.5 py-1 rounded-full shadow-sm">
+        {draftCount > 0 && <span className="text-slate-600">{draftCount} draft</span>}
+        {draftCount > 0 && pendingCount > 0 && <span className="text-slate-300">–</span>}
+        {pendingCount > 0 && <span className="text-amber-600">{pendingCount} pending review</span>}
+        {(draftCount > 0 || pendingCount > 0) && approvedCount > 0 && <span className="text-slate-300">–</span>}
+        {approvedCount > 0 && <span className="text-emerald-600">{approvedCount} approved</span>}
+      </span>
+    )
   }
 
   return (
@@ -73,7 +83,7 @@ export function AreaCard({ area, mode = "dean" }: AreaCardProps) {
       >
         <h3 className="font-semibold text-slate-800">{area.name}</h3>
         <span className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full ml-2 font-medium">
-          {criteriaCount} Sub-Areas
+          {criteriaCount} Criterias
         </span>
         
         <div className="ml-auto flex items-center gap-3">
