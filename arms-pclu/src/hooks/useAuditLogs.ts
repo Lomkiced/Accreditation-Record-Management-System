@@ -44,8 +44,7 @@ export function useAuditLogs() {
     },
     // Fresh for 30 seconds; Realtime WebSocket bypasses this on INSERT.
     staleTime: 1000 * 30,
-    // Longer fallback poll (60s) only if Realtime is unavailable.
-    // The Supabase channel subscription above handles real-time pushes.
-    refetchInterval: 60_000,
+    // No polling needed — the Supabase Realtime channel subscription above
+    // handles real-time pushes and invalidates the cache on INSERT events.
   })
 }

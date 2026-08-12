@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import dynamic from "next/dynamic"
 import { motion, Variants } from "framer-motion"
 import {
   Archive,
@@ -16,8 +17,32 @@ import {
   ArrowRight
 } from "lucide-react"
 
-import { ActivityFeed } from "@/components/dashboard/ActivityFeed"
-import { ProgressByArea } from "@/components/dashboard/ProgressByArea"
+// ── Lazy-load data-fetching dashboard widgets ──────────────────────────────
+// These components have their own TanStack Query hooks and render heavy UI.
+// Loading them dynamically keeps the initial DeanDashboard JS chunk smaller.
+const ActivityFeed = dynamic(
+  () => import("@/components/dashboard/ActivityFeed").then((m) => ({ default: m.ActivityFeed })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 min-h-[300px] flex items-center justify-center">
+        <p className="text-sm text-slate-400 animate-pulse">Loading activity…</p>
+      </div>
+    ),
+  }
+)
+
+const ProgressByArea = dynamic(
+  () => import("@/components/dashboard/ProgressByArea").then((m) => ({ default: m.ProgressByArea })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 min-h-[300px] flex items-center justify-center">
+        <p className="text-sm text-slate-400 animate-pulse">Loading progress…</p>
+      </div>
+    ),
+  }
+)
 
 import type { DashboardStats, PendingSubmission, RecentAuditLog } from "@/actions/dashboard.actions"
 

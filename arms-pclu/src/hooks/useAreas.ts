@@ -35,9 +35,10 @@ export const areaKeys = {
 // AREAS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export function useAreas() {
+export function useAreas(initialData?: Extract<Awaited<ReturnType<typeof getAreas>>, { success: true }>["data"]) {
   return useQuery({
     queryKey: areaKeys.all,
+    initialData,
     queryFn: async () => {
       const result = await getAreas()
       if (!result.success) throw new Error(result.error)

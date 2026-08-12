@@ -12,7 +12,7 @@ export function useUsers(roles: Role[] = ["FACULTY"]) {
   return useQuery({
     queryKey: userKeys.list(roles),
     queryFn: () => getUsers(roles),
-    staleTime: 30_000, // Cache for 30s to reduce server load
+    staleTime: 2 * 60 * 1000, // 2 min — user list changes infrequently
     retry: 2, // Retry twice on failure
   })
 }

@@ -20,9 +20,10 @@ export const submissionKeys = {
 
 // ─── GET MY SUBMISSIONS ───────────────────────────────────────────────────────
 
-export function useMySubmissions() {
+export function useMySubmissions(initialData?: Extract<Awaited<ReturnType<typeof getMySubmissions>>, { success: true }>["data"]) {
   return useQuery({
     queryKey: submissionKeys.mine,
+    initialData,
     queryFn: async () => {
       const result = await getMySubmissions()
       if (!result.success) throw new Error(result.error)

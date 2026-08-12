@@ -208,6 +208,7 @@ export async function uploadAndMapDocument(
     revalidatePath("/admin/dashboard")
     revalidatePath("/dean/dashboard")
     revalidateTag("areas-hierarchy")
+    revalidateTag("dashboard")
 
     return {
       success: true,
@@ -301,6 +302,7 @@ export async function saveDocumentAsDraft(
     })
 
     revalidatePath("/faculty/submissions")
+    revalidateTag("dashboard")
 
     return {
       success: true,
@@ -746,6 +748,7 @@ export async function reviewSubmission(
     revalidatePath("/admin/dashboard")
     revalidatePath("/dean/dashboard")
     revalidateTag("areas-hierarchy")
+    revalidateTag("dashboard")
 
     return { success: true }
 

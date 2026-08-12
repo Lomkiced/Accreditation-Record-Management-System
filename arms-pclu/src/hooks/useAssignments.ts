@@ -21,9 +21,10 @@ export const assignmentKeys = {
 
 // ─── GET ASSIGNMENTS FOR A FACULTY MEMBER ────────────────────────────────────
 
-export function useAssignments(userId: string) {
+export function useAssignments(userId: string, initialData?: Extract<Awaited<ReturnType<typeof getAssignmentsForFaculty>>, { success: true }>["data"]) {
   return useQuery({
     queryKey: assignmentKeys.forFaculty(userId),
+    initialData,
     queryFn: async () => {
       const result = await getAssignmentsForFaculty(userId)
       if (!result.success) throw new Error(result.error)

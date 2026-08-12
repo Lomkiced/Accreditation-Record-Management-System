@@ -62,53 +62,55 @@ export interface RecentAuditLog {
 // ─── getDashboardStats ────────────────────────────────────────────────────────
 
 /**
- * Fetches aggregated statistics for the admin dashboard.
- * Runs 4 parallel Prisma queries for performance.
+ * Inner function: runs the actual Prisma queries.
+ * Wrapped by unstable_cache below for server-side caching.
+ */
+const _fetchDashboardStats = unstable_cache(
+  async (): Promise<DashboardStats> => {
+    const [
+      totalDocuments,
+      pendingReviews,
+      activeFaculty,
+      approvedMappings,
+      totalMappingsWithIndicators,
+    ] = await Promise.all([
+      prisma.document.count(),
+      prisma.documentMapping.count({
+        where: { status: { in: ["SUBMITTED", "UNDER_REVIEW"] } },
+      }),
+      prisma.user.count({
+        where: { role: "FACULTY", isActive: true },
+      }),
+      prisma.documentMapping.count({
+        where: { status: "APPROVED" },
+      }),
+      prisma.indicator.count(),
+    ])
+
+    const compliancePercent =
+      totalMappingsWithIndicators > 0
+        ? Math.round((approvedMappings / totalMappingsWithIndicators) * 100)
+        : 0
+
+    return {
+      totalDocuments,
+      pendingReviews,
+      activeFaculty,
+      approvedMappings,
+      compliancePercent,
+    }
+  },
+  ["dashboard-stats"],
+  { revalidate: 60, tags: ["dashboard"] }
+)
+
+/**
+ * Fetches aggregated statistics for the admin/dean dashboard.
+ * Auth-gated, then delegates to a cached inner function.
  */
 export async function getDashboardStats(): Promise<DashboardStats> {
   await requireAdminOrDean()
-
-  const [
-    totalDocuments,
-    pendingReviews,
-    activeFaculty,
-    approvedMappings,
-    totalMappingsWithIndicators,
-  ] = await Promise.all([
-    // Total uploaded documents in the central repository
-    prisma.document.count(),
-
-    // Mappings awaiting admin review
-    prisma.documentMapping.count({
-      where: { status: { in: ["SUBMITTED", "UNDER_REVIEW"] } },
-    }),
-
-    // Active faculty accounts (excluding admins)
-    prisma.user.count({
-      where: { role: "FACULTY", isActive: true },
-    }),
-
-    // Fully approved mappings (at least 1 approved mapping per indicator)
-    prisma.documentMapping.count({
-      where: { status: "APPROVED" },
-    }),
-
-    // Total indicator count for compliance percentage calculation
-    prisma.indicator.count(),
-  ])
-
-  const compliancePercent =
-    totalMappingsWithIndicators > 0
-      ? Math.round((approvedMappings / totalMappingsWithIndicators) * 100)
-      : 0
-
-  return {
-    totalDocuments,
-    pendingReviews,
-    activeFaculty,
-    approvedMappings,
-    compliancePercent,
-  }
+  return _fetchDashboardStats()
 }
 
 // ─── getPendingSubmissions ────────────────────────────────────────────────────
@@ -203,51 +205,61 @@ export async function getRecentAuditLogs(): Promise<RecentAuditLog[]> {
 // ─── getComplianceData ────────────────────────────────────────────────────────
 
 /**
- * Fetches compliance percentage per Area using an efficient DB-side aggregation.
- * Instead of pulling all indicators + mappings into memory, this does one
- * prisma.$queryRaw (or groupBy) pass to compute approved counts per area.
+ * Inner function: efficient DB-side aggregation for compliance percentages.
+ * Wrapped by unstable_cache for server-side caching.
  */
-export async function getComplianceData(): Promise<AreaCompliance[]> {
-  await requireAdminOrDean()
-
-  // Fetch areas with their indicator IDs (lean — no mappings)
-  const areas = await prisma.area.findMany({
-    orderBy: { order: "asc" },
-    select: {
-      name: true,
-      criteria: {
-        select: {
-          indicators: {
-            select: { id: true },
+const _fetchComplianceData = unstable_cache(
+  async (): Promise<AreaCompliance[]> => {
+    // Fetch areas with their indicator IDs (lean — no mappings)
+    const areas = await prisma.area.findMany({
+      orderBy: { order: "asc" },
+      select: {
+        name: true,
+        criteria: {
+          select: {
+            indicators: {
+              select: { id: true },
+            },
           },
         },
       },
-    },
-  })
+    })
 
-  // Aggregate all approved mappings per indicator in ONE query
-  const approvedGroups = await prisma.documentMapping.groupBy({
-    by: ["indicatorId"],
-    where: { status: "APPROVED" },
-    _count: { _all: true },
-  })
+    // Aggregate all approved mappings per indicator in ONE query
+    const approvedGroups = await prisma.documentMapping.groupBy({
+      by: ["indicatorId"],
+      where: { status: "APPROVED" },
+      _count: { _all: true },
+    })
 
-  const approvedIndicatorIds = new Set(approvedGroups.map((g) => g.indicatorId))
+    const approvedIndicatorIds = new Set(approvedGroups.map((g) => g.indicatorId))
 
-  return areas.map((area) => {
-    const allIndicatorIds = area.criteria.flatMap((c) =>
-      c.indicators.map((i) => i.id)
-    )
-    const totalIndicators = allIndicatorIds.length
-    const approvedIndicators = allIndicatorIds.filter((id) =>
-      approvedIndicatorIds.has(id)
-    ).length
+    return areas.map((area) => {
+      const allIndicatorIds = area.criteria.flatMap((c) =>
+        c.indicators.map((i) => i.id)
+      )
+      const totalIndicators = allIndicatorIds.length
+      const approvedIndicators = allIndicatorIds.filter((id) =>
+        approvedIndicatorIds.has(id)
+      ).length
 
-    const value =
-      totalIndicators > 0
-        ? Math.round((approvedIndicators / totalIndicators) * 100)
-        : 0
+      const value =
+        totalIndicators > 0
+          ? Math.round((approvedIndicators / totalIndicators) * 100)
+          : 0
 
-    return { name: area.name, value }
-  })
+      return { name: area.name, value }
+    })
+  },
+  ["compliance-data"],
+  { revalidate: 60, tags: ["dashboard"] }
+)
+
+/**
+ * Fetches compliance percentage per Area.
+ * Auth-gated, then delegates to a cached inner function.
+ */
+export async function getComplianceData(): Promise<AreaCompliance[]> {
+  await requireAdminOrDean()
+  return _fetchComplianceData()
 }

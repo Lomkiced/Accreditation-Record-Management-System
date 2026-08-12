@@ -38,6 +38,14 @@ src/
 └── types/          # TypeScript type definitions and Zod schemas
 ```
 
+## Performance Strategy
+- **TanStack Query Caching:** Global defaults (`staleTime: 3min`, `gcTime: 10min`, `refetchOnMount: false`, `refetchOnWindowFocus: false`) prevent redundant network requests. Individual hooks may override with domain-appropriate stale times (e.g., 10min for taxonomy data, 1min for notifications).
+- **Sidebar Hover Prefetching:** A centralized `usePrefetch` hook maps sidebar route paths to their TanStack Query keys/functions. `onMouseEnter` on sidebar links calls `router.prefetch()` (Next.js route warming) + `queryClient.prefetchQuery()` (data warming) for near-instant navigation.
+- **Route-Level Skeletons:** Every route has a `loading.tsx` that renders page-structure-matching skeletons via `PageSkeleton` components, providing instant visual feedback during navigation.
+- **Server-Side Data Cache:** Dashboard aggregation queries use `unstable_cache()` with tag-based revalidation to serve cached results across users without re-querying Postgres on every request.
+- **Bundle Optimization:** Heavy libraries (recharts, jspdf, xlsx) are loaded via `next/dynamic` with `{ ssr: false }`. `next.config.mjs` enables `optimizePackageImports` for barrel-file packages (lucide-react, date-fns, framer-motion).
+- **Server/Client Split:** Data-heavy pages use async Server Components for initial data fetching (via Prisma) and pass results as `initialData` to focused Client Components that manage interactivity and reactivity.
+
 ## Key Implementations
 - **Document Management:** A central document uploaded once can be mapped to multiple indicators using a pivot table (`DocumentMapping`), tracking separate approval statuses per indicator.
 - **Role-Based Access Control (RBAC):** Authorization checks are performed at the layout level and within every Server Action to ensure users (ADMIN, DEAN, FACULTY) can only access appropriate resources.

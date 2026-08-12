@@ -30,6 +30,15 @@ const nextConfig = {
   // (Renamed to top-level serverExternalPackages in Next.js 15+.)
   experimental: {
     serverComponentsExternalPackages: ["@prisma/client", "bcryptjs"],
+    // Tree-shake barrel-file packages that Next.js can't optimize automatically.
+    // Without this, importing a single icon from lucide-react pulls the entire library.
+    optimizePackageImports: [
+      "lucide-react",
+      "recharts",
+      "framer-motion",
+      "date-fns",
+      "@radix-ui/react-icons",
+    ],
   },
 
   async headers() {

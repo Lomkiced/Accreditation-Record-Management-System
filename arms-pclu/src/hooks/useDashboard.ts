@@ -14,8 +14,9 @@ export const dashboardKeys = {
   compliance: () => [...dashboardKeys.all, "compliance"] as const,
 }
 
-// Optional: refresh every 1 minute
-const STALE_TIME = 60 * 1000 
+// Dashboard stats change infrequently — 5 min stale time reduces redundant fetches.
+// Mutations that affect dashboard data (reviews, uploads) invalidate via queryClient.
+const STALE_TIME = 5 * 60 * 1000
 
 export function useDashboardStats(initialData?: any) {
   return useQuery({
