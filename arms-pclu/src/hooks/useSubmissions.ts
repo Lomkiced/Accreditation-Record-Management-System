@@ -87,7 +87,9 @@ export function useSubmitAllMappings() {
 
 // ─── GET ALL SUBMISSIONS (Admin view) ────────────────────────────────────────
 
-export function useAllSubmissions() {
+type AllSubmissionsData = NonNullable<Extract<Awaited<ReturnType<typeof getAllSubmissions>>, { success: true }>["data"]>
+
+export function useAllSubmissions(initialData?: AllSubmissionsData) {
   return useQuery({
     queryKey: submissionKeys.all,
     queryFn: async () => {
@@ -95,6 +97,7 @@ export function useAllSubmissions() {
       if (!result.success) throw new Error(result.error)
       return result.data
     },
+    initialData,
     staleTime: 1000 * 60 * 2,
   })
 }

@@ -52,7 +52,9 @@ export function useAssignedScope(userId?: string) {
 
 // ─── GET FACULTY LIST WITH ASSIGNMENT COUNTS ─────────────────────────────────
 
-export function useFacultyList() {
+type FacultyListData = NonNullable<Extract<Awaited<ReturnType<typeof getFacultyWithAssignmentCounts>>, { success: true }>["data"]>
+
+export function useFacultyList(initialData?: FacultyListData) {
   return useQuery({
     queryKey: assignmentKeys.facultyList,
     queryFn: async () => {
@@ -60,6 +62,7 @@ export function useFacultyList() {
       if (!result.success) throw new Error(result.error)
       return result.data
     },
+    initialData,
     staleTime: 1000 * 60 * 2,
   })
 }

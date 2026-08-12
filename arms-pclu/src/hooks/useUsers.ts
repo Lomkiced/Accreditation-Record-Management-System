@@ -8,10 +8,11 @@ export const userKeys = {
   list: (roles?: Role[]) => ["users", "list", roles ? roles.join(",") : "all"] as const,
 }
 
-export function useUsers(roles: Role[] = ["FACULTY"]) {
+export function useUsers(roles: Role[] = ["FACULTY"], initialData?: UserWithCounts[]) {
   return useQuery({
     queryKey: userKeys.list(roles),
     queryFn: () => getUsers(roles),
+    initialData,
     staleTime: 2 * 60 * 1000, // 2 min — user list changes infrequently
     retry: 2, // Retry twice on failure
   })

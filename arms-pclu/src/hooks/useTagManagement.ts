@@ -11,7 +11,9 @@ export const tagKeys = {
   all: ["tag-management", "all"] as const,
 }
 
-export function useTagManagement() {
+type TagsData = NonNullable<Extract<Awaited<ReturnType<typeof getTagsWithUsage>>, { success: true }>["data"]>
+
+export function useTagManagement(initialData?: TagsData) {
   return useQuery({
     queryKey: tagKeys.all,
     queryFn: async () => {
@@ -19,6 +21,7 @@ export function useTagManagement() {
       if (!result.success) throw new Error(result.error)
       return result.data
     },
+    initialData,
     staleTime: 1000 * 60 * 5, // 5 minutes
   })
 }
