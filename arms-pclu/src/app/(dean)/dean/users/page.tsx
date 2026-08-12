@@ -12,7 +12,7 @@ export default async function DeanUsersPage() {
   
   // Fetch initial data on the server
   const usersResult = await getUsers(["FACULTY"])
-  const initialData = (usersResult.success ? usersResult.data : undefined) ?? []
+  const initialData = usersResult
 
   return (
     <>
