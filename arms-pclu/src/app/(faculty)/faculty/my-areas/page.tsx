@@ -2,7 +2,7 @@ import { FacultyMyAreasClient } from "./FacultyMyAreasClient"
 import { getAssignmentsForFaculty } from "@/actions/assignment.actions"
 import { getAreas } from "@/actions/area.actions"
 import { getMySubmissions } from "@/actions/submission.actions"
-import { requireRole, getUserSession } from "@/actions/auth.actions"
+import { requireFaculty } from "@/lib/auth/getUser"
 
 export const metadata = {
   title: "My Assigned Areas | Faculty Portal",
@@ -10,9 +10,9 @@ export const metadata = {
 }
 
 export default async function FacultyMyAreasPage() {
-  await requireRole(["FACULTY"])
+  const user = await requireFaculty()
   
-  const user = await getUserSession()
+  
   const userId = user?.id ?? ""
   
   const [assignmentsResult, areasResult, submissionsResult] = await Promise.all([

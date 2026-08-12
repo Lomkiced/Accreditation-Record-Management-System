@@ -1,6 +1,6 @@
 import { DeanUsersClient } from "./DeanUsersClient"
 import { getUsers } from "@/actions/user.actions"
-import { requireRole } from "@/actions/auth.actions"
+import { requireAdminOrDean } from "@/lib/auth/getUser"
 
 export const metadata = {
   title: "Faculty Accounts | Dean Portal",
@@ -8,7 +8,7 @@ export const metadata = {
 }
 
 export default async function DeanUsersPage() {
-  await requireRole(["DEAN", "ADMIN"])
+  await requireAdminOrDean()
   
   // Fetch initial data on the server
   const usersResult = await getUsers(["FACULTY"])

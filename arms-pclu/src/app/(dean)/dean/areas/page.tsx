@@ -1,6 +1,6 @@
 import { DeanAreasClient } from "./DeanAreasClient"
 import { getAreas } from "@/actions/area.actions"
-import { requireRole } from "@/actions/auth.actions"
+import { requireAdminOrDean } from "@/lib/auth/getUser"
 
 export const metadata = {
   title: "Accreditation Areas | Dean Portal",
@@ -8,7 +8,7 @@ export const metadata = {
 }
 
 export default async function DeanAreasPage() {
-  await requireRole(["DEAN", "ADMIN"])
+  await requireAdminOrDean()
   
   const areasResult = await getAreas()
   const initialData = areasResult.success ? areasResult.data : []

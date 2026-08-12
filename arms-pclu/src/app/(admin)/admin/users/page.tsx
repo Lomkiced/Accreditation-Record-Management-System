@@ -1,6 +1,6 @@
 import { AdminUsersClient } from "./AdminUsersClient"
 import { getUsers } from "@/actions/user.actions"
-import { requireRole } from "@/actions/auth.actions"
+import { requireAdmin } from "@/lib/auth/getUser"
 
 export const metadata = {
   title: "User Management | Admin Portal",
@@ -8,7 +8,7 @@ export const metadata = {
 }
 
 export default async function AdminUsersPage() {
-  await requireRole(["ADMIN"])
+  await requireAdmin()
   
   // Fetch initial data on the server
   const usersResult = await getUsers(["ADMIN", "DEAN"])

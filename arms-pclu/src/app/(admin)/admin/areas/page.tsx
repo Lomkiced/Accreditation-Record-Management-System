@@ -1,6 +1,6 @@
 import { AdminAreasClient } from "./AdminAreasClient"
 import { getAreas } from "@/actions/area.actions"
-import { requireRole } from "@/actions/auth.actions"
+import { requireAdmin } from "@/lib/auth/getUser"
 
 export const metadata = {
   title: "Accreditation Areas | Admin Portal",
@@ -8,7 +8,7 @@ export const metadata = {
 }
 
 export default async function AdminAreasPage() {
-  await requireRole(["ADMIN"])
+  await requireAdmin()
   
   const areasResult = await getAreas()
   const initialData = areasResult.success ? areasResult.data : []

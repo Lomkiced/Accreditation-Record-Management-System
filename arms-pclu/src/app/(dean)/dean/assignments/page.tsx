@@ -1,6 +1,6 @@
 import { DeanAssignmentsClient } from "./DeanAssignmentsClient"
 import { getFacultyWithAssignmentCounts } from "@/actions/assignment.actions"
-import { requireRole } from "@/actions/auth.actions"
+import { requireAdminOrDean } from "@/lib/auth/getUser"
 
 export const metadata = {
   title: "Area Assignments | Dean Portal",
@@ -8,7 +8,7 @@ export const metadata = {
 }
 
 export default async function DeanAssignmentsPage() {
-  await requireRole(["DEAN", "ADMIN"])
+  await requireAdminOrDean()
   
   const facultiesResult = await getFacultyWithAssignmentCounts()
   const initialData = facultiesResult.success ? facultiesResult.data : []

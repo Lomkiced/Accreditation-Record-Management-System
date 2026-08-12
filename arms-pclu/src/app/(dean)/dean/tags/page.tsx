@@ -1,6 +1,6 @@
 import { DeanTagsClient } from "./DeanTagsClient"
 import { getTagsWithUsage } from "@/actions/tag.actions"
-import { requireRole } from "@/actions/auth.actions"
+import { requireAdminOrDean } from "@/lib/auth/getUser"
 
 export const metadata = {
   title: "Tag Management | Dean Portal",
@@ -8,7 +8,7 @@ export const metadata = {
 }
 
 export default async function DeanTagsPage() {
-  await requireRole(["DEAN", "ADMIN"])
+  await requireAdminOrDean()
   
   const tagsResult = await getTagsWithUsage()
   const initialData = tagsResult.success ? tagsResult.data : []

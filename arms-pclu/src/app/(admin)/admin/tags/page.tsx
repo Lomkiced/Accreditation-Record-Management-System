@@ -1,6 +1,6 @@
 import { AdminTagsClient } from "./AdminTagsClient"
 import { getTagsWithUsage } from "@/actions/tag.actions"
-import { requireRole } from "@/actions/auth.actions"
+import { requireAdmin } from "@/lib/auth/getUser"
 
 export const metadata = {
   title: "Tag Management | Admin Portal",
@@ -8,7 +8,7 @@ export const metadata = {
 }
 
 export default async function AdminTagsPage() {
-  await requireRole(["ADMIN"])
+  await requireAdmin()
   
   const tagsResult = await getTagsWithUsage()
   const initialData = tagsResult.success ? tagsResult.data : []

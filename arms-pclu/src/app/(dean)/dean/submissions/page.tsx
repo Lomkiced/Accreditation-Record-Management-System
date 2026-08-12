@@ -1,6 +1,6 @@
 import { DeanSubmissionsClient } from "./DeanSubmissionsClient"
 import { getAllSubmissions } from "@/actions/submission.actions"
-import { requireRole } from "@/actions/auth.actions"
+import { requireAdminOrDean } from "@/lib/auth/getUser"
 
 export const metadata = {
   title: "Document Submissions | Dean Portal",
@@ -8,7 +8,7 @@ export const metadata = {
 }
 
 export default async function DeanSubmissionsPage() {
-  await requireRole(["DEAN", "ADMIN"])
+  await requireAdminOrDean()
   
   const submissionsResult = await getAllSubmissions()
   const initialData = submissionsResult.success ? submissionsResult.data : []
