@@ -106,9 +106,6 @@ export function DocumentDetailPanel({
               {document.mappings.length} mapping
               {document.mappings.length !== 1 ? "s" : ""}
             </span>
-            <span className="text-xs text-slate-400 bg-white border px-2 py-0.5 rounded-full font-mono">
-              ID: {document.id.slice(0, 8)}…
-            </span>
           </div>
         </SheetHeader>
 
@@ -142,20 +139,6 @@ export function DocumentDetailPanel({
                   disabled={!document.fileUrl}
                 >
                   <Eye className="w-3.5 h-3.5 mr-1" /> Preview
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs text-emerald-600"
-                  onClick={() => {
-                    if (document.fileUrl) {
-                      // Supabase public URLs support ?download= to force download
-                      window.open(`${document.fileUrl}?download=`, "_blank")
-                    }
-                  }}
-                  disabled={!document.fileUrl}
-                >
-                  <Download className="w-3.5 h-3.5 mr-1" /> Download
                 </Button>
               </div>
             </div>

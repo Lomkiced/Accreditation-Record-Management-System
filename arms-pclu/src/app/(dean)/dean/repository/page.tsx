@@ -123,13 +123,10 @@ export default function RepositoryPage() {
     }
 
     if (dateRange !== "all") {
-      const now = new Date()
-      let cutoff = new Date(0)
-      if (dateRange === "7days") cutoff = new Date(now.setDate(now.getDate() - 7))
-      else if (dateRange === "30days") cutoff = new Date(now.setDate(now.getDate() - 30))
-      else if (dateRange === "year") cutoff = new Date(now.setFullYear(now.getFullYear() - 1))
-      
-      result = result.filter(doc => doc.rawDate >= cutoff)
+      const selectedDateStr = new Date(dateRange).toISOString().split('T')[0]
+      result = result.filter(doc => {
+        return doc.rawDate.toISOString().split('T')[0] === selectedDateStr
+      })
     }
 
     return result

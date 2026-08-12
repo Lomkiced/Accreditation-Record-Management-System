@@ -86,7 +86,7 @@ export function FilterBar(props: FilterBarProps) {
               {selectedAreas.length > 0 && ` (${selectedAreas.length})`}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48 max-h-60 overflow-y-auto">
+          <DropdownMenuContent align="start" className="w-48 max-h-60 overflow-y-auto bg-white z-50">
             {filterOptions.areas.map((area) => (
               <DropdownMenuCheckboxItem
                 key={area}
@@ -116,7 +116,7 @@ export function FilterBar(props: FilterBarProps) {
               {selectedCriteria.length > 0 && ` (${selectedCriteria.length})`}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48 max-h-60 overflow-y-auto">
+          <DropdownMenuContent align="start" className="w-48 max-h-60 overflow-y-auto bg-white z-50">
             {filterOptions.criteria.map((criterion) => (
               <DropdownMenuCheckboxItem
                 key={criterion}
@@ -146,7 +146,7 @@ export function FilterBar(props: FilterBarProps) {
               {selectedFaculties.length > 0 && ` (${selectedFaculties.length})`}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48 max-h-60 overflow-y-auto">
+          <DropdownMenuContent align="start" className="w-48 max-h-60 overflow-y-auto bg-white z-50">
             {filterOptions.faculties.map((faculty) => (
               <DropdownMenuCheckboxItem
                 key={faculty}
@@ -176,7 +176,7 @@ export function FilterBar(props: FilterBarProps) {
               {selectedStatuses.length > 0 && ` (${selectedStatuses.length})`}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48 max-h-60 overflow-y-auto">
+          <DropdownMenuContent align="start" className="w-48 max-h-60 overflow-y-auto bg-white z-50">
             {filterOptions.statuses.map((status) => (
               <DropdownMenuCheckboxItem
                 key={status}
@@ -200,43 +200,14 @@ export function FilterBar(props: FilterBarProps) {
         
 
         {/* DATE RANGE */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 text-xs text-slate-600 bg-slate-50">
-              Date: {
-                dateRange === "7days" ? "Last 7 Days" :
-                dateRange === "30days" ? "Last 30 Days" :
-                dateRange === "year" ? "This Year" : "All Time"
-              }
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48">
-            <DropdownMenuCheckboxItem
-              checked={dateRange === "all"}
-              onCheckedChange={() => onDateRangeChange("all")}
-            >
-              All Time
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={dateRange === "7days"}
-              onCheckedChange={() => onDateRangeChange("7days")}
-            >
-              Last 7 Days
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={dateRange === "30days"}
-              onCheckedChange={() => onDateRangeChange("30days")}
-            >
-              Last 30 Days
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={dateRange === "year"}
-              onCheckedChange={() => onDateRangeChange("year")}
-            >
-              This Year
-            </DropdownMenuCheckboxItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-2">
+          <Input 
+            type="date" 
+            className="h-8 text-xs w-auto bg-slate-50 text-slate-600" 
+            value={dateRange === "all" ? "" : dateRange}
+            onChange={(e) => onDateRangeChange(e.target.value ? e.target.value : "all")}
+          />
+        </div>
         
         {hasFilters && (
           <button 
