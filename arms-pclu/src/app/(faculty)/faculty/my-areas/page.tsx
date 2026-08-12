@@ -22,9 +22,9 @@ export default async function FacultyMyAreasPage() {
   ])
   
   const initialData = {
-    assignments: assignmentsResult.success ? assignmentsResult.data : [],
-    areas: areasResult.success ? areasResult.data : [],
-    submissions: submissionsResult.success ? submissionsResult.data : []
+    assignments: assignmentsResult.data ?? [],
+    areas: areasResult.data ?? [],
+    submissions: submissionsResult.data ?? []
   }
 
   return (

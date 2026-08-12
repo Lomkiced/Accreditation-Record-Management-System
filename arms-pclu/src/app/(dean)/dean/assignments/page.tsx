@@ -11,7 +11,7 @@ export default async function DeanAssignmentsPage() {
   await requireAdminOrDean()
   
   const facultiesResult = await getFacultyWithAssignmentCounts()
-  const initialData = facultiesResult.success ? facultiesResult.data : []
+  const initialData = (facultiesResult.success ? facultiesResult.data : undefined) ?? []
 
   return (
     <>

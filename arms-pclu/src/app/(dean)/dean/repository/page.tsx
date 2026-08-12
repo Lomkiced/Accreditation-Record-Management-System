@@ -11,7 +11,7 @@ export default async function DeanRepositoryPage() {
   await requireAdminOrDean()
   
   const submissionsResult = await getAllSubmissions()
-  const initialData = submissionsResult.success ? submissionsResult.data : []
+  const initialData = (submissionsResult.success ? submissionsResult.data : undefined) ?? []
 
   return (
     <>

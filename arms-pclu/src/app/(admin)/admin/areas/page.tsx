@@ -11,7 +11,7 @@ export default async function AdminAreasPage() {
   await requireAdmin()
   
   const areasResult = await getAreas()
-  const initialData = areasResult.success ? areasResult.data : []
+  const initialData = (areasResult.success ? areasResult.data : undefined) ?? []
 
   return (
     <>

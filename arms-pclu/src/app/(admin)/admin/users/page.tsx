@@ -12,7 +12,7 @@ export default async function AdminUsersPage() {
   
   // Fetch initial data on the server
   const usersResult = await getUsers(["ADMIN", "DEAN"])
-  const initialData = usersResult.success ? usersResult.data : []
+  const initialData = (usersResult.success ? usersResult.data : undefined) ?? []
 
   return (
     <>

@@ -11,7 +11,7 @@ export default async function AdminTagsPage() {
   await requireAdmin()
   
   const tagsResult = await getTagsWithUsage()
-  const initialData = tagsResult.success ? tagsResult.data : []
+  const initialData = (tagsResult.success ? tagsResult.data : undefined) ?? []
 
   return (
     <>
