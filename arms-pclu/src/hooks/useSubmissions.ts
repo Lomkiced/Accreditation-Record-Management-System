@@ -109,14 +109,35 @@ export function useReviewSubmission() {
 
   return useMutation({
     mutationFn: (data: Parameters<typeof reviewSubmission>[0]) => reviewSubmission({ ...data }),
+    onMutate: async (data) => {
+      await queryClient.cancelQueries({ queryKey: submissionKeys.all })
+      const previousSubmissions = queryClient.getQueryData<any[]>(submissionKeys.all)
+
+      if (previousSubmissions) {
+        queryClient.setQueryData(
+          submissionKeys.all,
+          previousSubmissions.map((sub) => 
+            sub.id === data.mappingId 
+              ? { ...sub, status: data.status, remarks: data.remarks ?? null } 
+              : sub
+          )
+        )
+      }
+      return { previousSubmissions }
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: submissionKeys.all })
-      queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
       toast.success("Submission reviewed successfully.")
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables, context) => {
+      if (context?.previousSubmissions) {
+        queryClient.setQueryData(submissionKeys.all, context.previousSubmissions)
+      }
       toast.error(error.message || "Failed to review submission.")
     },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: submissionKeys.all })
+      queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
+    }
   })
 }
 
@@ -160,14 +181,31 @@ export function useDeleteDocument() {
 
   return useMutation({
     mutationFn: (documentId: string) => deleteDocument(documentId),
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: submissionKeys.mine })
+      const previousSubmissions = queryClient.getQueryData<any[]>(submissionKeys.mine)
+
+      if (previousSubmissions) {
+        queryClient.setQueryData(
+          submissionKeys.mine,
+          previousSubmissions.filter((mapping) => mapping.documentId !== id)
+        )
+      }
+      return { previousSubmissions }
+    },
     onSuccess: (result) => {
       if (!result.success) throw new Error(result.error)
-      queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
-      queryClient.invalidateQueries({ queryKey: submissionKeys.all })
       toast.success("Document deleted successfully.")
     },
-    onError: (error: Error) => {
+    onError: (error: Error, id, context) => {
+      if (context?.previousSubmissions) {
+        queryClient.setQueryData(submissionKeys.mine, context.previousSubmissions)
+      }
       toast.error(error.message || "Failed to delete document.")
     },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
+      queryClient.invalidateQueries({ queryKey: submissionKeys.all })
+    }
   })
 }

@@ -26,14 +26,31 @@ export function useArchiveDocument() {
 
   return useMutation({
     mutationFn: (id: string) => archiveDocument(id),
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: submissionKeys.mine })
+      const previousSubmissions = queryClient.getQueryData<any[]>(submissionKeys.mine)
+
+      if (previousSubmissions) {
+        queryClient.setQueryData(
+          submissionKeys.mine,
+          previousSubmissions.filter((mapping) => mapping.documentId !== id)
+        )
+      }
+      return { previousSubmissions }
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
-      queryClient.invalidateQueries({ queryKey: archiveKeys.all })
       toast.success("Document archived.")
     },
-    onError: (error: Error) => {
+    onError: (error: Error, id, context) => {
+      if (context?.previousSubmissions) {
+        queryClient.setQueryData(submissionKeys.mine, context.previousSubmissions)
+      }
       toast.error(error.message || "Failed to archive document.")
     },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
+      queryClient.invalidateQueries({ queryKey: archiveKeys.all })
+    }
   })
 }
 
@@ -42,14 +59,31 @@ export function useRestoreDocument() {
 
   return useMutation({
     mutationFn: (id: string) => restoreDocument(id),
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: archiveKeys.all })
+      const previousArchives = queryClient.getQueryData<any[]>(archiveKeys.all)
+
+      if (previousArchives) {
+        queryClient.setQueryData(
+          archiveKeys.all,
+          previousArchives.filter((doc) => doc.id !== id)
+        )
+      }
+      return { previousArchives }
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
-      queryClient.invalidateQueries({ queryKey: archiveKeys.all })
       toast.success("Document restored.")
     },
-    onError: (error: Error) => {
+    onError: (error: Error, id, context) => {
+      if (context?.previousArchives) {
+        queryClient.setQueryData(archiveKeys.all, context.previousArchives)
+      }
       toast.error(error.message || "Failed to restore document.")
     },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
+      queryClient.invalidateQueries({ queryKey: archiveKeys.all })
+    }
   })
 }
 
@@ -58,12 +92,29 @@ export function usePermanentlyDeleteDocument() {
 
   return useMutation({
     mutationFn: (id: string) => permanentlyDeleteDocument(id),
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: archiveKeys.all })
+      const previousArchives = queryClient.getQueryData<any[]>(archiveKeys.all)
+
+      if (previousArchives) {
+        queryClient.setQueryData(
+          archiveKeys.all,
+          previousArchives.filter((doc) => doc.id !== id)
+        )
+      }
+      return { previousArchives }
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: archiveKeys.all })
       toast.success("Document permanently deleted.")
     },
-    onError: (error: Error) => {
+    onError: (error: Error, id, context) => {
+      if (context?.previousArchives) {
+        queryClient.setQueryData(archiveKeys.all, context.previousArchives)
+      }
       toast.error(error.message || "Failed to delete document.")
     },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: archiveKeys.all })
+    }
   })
 }

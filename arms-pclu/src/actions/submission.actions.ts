@@ -169,38 +169,38 @@ export async function uploadAndMapDocument(
       mappingId = map.id
     }
 
-    // Audit log (outside transaction — non-critical)
-    await prisma.auditLog.create({
-      data: {
-        userId: currentUser.id,
-        action: returnedMapping ? "RESUBMIT_DOCUMENT" : "SUBMIT_DOCUMENT",
-        module: "DOCUMENT",
-        targetId: documentId,
-        details: {
-          documentTitle: validated.title,
-          indicatorId: validated.indicatorId,
-          indicatorName: indicator.name,
-          mappingId: mappingId,
+    // Audit log and notifications (concurrent, non-critical)
+    await Promise.allSettled([
+      prisma.auditLog.create({
+        data: {
+          userId: currentUser.id,
+          action: returnedMapping ? "RESUBMIT_DOCUMENT" : "SUBMIT_DOCUMENT",
+          module: "DOCUMENT",
+          targetId: documentId,
+          details: {
+            documentTitle: validated.title,
+            indicatorId: validated.indicatorId,
+            indicatorName: indicator.name,
+            mappingId: mappingId,
+          },
         },
-      },
-    })
-
-    // Notify all admins and deans
-    const reviewers = await prisma.user.findMany({
-      where: { role: { in: ["ADMIN", "DEAN"] }, isActive: true },
-      select: { id: true, role: true },
-    })
-
-    if (reviewers.length > 0) {
-      await prisma.notification.createMany({
-        data: reviewers.map((r) => ({
-          userId: r.id,
-          message: `${currentUser.name} has submitted "${validated.title}" for review.`,
-          type: "SUBMISSION",
-          link: r.role === "ADMIN" ? "/admin/submissions" : "/dean/submissions",
-        })),
+      }),
+      prisma.user.findMany({
+        where: { role: { in: ["ADMIN", "DEAN"] }, isActive: true },
+        select: { id: true, role: true },
+      }).then(reviewers => {
+        if (reviewers.length > 0) {
+          return prisma.notification.createMany({
+            data: reviewers.map((r) => ({
+              userId: r.id,
+              message: `${currentUser.name} has submitted "${validated.title}" for review.`,
+              type: "SUBMISSION",
+              link: r.role === "ADMIN" ? "/admin/submissions" : "/dean/submissions",
+            })),
+          })
+        }
       })
-    }
+    ]).catch(console.error)
 
     revalidatePath("/faculty/submissions")
     revalidatePath("/admin/submissions")
@@ -287,19 +287,21 @@ export async function saveDocumentAsDraft(
       return [doc, map]
     })
 
-    await prisma.auditLog.create({
-      data: {
-        userId: currentUser.id,
-        action: "SAVE_DRAFT",
-        module: "DOCUMENT",
-        targetId: document.id,
-        details: {
-          documentTitle: document.title,
-          indicatorId: validated.indicatorId,
-          mappingId: mapping.id,
+    await Promise.allSettled([
+      prisma.auditLog.create({
+        data: {
+          userId: currentUser.id,
+          action: "SAVE_DRAFT",
+          module: "DOCUMENT",
+          targetId: document.id,
+          details: {
+            documentTitle: document.title,
+            indicatorId: validated.indicatorId,
+            mappingId: mapping.id,
+          },
         },
-      },
-    })
+      })
+    ]).catch(console.error)
 
     revalidatePath("/faculty/submissions")
     revalidateTag("dashboard")
@@ -713,34 +715,34 @@ export async function reviewSubmission(
       }
     })
 
-    // Create an audit log
-    await prisma.auditLog.create({
-      data: {
-        userId: admin.id,
-        action: "REVIEW_MAPPING",
-        module: "REVIEW",
-        targetId: mapping.id,
-        details: {
-          status: validated.status,
-          remarks: validated.remarks,
-          facultyName: mapping.user.name,
-          documentTitle: mapping.document.title,
-          indicatorName: mapping.indicator.name
+    // Audit log and notifications (concurrent, non-critical)
+    await Promise.allSettled([
+      prisma.auditLog.create({
+        data: {
+          userId: admin.id,
+          action: "REVIEW_MAPPING",
+          module: "REVIEW",
+          targetId: mapping.id,
+          details: {
+            status: validated.status,
+            remarks: validated.remarks,
+            facultyName: mapping.user.name,
+            documentTitle: mapping.document.title,
+            indicatorName: mapping.indicator.name
+          }
         }
-      }
-    })
-
-    // Notify the faculty
-    await prisma.notification.create({
-      data: {
-        userId: mapping.user.id,
-        message: validated.status === "RETURNED" 
-          ? `Your document "${mapping.document.title}" was returned with remarks: "${validated.remarks}". Please upload a new version.`
-          : `Your submission "${mapping.document.title}" for "${mapping.indicator.name}" has been ${validated.status.toLowerCase()}.`,
-        type: "REVIEW",
-        link: `/faculty/submissions`
-      }
-    })
+      }),
+      prisma.notification.create({
+        data: {
+          userId: mapping.user.id,
+          message: validated.status === "RETURNED" 
+            ? `Your document "${mapping.document.title}" was returned with remarks: "${validated.remarks}". Please upload a new version.`
+            : `Your submission "${mapping.document.title}" for "${mapping.indicator.name}" has been ${validated.status.toLowerCase()}.`,
+          type: "REVIEW",
+          link: `/faculty/submissions`
+        }
+      })
+    ]).catch(console.error)
 
     revalidatePath("/admin/submissions")
     revalidatePath("/dean/submissions")
