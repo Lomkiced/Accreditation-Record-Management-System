@@ -1,7 +1,7 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { requireAdminOrDeanOrThrow, requireUser } from "@/lib/auth/getUser"
+import { requireUserOrThrow, requireUser } from "@/lib/auth/getUser"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { sanitizeString } from "@/lib/sanitize"
@@ -71,7 +71,7 @@ export async function createIndicator(
   formData: z.infer<typeof IndicatorSchema>
 ): Promise<ActionResult<{ id: string }>> {
   try {
-    const admin = await requireAdminOrDeanOrThrow()
+    const user = await requireUserOrThrow()
 
     const validated = IndicatorSchema.parse({
       criterionId: formData.criterionId,
@@ -109,7 +109,7 @@ export async function createIndicator(
 
     await prisma.auditLog.create({
       data: {
-        userId: admin.id,
+        userId: user.id,
         action: "CREATE_INDICATOR",
         module: "AREA",
         targetId: indicator.id,
@@ -121,6 +121,8 @@ export async function createIndicator(
     })
 
     revalidatePath("/admin/areas")
+    revalidatePath("/dean/areas")
+    revalidatePath("/faculty/my-areas")
     return { success: true, data: { id: indicator.id } }
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -141,7 +143,7 @@ export async function updateIndicator(
   formData: z.infer<typeof UpdateIndicatorSchema>
 ): Promise<ActionResult> {
   try {
-    const admin = await requireAdminOrDeanOrThrow()
+    const user = await requireUserOrThrow()
 
     const validated = UpdateIndicatorSchema.parse({
       name: sanitizeString(formData.name),
@@ -169,7 +171,7 @@ export async function updateIndicator(
 
     await prisma.auditLog.create({
       data: {
-        userId: admin.id,
+        userId: user.id,
         action: "UPDATE_INDICATOR",
         module: "AREA",
         targetId: indicatorId,
@@ -178,6 +180,8 @@ export async function updateIndicator(
     })
 
     revalidatePath("/admin/areas")
+    revalidatePath("/dean/areas")
+    revalidatePath("/faculty/my-areas")
     return { success: true }
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -197,7 +201,7 @@ export async function deleteIndicator(
   indicatorId: string
 ): Promise<ActionResult> {
   try {
-    const admin = await requireAdminOrDeanOrThrow()
+    const user = await requireUserOrThrow()
 
     const existing = await prisma.indicator.findUnique({
       where: { id: indicatorId },
@@ -209,7 +213,7 @@ export async function deleteIndicator(
 
     await prisma.auditLog.create({
       data: {
-        userId: admin.id,
+        userId: user.id,
         action: "DELETE_INDICATOR",
         module: "AREA",
         targetId: indicatorId,
@@ -221,6 +225,8 @@ export async function deleteIndicator(
     })
 
     revalidatePath("/admin/areas")
+    revalidatePath("/dean/areas")
+    revalidatePath("/faculty/my-areas")
     return { success: true }
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("Forbidden")) {

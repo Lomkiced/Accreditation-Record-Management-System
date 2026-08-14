@@ -1,12 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { Upload, FileText, CheckCircle, AlertCircle, ChevronLeft, ChevronDown, Eye } from "lucide-react"
+import { Upload, FileText, CheckCircle, AlertCircle, ChevronLeft, ChevronDown, Eye, Plus, Edit } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { SubmissionUploadForm } from "@/components/submissions/SubmissionUploadForm"
+import { IndicatorFormModal } from "@/components/areas/IndicatorFormModal"
+import type { IndicatorWithMappings } from "@/actions/indicator.actions"
 import { useAreas } from "@/hooks/useAreas"
 import { useAssignments } from "@/hooks/useAssignments"
 import { useMySubmissions } from "@/hooks/useSubmissions"
@@ -31,6 +33,13 @@ export default function MyAreaDetailPage({ params }: { params: { id: string } })
     areaName: string
     criterionName: string
     existingSubmission: any | null
+  } | null>(null)
+
+  // State for Add/Edit Indicator Modal
+  const [addModal, setAddModal] = React.useState<{ criterionId: string } | null>(null)
+  const [editModal, setEditModal] = React.useState<{
+    criterionId: string
+    indicator: IndicatorWithMappings
   } | null>(null)
 
   // Collapsible criteria state
@@ -217,6 +226,17 @@ export default function MyAreaDetailPage({ params }: { params: { id: string } })
                     )}>
                       {critApproved}/{critTotal} Complete
                     </span>
+                    <Button
+                      size="sm"
+                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-7 ml-2"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setAddModal({ criterionId: criterion.id })
+                      }}
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add
+                    </Button>
                   </div>
                 </button>
                 
@@ -279,6 +299,14 @@ export default function MyAreaDetailPage({ params }: { params: { id: string } })
                                 Upload
                               </Button>
                             )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs h-8 px-2 shrink-0 ml-1"
+                              onClick={() => setEditModal({ criterionId: criterion.id, indicator: ind as unknown as IndicatorWithMappings })}
+                            >
+                              <Edit className="w-3 h-3" />
+                            </Button>
                           </div>
 
                           {/* Submissions List - Compact inline rows */}
@@ -388,6 +416,25 @@ export default function MyAreaDetailPage({ params }: { params: { id: string } })
         criterionName={uploadModalData?.criterionName || ""}
         existingSubmission={uploadModalData?.existingSubmission || null}
       />
+
+      {/* Add Indicator modal */}
+      {addModal && (
+        <IndicatorFormModal
+          open={!!addModal}
+          onClose={() => setAddModal(null)}
+          criterionId={addModal.criterionId}
+        />
+      )}
+
+      {/* Edit Indicator modal */}
+      {editModal && (
+        <IndicatorFormModal
+          open={!!editModal}
+          onClose={() => setEditModal(null)}
+          criterionId={editModal.criterionId}
+          indicator={editModal.indicator}
+        />
+      )}
     </>
   )
 }
