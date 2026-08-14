@@ -583,6 +583,7 @@ export async function getAllSubmissions() {
     await requireAdminOrDean()
 
     const mappings = await prisma.documentMapping.findMany({
+      where: { document: { isArchived: false } },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,

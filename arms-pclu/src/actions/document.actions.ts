@@ -640,10 +640,10 @@ export async function getDocumentsForRepository(opts?: {
     // Faculty can only see their own documents
     const whereClause =
       currentUser.role === "FACULTY"
-        ? { userId: currentUser.id }
+        ? { userId: currentUser.id, isArchived: false }
         : opts?.userId
-          ? { userId: opts.userId }
-          : {}
+          ? { userId: opts.userId, isArchived: false }
+          : { isArchived: false }
 
     const documents = await prisma.document.findMany({
       where: whereClause,
