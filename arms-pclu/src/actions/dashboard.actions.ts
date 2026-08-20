@@ -11,11 +11,25 @@ export interface AreaCompliance {
   value: number
 }
 
+/** Richer compliance shape used by the Dean's ProgressByArea component. */
+export interface AreaComplianceWithCounts {
+  name: string
+  /** Compliance % = (indicators with ≥1 APPROVED mapping) / totalIndicators × 100 */
+  value: number
+  /** Indicators that have at least one APPROVED or SUBMITTED mapping (faculty provided). */
+  providedEvidences: number
+  /** Total number of indicators in this area. */
+  totalIndicators: number
+}
+
 export interface DashboardStats {
+  /** Number of non-archived documents that have at least one APPROVED mapping. */
   totalDocuments: number
   pendingReviews: number
   activeFaculty: number
+  /** Number of indicators that have at least one APPROVED mapping. */
   approvedMappings: number
+  /** (approvedMappings / totalIndicators) × 100 */
   compliancePercent: number
 }
 
@@ -64,6 +78,12 @@ export interface RecentAuditLog {
 /**
  * Inner function: runs the actual Prisma queries.
  * Wrapped by unstable_cache below for server-side caching.
+ *
+ * FIX #1: totalDocuments now counts only non-archived documents that have
+ *          at least one APPROVED mapping — truly "approved documents."
+ * FIX #4: compliancePercent now uses indicator-level compliance
+ *          (indicators with ≥1 APPROVED mapping / total indicators),
+ *          not raw approved-mapping-count / total-indicator-count.
  */
 const _fetchDashboardStats = unstable_cache(
   async (): Promise<DashboardStats> => {
@@ -71,32 +91,39 @@ const _fetchDashboardStats = unstable_cache(
       totalDocuments,
       pendingReviews,
       activeFaculty,
-      approvedMappings,
-      totalMappingsWithIndicators,
+      indicatorsWithApproval,
+      totalIndicators,
     ] = await Promise.all([
-      prisma.document.count(),
+      // Only count non-archived documents that have at least one APPROVED mapping
+      prisma.document.count({
+        where: {
+          isArchived: false,
+          mappings: { some: { status: "APPROVED" } },
+        },
+      }),
       prisma.documentMapping.count({
         where: { status: { in: ["SUBMITTED", "UNDER_REVIEW"] } },
       }),
       prisma.user.count({
         where: { role: "FACULTY", isActive: true },
       }),
-      prisma.documentMapping.count({
-        where: { status: "APPROVED" },
+      // Indicator-level compliance: indicators that have ≥1 APPROVED mapping
+      prisma.indicator.count({
+        where: { mappings: { some: { status: "APPROVED" } } },
       }),
       prisma.indicator.count(),
     ])
 
     const compliancePercent =
-      totalMappingsWithIndicators > 0
-        ? Math.round((approvedMappings / totalMappingsWithIndicators) * 100)
+      totalIndicators > 0
+        ? Math.round((indicatorsWithApproval / totalIndicators) * 100)
         : 0
 
     return {
       totalDocuments,
       pendingReviews,
       activeFaculty,
-      approvedMappings,
+      approvedMappings: indicatorsWithApproval,
       compliancePercent,
     }
   },
@@ -207,6 +234,8 @@ export async function getRecentAuditLogs(): Promise<RecentAuditLog[]> {
 /**
  * Inner function: efficient DB-side aggregation for compliance percentages.
  * Wrapped by unstable_cache for server-side caching.
+ *
+ * Compliance = (indicators with ≥1 APPROVED mapping) / totalIndicators × 100
  */
 const _fetchComplianceData = unstable_cache(
   async (): Promise<AreaCompliance[]> => {
@@ -262,4 +291,77 @@ const _fetchComplianceData = unstable_cache(
 export async function getComplianceData(): Promise<AreaCompliance[]> {
   await requireAdminOrDean()
   return _fetchComplianceData()
+}
+
+// ─── getComplianceDataWithCounts ──────────────────────────────────────────────
+
+/**
+ * Richer compliance data for the Dean's Progress by Area component.
+ * Returns per-area compliance %, plus evidence counts:
+ *   - providedEvidences: indicators with ≥1 APPROVED or SUBMITTED mapping
+ *     (i.e., faculty has provided evidence, whether approved yet or not)
+ *   - totalIndicators: total indicator count for that area
+ *
+ * This enables the "1/12 evidences" display.
+ */
+const _fetchComplianceDataWithCounts = unstable_cache(
+  async (): Promise<AreaComplianceWithCounts[]> => {
+    const areas = await prisma.area.findMany({
+      orderBy: { order: "asc" },
+      select: {
+        name: true,
+        criteria: {
+          select: {
+            indicators: {
+              select: { id: true },
+            },
+          },
+        },
+      },
+    })
+
+    // Single query: group by indicatorId for APPROVED mappings
+    const approvedGroups = await prisma.documentMapping.groupBy({
+      by: ["indicatorId"],
+      where: { status: "APPROVED" },
+      _count: { _all: true },
+    })
+
+    // Single query: group by indicatorId for APPROVED or SUBMITTED (provided) mappings
+    const providedGroups = await prisma.documentMapping.groupBy({
+      by: ["indicatorId"],
+      where: { status: { in: ["APPROVED", "SUBMITTED", "UNDER_REVIEW"] } },
+      _count: { _all: true },
+    })
+
+    const approvedIndicatorIds = new Set(approvedGroups.map((g) => g.indicatorId))
+    const providedIndicatorIds = new Set(providedGroups.map((g) => g.indicatorId))
+
+    return areas.map((area) => {
+      const allIndicatorIds = area.criteria.flatMap((c) =>
+        c.indicators.map((i) => i.id)
+      )
+      const totalIndicators = allIndicatorIds.length
+      const approvedIndicators = allIndicatorIds.filter((id) =>
+        approvedIndicatorIds.has(id)
+      ).length
+      const providedEvidences = allIndicatorIds.filter((id) =>
+        providedIndicatorIds.has(id)
+      ).length
+
+      const value =
+        totalIndicators > 0
+          ? Math.round((approvedIndicators / totalIndicators) * 100)
+          : 0
+
+      return { name: area.name, value, providedEvidences, totalIndicators }
+    })
+  },
+  ["compliance-data-with-counts"],
+  { revalidate: 60, tags: ["dashboard"] }
+)
+
+export async function getComplianceDataWithCounts(): Promise<AreaComplianceWithCounts[]> {
+  await requireAdminOrDean()
+  return _fetchComplianceDataWithCounts()
 }

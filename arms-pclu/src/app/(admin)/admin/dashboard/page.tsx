@@ -6,20 +6,15 @@ import {
   TrendingUp,
   Users,
   AlertCircle,
-  ActivitySquare,
   FileText,
   ChevronRight,
 } from "lucide-react"
-import { Skeleton } from "@/components/ui/skeleton"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { StatCard } from "@/components/dashboard/StatCard"
-import { ComplianceChart } from "@/components/dashboard/ComplianceChart"
-import { ActivityFeed } from "@/components/dashboard/ActivityFeed"
 import { HierarchicalDrillDown } from "@/components/dashboard/HierarchicalDrillDown"
 import {
   getDashboardStats,
   getPendingSubmissions,
-  getRecentAuditLogs,
 } from "@/actions/dashboard.actions"
 import { requireAdmin } from "@/lib/auth/getUser"
 
@@ -45,17 +40,6 @@ function StatusPill({ status }: { status: string }) {
   )
 }
 
-// ─── Audit action label map ───────────────────────────────────────────────────
-
-const ACTION_LABELS: Record<string, string> = {
-  UPLOAD_DOCUMENT:        "Uploaded a document",
-  CREATE_EVIDENCE_MAPPINGS: "Tagged evidence to indicators",
-  SUBMIT_MAPPING:         "Submitted a mapping for review",
-  SUBMIT_ALL_MAPPINGS:    "Submitted all mappings",
-  REVIEW_MAPPING:         "Reviewed a mapping",
-  DELETE_MAPPING:         "Deleted a mapping",
-}
-
 // ─── Dashboard Page (Async Server Component) ──────────────────────────────────
 
 export default async function AdminDashboardPage() {
@@ -70,9 +54,9 @@ export default async function AdminDashboardPage() {
   })
 
   // Parallel data fetching
-  const [stats, recentLogs] = await Promise.all([
+  const [stats, pendingSubmissions] = await Promise.all([
     getDashboardStats(),
-    getRecentAuditLogs(),
+    getPendingSubmissions(),
   ])
 
   return (
@@ -86,9 +70,9 @@ export default async function AdminDashboardPage() {
       {/* ── Stats Row ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <StatCard
-          title="Total Documents"
+          title="Approved Documents"
           value={stats.totalDocuments}
-          subtitle="In central repository"
+          subtitle="With at least one approval"
           icon={Archive}
           color="blue"
         />
@@ -102,7 +86,7 @@ export default async function AdminDashboardPage() {
         <StatCard
           title="Compliance Rate"
           value={`${stats.compliancePercent}%`}
-          subtitle={`${stats.approvedMappings} approved mappings`}
+          subtitle={`${stats.approvedMappings} indicators met`}
           icon={TrendingUp}
           color="emerald"
           trend={
@@ -111,7 +95,6 @@ export default async function AdminDashboardPage() {
               : undefined
           }
         />
-
         <StatCard
           title="Active Faculty"
           value={stats.activeFaculty}
@@ -121,96 +104,82 @@ export default async function AdminDashboardPage() {
         />
       </div>
 
-      {/* ── Charts Row ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
-        <div className="xl:col-span-2">
-          <ComplianceChart />
+      {/* ── Pending Submissions Table ── */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+        <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+          <div>
+            <h3 className="text-base font-semibold text-slate-800 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-amber-500" />
+              Pending Submissions
+              {stats.pendingReviews > 0 && (
+                <span className="bg-amber-100 text-amber-700 text-xs py-0.5 px-2 rounded-full font-bold ml-1">
+                  {stats.pendingReviews}
+                </span>
+              )}
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">Documents awaiting your review</p>
+          </div>
+          <Link
+            href="/admin/repository"
+            className="text-xs text-blue-600 hover:underline font-medium inline-flex items-center gap-1"
+          >
+            View all
+            <ChevronRight className="w-3 h-3" />
+          </Link>
         </div>
-        <div className="xl:col-span-1">
-          <ActivityFeed />
+
+        <div className="flex-1">
+          {pendingSubmissions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+              <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center mb-3">
+                <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+              </div>
+              <p className="text-sm font-semibold text-slate-700">All caught up!</p>
+              <p className="text-xs text-slate-400 mt-1">
+                No submissions are currently awaiting review.
+              </p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {pendingSubmissions.map((sub) => (
+                <li
+                  key={sub.id}
+                  className="flex items-start gap-3 px-5 py-4 hover:bg-slate-50 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0 mt-0.5">
+                    <FileText className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 truncate">
+                      {sub.document.title}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5 truncate">
+                      <span className="font-medium text-slate-600">{sub.user.name}</span>
+                      {" · "}
+                      {sub.indicator.criterion.area.name}
+                      {" › "}
+                      {sub.indicator.criterion.name}
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      {new Date(sub.createdAt).toLocaleString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </div>
+                  <StatusPill status={sub.status} />
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 
       {/* ── Hierarchical Evidence Drill-Down ── */}
       <div className="mb-6">
         <HierarchicalDrillDown />
-      </div>
-
-      {/* ── Bottom Row: Recent Activity ── */}
-      <div className="grid grid-cols-1 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-          <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-            <h3 className="text-base font-semibold text-slate-800 flex items-center gap-2">
-              <ActivitySquare className="w-4 h-4 text-slate-400" />
-              Recent Activity
-            </h3>
-          </div>
-
-          <div className="flex-1">
-            {recentLogs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-                  <AlertCircle className="w-6 h-6 text-slate-400" />
-                </div>
-                <p className="text-sm font-semibold text-slate-700">No activity yet</p>
-                <p className="text-xs text-slate-400 mt-1">
-                  System events will appear here as faculty and admins perform actions.
-                </p>
-              </div>
-            ) : (
-              <ul className="divide-y divide-slate-100">
-                {recentLogs.map((log) => {
-                  const docTitle =
-                    log.details != null && typeof log.details.documentTitle === "string"
-                      ? log.details.documentTitle
-                      : null
-                  return (
-                  <li key={log.id} className="flex items-start gap-3 px-5 py-4 hover:bg-slate-50 transition-colors">
-                    <div className="w-8 h-8 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0 mt-0.5">
-                      <ActivitySquare className="w-4 h-4 text-blue-500" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-slate-800">
-                        <span className="font-semibold">{log.user.name}</span>{" "}
-                        <span className="text-slate-500">
-                          {ACTION_LABELS[log.action] ?? log.action.toLowerCase().replace(/_/g, " ")}
-                        </span>
-                      </p>
-                      {docTitle && (
-                        <p className="text-xs text-slate-400 mt-0.5 truncate">
-                          {docTitle}
-                        </p>
-                      )}
-                      <p className="text-[10px] text-slate-400 mt-1">
-                        {new Date(log.createdAt).toLocaleString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                    </div>
-                    <span className="text-[10px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full shrink-0">
-                      {log.module}
-                    </span>
-                  </li>
-                  )
-                })}
-              </ul>
-            )}
-          </div>
-
-          <div className="p-3 border-t border-slate-100 bg-slate-50/50 text-center">
-            <Link
-              href="/admin/audit-logs"
-              className="text-xs text-blue-600 hover:underline font-medium inline-flex items-center gap-1"
-            >
-              View full audit log
-              <ChevronRight className="w-3 h-3" />
-            </Link>
-          </div>
-        </div>
-
       </div>
     </>
   )

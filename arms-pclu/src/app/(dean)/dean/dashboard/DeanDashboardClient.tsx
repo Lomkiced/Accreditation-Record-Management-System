@@ -9,10 +9,7 @@ import {
   CheckCircle2,
   Clock,
   Users,
-  AlertCircle,
-  ActivitySquare,
   FileText,
-  ChevronRight,
   BarChart3,
   ArrowRight
 } from "lucide-react"
@@ -44,7 +41,7 @@ const ProgressByArea = dynamic(
   }
 )
 
-import type { DashboardStats, PendingSubmission, RecentAuditLog } from "@/actions/dashboard.actions"
+import type { DashboardStats, PendingSubmission } from "@/actions/dashboard.actions"
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -76,19 +73,10 @@ function StatusPill({ status }: { status: string }) {
   )
 }
 
-const ACTION_LABELS: Record<string, string> = {
-  UPLOAD_DOCUMENT:        "Uploaded a document",
-  CREATE_EVIDENCE_MAPPINGS: "Tagged evidence to indicators",
-  SUBMIT_MAPPING:         "Submitted a mapping for review",
-  SUBMIT_ALL_MAPPINGS:    "Submitted all mappings",
-  REVIEW_MAPPING:         "Reviewed a mapping",
-  DELETE_MAPPING:         "Deleted a mapping",
-}
 
 interface DeanDashboardClientProps {
   stats: DashboardStats
   pendingSubmissions: PendingSubmission[]
-  recentLogs: RecentAuditLog[]
   dean: { name: string }
   currentDate: string
 }
@@ -96,7 +84,6 @@ interface DeanDashboardClientProps {
 export function DeanDashboardClient({
   stats,
   pendingSubmissions,
-  recentLogs,
   dean,
   currentDate,
 }: DeanDashboardClientProps) {
@@ -132,14 +119,14 @@ export function DeanDashboardClient({
           <div className="bg-white rounded-[1.5rem] p-6 border border-slate-200/60 shadow-sm flex flex-col justify-between group hover:border-blue-300 transition-all hover:shadow-md">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-semibold text-slate-500 mb-1">Total Documents</p>
+                <p className="text-sm font-semibold text-slate-500 mb-1">Approved Documents</p>
                 <h3 className="text-4xl font-black text-slate-800 tracking-tight">{stats.totalDocuments}</h3>
               </div>
               <div className="p-3.5 bg-blue-50 text-blue-600 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm">
                 <Archive size={24} />
               </div>
             </div>
-            <p className="text-xs text-slate-500 mt-5 font-medium">In central repository</p>
+            <p className="text-xs text-slate-500 mt-5 font-medium">With at least one approval</p>
           </div>
           
           <div className="bg-white rounded-[1.5rem] p-6 border border-slate-200/60 shadow-sm flex flex-col justify-between group hover:border-amber-300 transition-all hover:shadow-md relative overflow-hidden">

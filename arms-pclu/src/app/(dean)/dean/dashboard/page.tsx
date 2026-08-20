@@ -1,7 +1,6 @@
 import {
   getDashboardStats,
   getPendingSubmissions,
-  getRecentAuditLogs,
 } from "@/actions/dashboard.actions"
 import { requireDean } from "@/lib/auth/getUser"
 import { DeanDashboardClient } from "./DeanDashboardClient"
@@ -16,17 +15,15 @@ export default async function DeanDashboardPage() {
     day: "numeric",
   })
 
-  const [stats, pendingSubmissions, recentLogs] = await Promise.all([
+  const [stats, pendingSubmissions] = await Promise.all([
     getDashboardStats(),
     getPendingSubmissions(),
-    getRecentAuditLogs(),
   ])
 
   return (
-    <DeanDashboardClient 
+    <DeanDashboardClient
       stats={stats}
       pendingSubmissions={pendingSubmissions}
-      recentLogs={recentLogs}
       dean={dean}
       currentDate={currentDate}
     />

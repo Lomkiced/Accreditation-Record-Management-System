@@ -31,12 +31,16 @@ export function CriterionList({ areaId, mode = "dean" }: CriterionListProps) {
   const [editTarget, setEditTarget] = React.useState<CriterionWithIndicators | null>(null)
   const [deleteTarget, setDeleteTarget] = React.useState<CriterionWithIndicators | null>(null)
 
-  // Compute completion percentage from real mapping statuses
+  // Compute completion percentage using indicator-level compliance:
+  // "How many indicators in this criterion have ≥1 APPROVED mapping?"
+  // This aligns with the dashboard's canonical compliance metric.
   const getCompletion = (criterion: CriterionWithIndicators): number => {
-    const allMappings = criterion.indicators.flatMap((i) => i.mappings)
-    if (allMappings.length === 0) return 0
-    const approved = allMappings.filter((m) => m.status === "APPROVED").length
-    return Math.round((approved / allMappings.length) * 100)
+    const total = criterion.indicators.length
+    if (total === 0) return 0
+    const approved = criterion.indicators.filter((i) =>
+      i.mappings.some((m) => m.status === "APPROVED")
+    ).length
+    return Math.round((approved / total) * 100)
   }
 
   const getCompletionPill = (completion: number) => {

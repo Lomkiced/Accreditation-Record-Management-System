@@ -583,6 +583,8 @@ const _fetchAreasHierarchyCached = unstable_cache(
                 ratingScale: true,
                 order: true,
                 mappings: {
+                  // Exclude archived documents from hierarchy view
+                  where: { document: { isArchived: false } },
                   select: {
                     id: true,
                     status: true,

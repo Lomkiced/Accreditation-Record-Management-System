@@ -31,77 +31,125 @@ export function AreaCard({ area, mode = "dean" }: AreaCardProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
   const deleteArea = useDeleteArea()
 
+  // ── Accurate stats from real mapping data ──────────────────────────────────
+  // AREA_LEAN_SELECT now includes mappings, so we can compute accurate numbers.
+  // Compliance is measured at the INDICATOR level:
+  //   "How many indicators have at least one approved mapping?"
+  // This aligns with the rest of the dashboard's compliance logic.
 
+  const indicators = area.criteria.flatMap((c) => c.indicators)
+  const totalIndicators = indicators.length
 
-  // Calculate dynamic stats
+  // Indicators with at least one APPROVED mapping
+  const approvedIndicators = indicators.filter((ind) =>
+    (ind as any).mappings?.some((m: { status: string }) => m.status === "APPROVED")
+  ).length
+
+  // Indicators with at least one SUBMITTED or UNDER_REVIEW mapping (pending)
+  const pendingIndicators = indicators.filter((ind) =>
+    (ind as any).mappings?.some(
+      (m: { status: string }) =>
+        m.status === "SUBMITTED" || m.status === "UNDER_REVIEW"
+    )
+  ).length
+
+  // Indicators with any mapping (has evidence provided by faculty)
+  const indicatorsWithEvidence = indicators.filter(
+    (ind) => ((ind as any).mappings?.length ?? 0) > 0
+  ).length
+
+  // Total unique mapping entries across all indicators
+  const totalMappings = indicators.reduce(
+    (acc, ind) => acc + ((ind as any).mappings?.length ?? 0),
+    0
+  )
+
   const criteriaCount = area.criteria.length
-  
-  let draftCount = 0
-  let pendingCount = 0
-  let approvedCount = 0
-  let totalDocsCount = 0
-  
-  area.criteria.forEach(criterion => {
-    criterion.indicators.forEach(indicator => {
-      const mappings = (indicator as any).mappings ?? []
-      mappings.forEach((m: any) => {
-        totalDocsCount++
-        if (m.status === "DRAFT") draftCount++
-        else if (m.status === "APPROVED") approvedCount++
-        else pendingCount++ // SUBMITTED, UNDER_REVIEW, RETURNED
-      })
-    })
-  })
 
+  // Completion pill for the area header
   const getCompletionPill = () => {
     if (mode === "admin") {
-      if (totalDocsCount === 0) return <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">No Documents</span>
-      const completion = Math.round((approvedCount / totalDocsCount) * 100)
-      if (completion === 100) return <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">100% Complete</span>
-      if (completion > 0) return <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">{completion}% Partial</span>
-      return <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">0%</span>
+      if (totalIndicators === 0)
+        return (
+          <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">
+            No Indicators
+          </span>
+        )
+
+      const pct = Math.round((approvedIndicators / totalIndicators) * 100)
+
+      if (pct === 100)
+        return (
+          <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">
+            100% Complete
+          </span>
+        )
+      if (pct > 0)
+        return (
+          <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+            {pct}% Partial
+          </span>
+        )
+      return (
+        <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">
+          0%
+        </span>
+      )
     }
-    
-    if (totalDocsCount === 0) return <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">No Documents</span>
-    
+
+    // Dean mode — show evidence breakdown
+    if (totalMappings === 0)
+      return (
+        <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">
+          No Documents
+        </span>
+      )
+
     return (
       <span className="text-xs flex items-center gap-2 font-medium bg-white border border-slate-200 px-2.5 py-1 rounded-full shadow-sm">
-        {draftCount > 0 && <span className="text-slate-600">{draftCount} draft</span>}
-        {draftCount > 0 && pendingCount > 0 && <span className="text-slate-300">–</span>}
-        {pendingCount > 0 && <span className="text-amber-600">{pendingCount} pending review</span>}
-        {(draftCount > 0 || pendingCount > 0) && approvedCount > 0 && <span className="text-slate-300">–</span>}
-        {approvedCount > 0 && <span className="text-emerald-600">{approvedCount} approved</span>}
+        {pendingIndicators > 0 && (
+          <span className="text-amber-600">{pendingIndicators} pending review</span>
+        )}
+        {pendingIndicators > 0 && approvedIndicators > 0 && (
+          <span className="text-slate-300">–</span>
+        )}
+        {approvedIndicators > 0 && (
+          <span className="text-emerald-600">{approvedIndicators} approved</span>
+        )}
+        {pendingIndicators === 0 && approvedIndicators === 0 && totalMappings > 0 && (
+          <span className="text-slate-600">{indicatorsWithEvidence} with evidence</span>
+        )}
       </span>
     )
   }
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm mb-3 overflow-hidden">
-      <div 
+      <div
         className="flex items-center p-4 cursor-pointer hover:bg-slate-50 transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <h3 className="font-semibold text-slate-800">{area.name}</h3>
         <span className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full ml-2 font-medium">
-          {criteriaCount} Criterias
+          {criteriaCount} Criteria
         </span>
-        
+
         <div className="ml-auto flex items-center gap-3">
           {getCompletionPill()}
-          
+
           {mode === "dean" && (
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="h-8 w-8 text-slate-400 hover:text-blue-600"
                 onClick={() => setIsEditModalOpen(true)}
               >
                 <Edit className="w-4 h-4" />
               </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="h-8 w-8 text-slate-400 hover:text-red-500"
                 onClick={() => setIsDeleteDialogOpen(true)}
               >
@@ -127,7 +175,7 @@ export function AreaCard({ area, mode = "dean" }: AreaCardProps) {
             exit="collapsed"
             variants={{
               open: { opacity: 1, height: "auto" },
-              collapsed: { opacity: 0, height: 0 }
+              collapsed: { opacity: 0, height: 0 },
             }}
             transition={{ duration: 0.2, ease: "easeInOut" }}
           >
@@ -156,14 +204,14 @@ export function AreaCard({ area, mode = "dean" }: AreaCardProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteArea.isPending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               className="bg-red-600 hover:bg-red-700 focus:ring-red-600 text-white"
               disabled={deleteArea.isPending}
               onClick={(e) => {
-                e.preventDefault();
+                e.preventDefault()
                 deleteArea.mutate(area.id, {
-                  onSuccess: () => setIsDeleteDialogOpen(false)
-                });
+                  onSuccess: () => setIsDeleteDialogOpen(false),
+                })
               }}
             >
               {deleteArea.isPending ? "Deleting..." : "Delete Area"}

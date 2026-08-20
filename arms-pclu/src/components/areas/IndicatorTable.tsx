@@ -12,14 +12,28 @@ import {
 import { useDeleteIndicator } from "@/hooks/useAreas"
 import type { IndicatorWithMappings } from "@/actions/indicator.actions"
 
-// Flexible indicator type — mappings may be absent for lean list views
+// Lean mapping shape returned from AREA_LEAN_SELECT (status only)
+type LeanMapping = { status: string }
+
+// Full mapping shape returned from IndicatorWithMappings (includes document)
+type FullMapping = {
+  id: string
+  status: string
+  rating: number | null
+  createdAt: Date
+  document: { id: string; title: string; fileName: string | null }
+}
+
+// IndicatorRow accepts either lean (status-only) or full mapping shapes.
+// The [id] detail page passes lean data from useAreas() while the edit modal
+// uses the full IndicatorWithMappings shape from indicator.actions.ts.
 type IndicatorRow = {
   id: string
   name: string
   requiredDocs?: string | null
   ratingScale: number
   order: number
-  mappings?: IndicatorWithMappings["mappings"]
+  mappings?: LeanMapping[] | FullMapping[]
 }
 
 interface IndicatorTableProps {
@@ -46,27 +60,42 @@ export function IndicatorTable({
     )
   }
 
-  const renderEvidence = (mappings: IndicatorWithMappings["mappings"] | undefined) => {
+  const renderEvidence = (mappings: LeanMapping[] | FullMapping[] | undefined) => {
     if (!mappings || mappings.length === 0) {
       return <span className="text-xs text-slate-400 italic">No evidence</span>
     }
     // Prefer APPROVED, otherwise fallback to the most recent SUBMITTED/UNDER_REVIEW
     const approved = mappings.find(m => m.status === "APPROVED")
     const latest = approved || mappings.find(m => m.status !== "DRAFT" && m.status !== "RETURNED")
-    
+
     if (!latest) {
       return <span className="text-xs text-slate-400 italic">No evidence</span>
     }
-    
+
     const isApproved = latest.status === "APPROVED"
     const Icon = isApproved ? CheckCircle : Clock
     const colorClass = isApproved ? "text-emerald-500" : "text-amber-500"
-    
+    // "document" only exists on FullMapping — lean mappings won't have it
+    const fullMapping = latest as Partial<FullMapping>
+    const docTitle = fullMapping.document?.title ?? null
+
+    if (!docTitle) {
+      // Lean shape: just show status indicator
+      return (
+        <div className="flex items-center gap-2">
+          <Icon className={`w-3.5 h-3.5 shrink-0 ${colorClass}`} />
+          <span className="text-xs font-medium text-slate-700">
+            {isApproved ? "Approved" : "Pending review"}
+          </span>
+        </div>
+      )
+    }
+
     return (
       <div className="flex items-center gap-2 max-w-[200px]">
         <Icon className={`w-3.5 h-3.5 shrink-0 ${colorClass}`} />
-        <span className="text-xs font-medium text-slate-700 truncate" title={latest.document.title}>
-          {latest.document.title}
+        <span className="text-xs font-medium text-slate-700 truncate" title={docTitle}>
+          {docTitle}
         </span>
       </div>
     )

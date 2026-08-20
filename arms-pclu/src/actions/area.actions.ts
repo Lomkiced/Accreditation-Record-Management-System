@@ -25,7 +25,8 @@ const ReorderSchema = z.object({
 })
 
 // ─── Lean nested select shape (used for list/dropdown rendering) ─────────────
-// Only pulls names and ordering — NOT the full document/mapping tree.
+// Includes mapping statuses so AreaCard and CriterionList can compute accurate
+// document counts and compliance percentages without additional round-trips.
 
 const AREA_LEAN_SELECT = {
   id: true,
@@ -49,6 +50,11 @@ const AREA_LEAN_SELECT = {
           requiredDocs: true,
           ratingScale: true,
           order: true,
+          // Include mapping statuses for real-time compliance and doc counts
+          mappings: {
+            where: { document: { isArchived: false } },
+            select: { status: true },
+          },
         },
       },
     },

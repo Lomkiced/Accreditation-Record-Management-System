@@ -4,8 +4,8 @@ import * as React from "react"
 import { useQuery } from "@tanstack/react-query"
 import { FileText, Loader2 } from "lucide-react"
 import { motion } from "framer-motion"
-import { getComplianceData } from "@/actions/dashboard.actions"
-import type { AreaCompliance } from "@/actions/dashboard.actions"
+import { getComplianceDataWithCounts } from "@/actions/dashboard.actions"
+import type { AreaComplianceWithCounts } from "@/actions/dashboard.actions"
 
 // Roman numeral converter for area numbering
 const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"]
@@ -44,14 +44,14 @@ function getStatusConfig(value: number): {
   }
 }
 
-function AreaRow({ area, index }: { area: AreaCompliance; index: number }) {
+function AreaRow({ area, index }: { area: AreaComplianceWithCounts; index: number }) {
   const status = getStatusConfig(area.value)
   const roman = ROMAN_NUMERALS[index] ?? `${index + 1}`
 
   return (
     <div className="flex items-center gap-4 py-3 group hover:bg-slate-50/50 transition-colors px-1 rounded-lg">
       {/* Area name */}
-      <div className="flex items-center gap-3 w-[320px] min-w-0 shrink-0">
+      <div className="flex items-center gap-3 w-[280px] min-w-0 shrink-0">
         <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
           <FileText className="w-3.5 h-3.5 text-slate-500" />
         </div>
@@ -60,6 +60,18 @@ function AreaRow({ area, index }: { area: AreaCompliance; index: number }) {
           <span className="text-slate-300 mr-1.5">–</span>
           {area.name}
         </p>
+      </div>
+
+      {/* Evidence count badge */}
+      <div className="w-[100px] shrink-0 text-center">
+        <span
+          title={`${area.providedEvidences} evidences provided out of ${area.totalIndicators} total indicators`}
+          className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full"
+        >
+          {area.providedEvidences}
+          <span className="text-slate-400">/</span>
+          {area.totalIndicators}
+        </span>
       </div>
 
       {/* Progress bar */}
@@ -90,9 +102,9 @@ function AreaRow({ area, index }: { area: AreaCompliance; index: number }) {
 
 export function ProgressByArea() {
   const { data: areas = [], isLoading, error } = useQuery({
-    queryKey: ["compliance", "by-area"],
+    queryKey: ["compliance", "by-area-with-counts"],
     queryFn: async () => {
-      const result = await getComplianceData()
+      const result = await getComplianceDataWithCounts()
       return result
     },
     staleTime: 1000 * 60 * 5,
@@ -119,8 +131,11 @@ export function ProgressByArea() {
     <div>
       {/* Table Header */}
       <div className="flex items-center gap-4 px-1 mb-2">
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider w-[320px] shrink-0">
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider w-[280px] shrink-0">
           Area
+        </p>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider w-[100px] shrink-0 text-center">
+          Evidences
         </p>
         <p className="text-xs font-bold text-slate-400 uppercase tracking-wider flex-1">
           Progress
@@ -144,7 +159,12 @@ export function ProgressByArea() {
       )}
 
       {/* Legend */}
-      <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-center gap-6">
+      <div className="mt-5 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-center gap-6">
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-medium text-slate-500">Evidences =</span>
+          <span className="text-xs font-semibold text-slate-700">provided / total indicators</span>
+        </div>
+        <div className="w-px h-3 bg-slate-200" />
         <div className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
           <span className="text-xs font-medium text-slate-500">Complete (100%)</span>
