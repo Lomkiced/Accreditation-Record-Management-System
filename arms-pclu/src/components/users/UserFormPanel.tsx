@@ -41,7 +41,7 @@ interface UserFormPanelProps {
 export function UserFormPanel({ open, onClose, user, allowedRoles = ["ADMIN", "DEAN", "FACULTY"] }: UserFormPanelProps) {
   const isEdit = !!user
   const [showPassword, setShowPassword] = React.useState(false)
-  const defaultRole = allowedRoles.length === 1 ? allowedRoles[0] : "FACULTY"
+  const defaultRole = allowedRoles.length === 1 ? allowedRoles[0] : (allowedRoles.includes("FACULTY") ? "FACULTY" : allowedRoles[0])
   const [selectedRole, setSelectedRole] = React.useState<"ADMIN" | "DEAN" | "FACULTY">(user?.role ?? defaultRole)
   
   // Password Reset State

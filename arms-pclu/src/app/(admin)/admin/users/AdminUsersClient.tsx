@@ -152,6 +152,7 @@ export function AdminUsersClient({ initialData }: { initialData: UserWithCounts[
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         user={editingUser}
+        allowedRoles={["ADMIN", "DEAN"]}
       />
 
       <ConfirmDialog 
