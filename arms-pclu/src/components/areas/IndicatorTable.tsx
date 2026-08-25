@@ -81,11 +81,12 @@ export function IndicatorTable({
 
     if (!docTitle) {
       // Lean shape: just show status indicator
+      const notApprovedCount = mappings.filter(m => m.status !== "APPROVED").length
       return (
         <div className="flex items-center gap-2">
           <Icon className={`w-3.5 h-3.5 shrink-0 ${colorClass}`} />
           <span className="text-xs font-medium text-slate-700">
-            {isApproved ? "Approved" : "Pending review"}
+            {isApproved ? "Completely Provided" : `${notApprovedCount} needs to be submit`}
           </span>
         </div>
       )

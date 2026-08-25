@@ -20,9 +20,9 @@ export function AdminUsersClient({ initialData }: { initialData: UserWithCounts[
   
   const [searchQuery, setSearchQuery] = React.useState("")
   const [selectedDept, setSelectedDept] = React.useState<string>("All")
-  const [roleFilter, setRoleFilter] = React.useState<"ALL" | "ADMIN" | "DEAN">("ALL")
+  const [roleFilter, setRoleFilter] = React.useState<"ALL" | "ADMIN" | "DEAN" | "FACULTY">("ALL")
   
-  const { data: users = [], isLoading } = useUsers(["ADMIN", "DEAN"], initialData)
+  const { data: users = [], isLoading } = useUsers(["ADMIN", "DEAN", "FACULTY"], initialData)
   const { mutateAsync: deleteUser, isPending: isDeleting } = useDeleteUser()
 
   const departments = React.useMemo(() => {
@@ -128,6 +128,12 @@ export function AdminUsersClient({ initialData }: { initialData: UserWithCounts[
               className={`h-7 text-xs ${roleFilter === "DEAN" ? "bg-white shadow-sm" : "text-slate-600"}`}
               onClick={() => setRoleFilter("DEAN")}
             >Dean</Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className={`h-7 text-xs ${roleFilter === "FACULTY" ? "bg-white shadow-sm" : "text-slate-600"}`}
+              onClick={() => setRoleFilter("FACULTY")}
+            >Faculty</Button>
           </div>
 
           <div className="ml-auto text-sm text-slate-500">

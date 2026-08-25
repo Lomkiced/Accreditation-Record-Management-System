@@ -76,7 +76,27 @@ export function AreaCard({ area, mode = "dean" }: AreaCardProps) {
           </span>
         )
 
-      const pct = Math.round((approvedIndicators / totalIndicators) * 100)
+      // Use the same requiredDocs-aware calculation as the Faculty portal
+      // to ensure percentages are aligned across all portals.
+      let totalRequired = 0
+      let totalApproved = 0
+      indicators.forEach((ind) => {
+        let reqCount = 1
+        const reqDocs = (ind as any).requiredDocs as string | null | undefined
+        if (reqDocs) {
+          if (!isNaN(Number(reqDocs))) {
+            reqCount = Math.max(1, Number(reqDocs))
+          } else {
+            reqCount = reqDocs.split(",").filter((s: string) => s.trim().length > 0).length || 1
+          }
+        }
+        totalRequired += reqCount
+        const approvedCount = ((ind as any).mappings ?? []).filter(
+          (m: { status: string }) => m.status === "APPROVED"
+        ).length
+        totalApproved += Math.min(approvedCount, reqCount)
+      })
+      const pct = totalRequired === 0 ? 0 : Math.round((totalApproved / totalRequired) * 100)
 
       if (pct === 100)
         return (
@@ -107,17 +127,18 @@ export function AreaCard({ area, mode = "dean" }: AreaCardProps) {
 
     return (
       <span className="text-xs flex items-center gap-2 font-medium bg-white border border-slate-200 px-2.5 py-1 rounded-full shadow-sm">
-        {pendingIndicators > 0 && (
-          <span className="text-amber-600">{pendingIndicators} pending review</span>
+        {approvedIndicators > 0 && (
+          <span className="text-emerald-600">
+            {approvedIndicators} indicator{approvedIndicators !== 1 ? "s" : ""} completely provided
+          </span>
         )}
-        {pendingIndicators > 0 && approvedIndicators > 0 && (
+        {approvedIndicators > 0 && (totalIndicators - approvedIndicators) > 0 && (
           <span className="text-slate-300">–</span>
         )}
-        {approvedIndicators > 0 && (
-          <span className="text-emerald-600">{approvedIndicators} approved</span>
-        )}
-        {pendingIndicators === 0 && approvedIndicators === 0 && totalMappings > 0 && (
-          <span className="text-slate-600">{indicatorsWithEvidence} with evidence</span>
+        {(totalIndicators - approvedIndicators) > 0 && (
+          <span className="text-amber-600">
+            {totalIndicators - approvedIndicators} needs to be submit
+          </span>
         )}
       </span>
     )

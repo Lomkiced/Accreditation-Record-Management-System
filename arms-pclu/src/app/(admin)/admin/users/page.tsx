@@ -11,7 +11,7 @@ export default async function AdminUsersPage() {
   await requireAdmin()
   
   // Fetch initial data on the server
-  const usersResult = await getUsers(["ADMIN", "DEAN"])
+  const usersResult = await getUsers(["ADMIN", "DEAN", "FACULTY"])
   const initialData = usersResult
 
   return (

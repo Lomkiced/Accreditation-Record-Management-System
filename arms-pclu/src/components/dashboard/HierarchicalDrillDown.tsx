@@ -347,12 +347,9 @@ export function HierarchicalDrillDown({ showPercentages = true }: { showPercenta
                         {area.criteria.length} criteria ·{" "}
                         {stats.totalIndicators} indicators
                       </span>
-                      {stats.totalDocuments > 0 && (
-                        <span className="text-xs text-slate-400">
-                          · {stats.totalDocuments} document
-                          {stats.totalDocuments !== 1 ? "s" : ""}
-                        </span>
-                      )}
+                      <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full border", accent.border, accent.text, accent.light)}>
+                        {stats.totalDocuments}/{stats.totalIndicators} documents
+                      </span>
                     </div>
                   </div>
 
