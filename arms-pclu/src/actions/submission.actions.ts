@@ -663,6 +663,74 @@ export type AdminSubmission = NonNullable<
 
 // ─── REVIEW SUBMISSION (Admin only) ──────────────────────────────────────────
 
+export async function markSubmissionUnderReview(mappingId: string): Promise<ActionResult> {
+  try {
+    const admin = await requireAdminOrDean()
+    
+    // First, fetch the current status
+    const mapping = await prisma.documentMapping.findUnique({
+      where: { id: mappingId },
+      include: {
+        document: { select: { title: true } },
+        indicator: { select: { name: true } },
+      }
+    })
+
+    if (!mapping) return { error: "Submission not found." }
+
+    // Idempotency: only transition if it's strictly "SUBMITTED"
+    if (mapping.status !== "SUBMITTED") {
+      return { success: true }
+    }
+
+    await prisma.documentMapping.update({
+      where: { id: mappingId },
+      data: { status: "UNDER_REVIEW" }
+    })
+
+    // Concurrent audit and notification
+    await Promise.allSettled([
+      prisma.auditLog.create({
+        data: {
+          userId: admin.id,
+          action: "REVIEW_STARTED",
+          module: "REVIEW",
+          targetId: mapping.id,
+          details: {
+            documentTitle: mapping.document.title,
+            indicatorName: mapping.indicator.name
+          }
+        }
+      }),
+      prisma.notification.create({
+        data: {
+          userId: mapping.userId,
+          message: `The Dean is currently reviewing your submission: "${mapping.document.title}".`,
+          type: "REVIEW",
+          link: `/faculty/submissions`
+        }
+      })
+    ]).catch(console.error)
+
+    revalidatePath("/admin/submissions")
+    revalidatePath("/dean/submissions")
+    revalidatePath("/faculty/submissions")
+    revalidatePath("/admin/dashboard")
+    revalidatePath("/dean/dashboard")
+    revalidateTag("areas-hierarchy")
+    revalidateTag("dashboard")
+
+    return { success: true }
+
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("Forbidden")) {
+      return { error: "Admin/Dean access required." }
+    }
+    console.error("[markSubmissionUnderReview]", error)
+    return { error: "Failed to mark submission as under review." }
+  }
+}
+
 const reviewSubmissionSchema = z.object({
   mappingId: z.string().uuid("Invalid mapping ID"),
   status: z.enum(["APPROVED", "RETURNED"]),

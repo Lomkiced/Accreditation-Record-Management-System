@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { VersionHistory } from "./VersionHistory"
 import { AdminSubmission } from "@/actions/submission.actions"
-import { useReviewSubmission } from "@/hooks/useSubmissions"
+import { useReviewSubmission, useMarkSubmissionUnderReview } from "@/hooks/useSubmissions"
 
 interface SubmissionReviewPanelProps {
   open: boolean
@@ -38,13 +38,19 @@ export function SubmissionReviewPanel({ open, onClose, submission }: SubmissionR
   const [hasConfirmedReview, setHasConfirmedReview] = React.useState(false)
   
   const reviewMutation = useReviewSubmission()
+  const markUnderReviewMutation = useMarkSubmissionUnderReview()
 
   React.useEffect(() => {
-    if (open) {
+    if (open && submission) {
       setRemarks("")
       setHasConfirmedReview(false)
+      
+      // Auto-transition to UNDER_REVIEW if it's currently SUBMITTED
+      if (submission.status === "SUBMITTED") {
+        markUnderReviewMutation.mutate(submission.id)
+      }
     }
-  }, [open, submission?.id])
+  }, [open, submission, markUnderReviewMutation])
 
   if (!submission) return null
 

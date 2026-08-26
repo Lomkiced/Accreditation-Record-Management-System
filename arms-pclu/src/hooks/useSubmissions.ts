@@ -8,6 +8,7 @@ import {
   saveDocumentAsDraft,
   getAllSubmissions,
   reviewSubmission,
+  markSubmissionUnderReview,
 } from "@/actions/submission.actions"
 import { submitAllMappings, deleteDocument } from "@/actions/document.actions"
 
@@ -103,6 +104,40 @@ export function useAllSubmissions(initialData?: AllSubmissionsData) {
 }
 
 // ─── REVIEW SUBMISSION (Admin view) ──────────────────────────────────────────
+
+export function useMarkSubmissionUnderReview() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (mappingId: string) => markSubmissionUnderReview(mappingId),
+    onMutate: async (mappingId) => {
+      await queryClient.cancelQueries({ queryKey: submissionKeys.all })
+      const previousSubmissions = queryClient.getQueryData<any[]>(submissionKeys.all)
+
+      if (previousSubmissions) {
+        queryClient.setQueryData(
+          submissionKeys.all,
+          previousSubmissions.map((sub) => 
+            sub.id === mappingId && sub.status === "SUBMITTED"
+              ? { ...sub, status: "UNDER_REVIEW" } 
+              : sub
+          )
+        )
+      }
+      return { previousSubmissions }
+    },
+    onError: (error: Error, variables, context) => {
+      if (context?.previousSubmissions) {
+        queryClient.setQueryData(submissionKeys.all, context.previousSubmissions)
+      }
+      console.error("Failed to auto-mark as under review", error)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: submissionKeys.all })
+    }
+  })
+}
+
 
 export function useReviewSubmission() {
   const queryClient = useQueryClient()
