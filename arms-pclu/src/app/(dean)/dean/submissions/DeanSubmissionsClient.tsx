@@ -14,7 +14,7 @@ type AllSubmissionsData = Extract<Awaited<ReturnType<typeof getAllSubmissions>>,
 
 export function DeanSubmissionsClient({ initialData }: { initialData: AllSubmissionsData }) {
   const [activeTab, setActiveTab] = React.useState("ALL")
-  const [selectedSubmission, setSelectedSubmission] = React.useState<AdminSubmission | null>(null)
+  const [selectedSubmissionId, setSelectedSubmissionId] = React.useState<string | null>(null)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [filterArea, setFilterArea] = React.useState("ALL")
   const [filterCriterion, setFilterCriterion] = React.useState("ALL")
@@ -22,6 +22,11 @@ export function DeanSubmissionsClient({ initialData }: { initialData: AllSubmiss
   
   const { data: submissions = [], isLoading } = useAllSubmissions(initialData)
   
+  const selectedSubmission = React.useMemo(() => {
+    if (!selectedSubmissionId) return null
+    return submissions.find(s => s.id === selectedSubmissionId) || null
+  }, [submissions, selectedSubmissionId])
+
   const stats = {
     total: submissions.length,
     pending: submissions.filter(s => s.status === "SUBMITTED" || s.status === "UNDER_REVIEW").length,
@@ -160,14 +165,15 @@ export function DeanSubmissionsClient({ initialData }: { initialData: AllSubmiss
             </div>
           </div>
         </div>
-        <SubmissionsTable data={filtered} onRowClick={setSelectedSubmission} />
+        <SubmissionsTable data={filtered} onRowClick={(sub) => setSelectedSubmissionId(sub.id)} />
         </div>
       )}
       <SubmissionReviewPanel 
         open={!!selectedSubmission}
-        onClose={() => setSelectedSubmission(null)}
+        onClose={() => setSelectedSubmissionId(null)}
         submission={selectedSubmission}
       />
     </>
   )
 }
+
