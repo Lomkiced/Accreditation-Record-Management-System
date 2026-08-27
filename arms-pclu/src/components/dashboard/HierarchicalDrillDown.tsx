@@ -27,11 +27,11 @@ import { getAreasWithHierarchy } from "@/actions/document.actions"
 import type { AreaWithHierarchy, MappingStatus } from "@/types/document.types"
 import type { MappingStatus as PrismaMappingStatus } from "@prisma/client"
 
-// ─── React Query key ─────────────────────────────────────────────────────────
+// â”€â”€â”€ React Query key â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const HIERARCHY_QUERY_KEY = ["areas", "hierarchy"] as const
 
 
-// ─── Status Badge helper ───────────────────────────────────────────────────────
+// â”€â”€â”€ Status Badge helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const STATUS_CONFIG: Record<
   string,
@@ -60,7 +60,7 @@ function MappingStatusBadge({ status }: { status: string }) {
   )
 }
 
-// ─── Area compliance ring ──────────────────────────────────────────────────────
+// â”€â”€â”€ Area compliance ring â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ComplianceRing({
   percent,
@@ -119,7 +119,7 @@ function ComplianceRing({
   )
 }
 
-// ─── Compute area compliance ──────────────────────────────────────────────────
+// â”€â”€â”€ Compute area compliance â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function parseRequiredDocsCount(requiredDocs: string | null | undefined): number {
   if (!requiredDocs) return 1
@@ -169,7 +169,7 @@ function computeAreaCompliance(area: AreaWithHierarchy) {
   }
 }
 
-// ─── Indicator Row ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Indicator Row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function IndicatorRow({
   indicator,
@@ -243,7 +243,7 @@ function IndicatorRow({
                   {mapping.document.title}
                 </p>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  {mapping.document.user.name} ·{" "}
+                  {mapping.document.user.name} Â·{" "}
                   {new Date(mapping.document.createdAt).toLocaleDateString(
                     "en-US",
                     { month: "short", day: "numeric", year: "numeric" }
@@ -270,7 +270,7 @@ function IndicatorRow({
   )
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const AREA_ACCENT_COLORS = [
   { bg: "bg-blue-500",   light: "bg-blue-50",   border: "border-blue-200",   text: "text-blue-700"   },
@@ -340,7 +340,7 @@ export function HierarchicalDrillDown({ showPercentages = true }: { showPercenta
               value={area.id}
               className="border-0"
             >
-              {/* ── Level 1: Area ── */}
+              {/* â”€â”€ Level 1: Area â”€â”€ */}
               <AccordionTrigger
                 className={cn(
                   "px-5 py-4 hover:no-underline group",
@@ -365,7 +365,7 @@ export function HierarchicalDrillDown({ showPercentages = true }: { showPercenta
                     </p>
                     <div className="flex items-center gap-3 mt-1">
                       <span className="text-xs text-slate-400">
-                        {area.criteria.length} criteria ·{" "}
+                        {area.criteria.length} criteria Â·{" "}
                         {stats.totalIndicators} indicators
                       </span>
                       <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full border", accent.border, accent.text, accent.light)}>
@@ -392,7 +392,7 @@ export function HierarchicalDrillDown({ showPercentages = true }: { showPercenta
               </AccordionTrigger>
 
               <AccordionContent className="px-0 pb-0">
-                {/* ── Level 2: Criteria ── */}
+                {/* â”€â”€ Level 2: Criteria â”€â”€ */}
                 <div className={cn("border-t border-slate-100", accent.light, "px-5 py-4 space-y-4")}>
                   {area.criteria.map((criterion) => {
                     const critRequiredDocs = criterion.indicators.reduce(
@@ -466,7 +466,7 @@ export function HierarchicalDrillDown({ showPercentages = true }: { showPercenta
                           </div>
                         </div>
 
-                        {/* ── Level 3: Indicators ── */}
+                        {/* â”€â”€ Level 3: Indicators â”€â”€ */}
                         <div className="ml-3 space-y-1.5">
                           {criterion.indicators.map((indicator) => (
                             <IndicatorRow

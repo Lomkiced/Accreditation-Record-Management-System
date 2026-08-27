@@ -45,25 +45,25 @@ Three roles: `ADMIN`, `DEAN`, `FACULTY`.
 ## Data Flow
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                      USER (Browser)                       │
-├──────────────────────────────────────────────────────────┤
-│                                                           │
-│  ┌─────────────┐    ┌──────────────────┐                 │
-│  │ Server Comp  │───▶│  Prisma Query     │──▶ PostgreSQL  │
-│  │ (RSC / Page) │    │  (Direct DB read) │                │
-│  └─────────────┘    └──────────────────┘                 │
-│        │ props                                            │
-│        ▼                                                  │
-│  ┌─────────────┐    ┌──────────────────┐                 │
-│  │ Client Comp  │───▶│  Server Action    │──▶ Prisma ──▶ DB│
-│  │ ("use client")│   │  ("use server")   │                │
-│  └─────────────┘    └──────────────────┘                 │
-│        │                     │                            │
-│   React Query          revalidateTag()                   │
-│   cache/invalidate     revalidatePath()                  │
-│                                                           │
-└──────────────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                      USER (Browser)                       â”‚
+â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+â”‚                                                           â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”                 â”‚
+â”‚  â”‚ Server Comp  â”‚â”€â”€â”€â–¶â”‚  Prisma Query     â”‚â”€â”€â–¶ PostgreSQL  â”‚
+â”‚  â”‚ (RSC / Page) â”‚    â”‚  (Direct DB read) â”‚                â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜                 â”‚
+â”‚        â”‚ props                                            â”‚
+â”‚        â–¼                                                  â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”                 â”‚
+â”‚  â”‚ Client Comp  â”‚â”€â”€â”€â–¶â”‚  Server Action    â”‚â”€â”€â–¶ Prisma â”€â”€â–¶ DBâ”‚
+â”‚  â”‚ ("use client")â”‚   â”‚  ("use server")   â”‚                â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜                 â”‚
+â”‚        â”‚                     â”‚                            â”‚
+â”‚   React Query          revalidateTag()                   â”‚
+â”‚   cache/invalidate     revalidatePath()                  â”‚
+â”‚                                                           â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ### Read Path
@@ -73,7 +73,7 @@ Three roles: `ADMIN`, `DEAN`, `FACULTY`.
 
 ### Write Path
 1. Client Component calls a Server Action via form submission or direct invocation.
-2. Server Action validates auth → validates input (Zod) → executes Prisma mutation.
+2. Server Action validates auth â†’ validates input (Zod) â†’ executes Prisma mutation.
 3. Server Action calls `revalidateTag()` / `revalidatePath()` to bust caches.
 4. React Query's `invalidateQueries()` triggers client-side refetch.
 
@@ -81,51 +81,51 @@ Three roles: `ADMIN`, `DEAN`, `FACULTY`.
 
 ```
 src/
-├── actions/           # Server Actions (data mutations + cached queries)
-│   ├── area.actions.ts
-│   ├── assignment.actions.ts
-│   ├── audit.actions.ts
-│   ├── auth.actions.ts
-│   ├── criterion.actions.ts
-│   ├── dashboard.actions.ts
-│   ├── document.actions.ts
-│   ├── indicator.actions.ts
-│   ├── notification.actions.ts
-│   ├── report.actions.ts
-│   ├── repository.actions.ts
-│   ├── search.actions.ts
-│   ├── submission.actions.ts
-│   ├── tag.actions.ts
-│   └── user.actions.ts
-├── app/
-│   ├── (admin)/       # Admin portal routes
-│   ├── (auth)/        # Login, forgot-password, etc.
-│   ├── (dean)/        # Dean portal routes
-│   ├── (faculty)/     # Faculty portal routes
-│   ├── api/           # REST API endpoints (auth callbacks, etc.)
-│   ├── globals.css
-│   └── layout.tsx     # Root layout (Inter font, Providers)
-├── components/
-│   ├── areas/         # Area, Criterion, Indicator UI components
-│   ├── assignments/   # Assignment management
-│   ├── auth/          # Login forms
-│   ├── dashboard/     # StatCard, ProgressByArea, HierarchicalDrillDown, etc.
-│   ├── documents/     # Document upload sheets
-│   ├── layout/        # Sidebar, Header, global layout components
-│   ├── notifications/ # Notification bell, list
-│   ├── profile/       # User profile forms
-│   ├── reports/       # Compliance report generation
-│   ├── repository/    # Document repository panels
-│   ├── shared/        # PageHeader, ConfirmDialog, PageSkeleton, etc.
-│   ├── submissions/   # Submission upload/review forms
-│   ├── tags/          # Tag management
-│   ├── ui/            # shadcn/ui primitives (Button, Input, Dialog, etc.)
-│   ├── users/         # UserFormPanel, UsersTable
-│   └── Providers.tsx  # React Query + Sonner providers
-├── hooks/             # Custom React hooks (useAreas, useUsers, usePrefetch, etc.)
-├── lib/               # Prisma client, Supabase client, utilities
-├── store/             # Zustand stores (authStore)
-└── types/             # TypeScript interfaces & Zod schemas
+â”œâ”€â”€ actions/           # Server Actions (data mutations + cached queries)
+â”‚   â”œâ”€â”€ area.actions.ts
+â”‚   â”œâ”€â”€ assignment.actions.ts
+â”‚   â”œâ”€â”€ audit.actions.ts
+â”‚   â”œâ”€â”€ auth.actions.ts
+â”‚   â”œâ”€â”€ criterion.actions.ts
+â”‚   â”œâ”€â”€ dashboard.actions.ts
+â”‚   â”œâ”€â”€ document.actions.ts
+â”‚   â”œâ”€â”€ indicator.actions.ts
+â”‚   â”œâ”€â”€ notification.actions.ts
+â”‚   â”œâ”€â”€ report.actions.ts
+â”‚   â”œâ”€â”€ repository.actions.ts
+â”‚   â”œâ”€â”€ search.actions.ts
+â”‚   â”œâ”€â”€ submission.actions.ts
+â”‚   â”œâ”€â”€ tag.actions.ts
+â”‚   â””â”€â”€ user.actions.ts
+â”œâ”€â”€ app/
+â”‚   â”œâ”€â”€ (admin)/       # Admin portal routes
+â”‚   â”œâ”€â”€ (auth)/        # Login, forgot-password, etc.
+â”‚   â”œâ”€â”€ (dean)/        # Dean portal routes
+â”‚   â”œâ”€â”€ (faculty)/     # Faculty portal routes
+â”‚   â”œâ”€â”€ api/           # REST API endpoints (auth callbacks, etc.)
+â”‚   â”œâ”€â”€ globals.css
+â”‚   â””â”€â”€ layout.tsx     # Root layout (Inter font, Providers)
+â”œâ”€â”€ components/
+â”‚   â”œâ”€â”€ areas/         # Area, Criterion, Indicator UI components
+â”‚   â”œâ”€â”€ assignments/   # Assignment management
+â”‚   â”œâ”€â”€ auth/          # Login forms
+â”‚   â”œâ”€â”€ dashboard/     # StatCard, ProgressByArea, HierarchicalDrillDown, etc.
+â”‚   â”œâ”€â”€ documents/     # Document upload sheets
+â”‚   â”œâ”€â”€ layout/        # Sidebar, Header, global layout components
+â”‚   â”œâ”€â”€ notifications/ # Notification bell, list
+â”‚   â”œâ”€â”€ profile/       # User profile forms
+â”‚   â”œâ”€â”€ reports/       # Compliance report generation
+â”‚   â”œâ”€â”€ repository/    # Document repository panels
+â”‚   â”œâ”€â”€ shared/        # PageHeader, ConfirmDialog, PageSkeleton, etc.
+â”‚   â”œâ”€â”€ submissions/   # Submission upload/review forms
+â”‚   â”œâ”€â”€ tags/          # Tag management
+â”‚   â”œâ”€â”€ ui/            # shadcn/ui primitives (Button, Input, Dialog, etc.)
+â”‚   â”œâ”€â”€ users/         # UserFormPanel, UsersTable
+â”‚   â””â”€â”€ Providers.tsx  # React Query + Sonner providers
+â”œâ”€â”€ hooks/             # Custom React hooks (useAreas, useUsers, usePrefetch, etc.)
+â”œâ”€â”€ lib/               # Prisma client, Supabase client, utilities
+â”œâ”€â”€ store/             # Zustand stores (authStore)
+â””â”€â”€ types/             # TypeScript interfaces & Zod schemas
 ```
 
 ## Performance Strategy
@@ -143,12 +143,12 @@ src/
 ## Key Implementations
 
 ### Document Management
-A document is uploaded once and can be mapped to multiple indicators via the `DocumentMapping` pivot table. Each mapping tracks its own approval status independently — a single document can be APPROVED for one indicator and UNDER_REVIEW for another.
+A document is uploaded once and can be mapped to multiple indicators via the `DocumentMapping` pivot table. Each mapping tracks its own approval status independently â€” a single document can be APPROVED for one indicator and UNDER_REVIEW for another.
 
 ### Canonical Compliance Metric
 All compliance calculations across all portals use a unified formula:
 ```
-compliance% = (indicators with ≥1 APPROVED mapping) / totalIndicators × 100
+compliance% = (indicators with â‰¥1 APPROVED mapping) / totalIndicators Ã— 100
 ```
 This is enforced in `getDashboardStats`, `getComplianceData`, `getComplianceDataWithCounts`, `computeAreaCompliance` (HierarchicalDrillDown), `AreaCard`, and `CriterionList`.
 
@@ -156,18 +156,18 @@ This is enforced in `getDashboardStats`, `getComplianceData`, `getComplianceData
 
 ### Progress by Area (Dean Dashboard)
 `ProgressByArea` component displays per-area compliance with:
-- **Indicator badge**: `provided/total` (e.g., `3/12`) — "provided" = indicators with ≥1 APPROVED, SUBMITTED, or UNDER_REVIEW mapping.
+- **Indicator badge**: `provided/total` (e.g., `3/12`) â€” "provided" = indicators with â‰¥1 APPROVED, SUBMITTED, or UNDER_REVIEW mapping.
 - **Progress bar**: animated horizontal bar with percentage.
 - **Status badge**: Complete / In Progress / Needs Attention.
 
 ### Hierarchical Evidence Drill-Down (Admin Dashboard)
-`HierarchicalDrillDown` shows a 3-level accordion (Area → Criterion → Indicator → Documents) with compliance rings, document counts, and per-mapping status badges.
+`HierarchicalDrillDown` shows a 3-level accordion (Area â†’ Criterion â†’ Indicator â†’ Documents) with compliance rings, document counts, and per-mapping status badges.
 
 ### Soft-Delete/Archiving
 Documents can be archived (`isArchived: true`). All active queries explicitly filter for `{ isArchived: false }`. The hierarchy cache also filters archived documents from mappings.
 
 ### Dashboard Stats
-"Approved Documents" counts non-archived documents with ≥1 APPROVED mapping — not all documents in the system.
+"Approved Documents" counts non-archived documents with â‰¥1 APPROVED mapping â€” not all documents in the system.
 
 ### Global Upload Evidence Picker
-Faculty can upload evidence from the My Areas listing via a cascading Area → Criterion → Indicator picker dialog, eliminating deep navigation.
+Faculty can upload evidence from the My Areas listing via a cascading Area â†’ Criterion â†’ Indicator picker dialog, eliminating deep navigation.

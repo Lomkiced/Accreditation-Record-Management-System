@@ -40,7 +40,7 @@ export function SubmissionReviewPanel({ open, onClose, submission }: SubmissionR
   const reviewMutation = useReviewSubmission()
   const markUnderReviewMutation = useMarkSubmissionUnderReview()
 
-  // Stable ref to prevent infinite loop � useMutation returns a new object every render
+  // Stable ref to prevent infinite loop — useMutation returns a new object every render
   const markUnderReviewRef = React.useRef(markUnderReviewMutation.mutate)
   React.useEffect(() => {
     markUnderReviewRef.current = markUnderReviewMutation.mutate
@@ -110,7 +110,7 @@ export function SubmissionReviewPanel({ open, onClose, submission }: SubmissionR
 
             {submission.document.description && (
               <div className="mt-4 bg-slate-50 border-l-4 border-slate-300 p-3 italic text-sm text-slate-600 rounded-r-lg">
-                “{submission.document.description}”
+                â€œ{submission.document.description}â€
               </div>
             )}
           </div>
@@ -260,7 +260,7 @@ export function SubmissionReviewPanel({ open, onClose, submission }: SubmissionR
               <h3 className="text-sm font-semibold text-slate-800">Review Information</h3>
               {submission.status === "RETURNED" && (
                 <div className="mt-2 text-xs text-red-600 bg-red-50 p-3 rounded italic">
-                  “{submission.remarks}”
+                  â€œ{submission.remarks}â€
                 </div>
               )}
               {submission.status === "APPROVED" && (
