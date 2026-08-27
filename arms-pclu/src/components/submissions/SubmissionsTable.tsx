@@ -71,7 +71,7 @@ export function SubmissionsTable({ data, onRowClick }: SubmissionsTableProps) {
       cell: ({ row }) => {
         const area = row.original.indicator.criterion.area
         return (
-          <span className="text-xs text-slate-700 font-medium truncate max-w-[150px] inline-block" title={area.name}>
+          <span className="text-xs text-slate-700 font-medium truncate max-w-[120px] block" title={area.name}>
             {area.name}
           </span>
         )
@@ -79,18 +79,19 @@ export function SubmissionsTable({ data, onRowClick }: SubmissionsTableProps) {
     },
     {
       id: "criterion",
-      header: "Criteria",
+      header: () => <span className="hidden lg:inline">Criteria</span>,
       cell: ({ row }) => (
-        <span className="text-sm text-slate-500 truncate max-w-[150px] inline-block" title={row.original.indicator.criterion.name}>
+        <span className="text-sm text-slate-500 truncate max-w-[120px] block hidden lg:block" title={row.original.indicator.criterion.name}>
           {row.original.indicator.criterion.name}
         </span>
       ),
+      meta: { className: "hidden lg:table-cell" },
     },
     {
       id: "indicator",
       header: "Indicator",
       cell: ({ row }) => (
-        <span className="text-sm text-slate-500 truncate max-w-[150px] inline-block" title={row.original.indicator.name}>
+        <span className="text-sm text-slate-500 truncate max-w-[120px] block" title={row.original.indicator.name}>
           {row.original.indicator.name}
         </span>
       ),
@@ -106,7 +107,7 @@ export function SubmissionsTable({ data, onRowClick }: SubmissionsTableProps) {
     },
     {
       id: "version",
-      header: "Version",
+      header: () => <span className="hidden md:inline">Version</span>,
       cell: ({ row }) => {
         const version = row.original.document.version
         return (
@@ -144,7 +145,7 @@ export function SubmissionsTable({ data, onRowClick }: SubmissionsTableProps) {
   ]
 
   return (
-    <div className="bg-white rounded-xl shadow-sm">
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
       <DataTable columns={columns} data={data} />
     </div>
   )

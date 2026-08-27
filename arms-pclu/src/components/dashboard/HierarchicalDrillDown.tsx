@@ -121,31 +121,52 @@ function ComplianceRing({
 
 // ─── Compute area compliance ──────────────────────────────────────────────────
 
+function parseRequiredDocsCount(requiredDocs: string | null | undefined): number {
+  if (!requiredDocs) return 1
+  if (!isNaN(Number(requiredDocs))) return Math.max(1, Number(requiredDocs))
+  return requiredDocs.split(',').filter((s: string) => s.trim().length > 0).length || 1
+}
+
 function computeAreaCompliance(area: AreaWithHierarchy) {
-  const allMappings = area.criteria.flatMap((c) =>
-    c.indicators.flatMap((i) => i.mappings)
-  )
-  const totalIndicators = area.criteria.flatMap((c) => c.indicators).length
-  const approvedMappingsPerIndicator = area.criteria.flatMap((c) =>
-    c.indicators.filter((i) =>
-      i.mappings.some((m) => m.status === "APPROVED")
-    )
-  )
-  const approvedCount = approvedMappingsPerIndicator.length
-  const submittedCount = area.criteria
-    .flatMap((c) => c.indicators)
-    .filter((i) =>
-      i.mappings.some(
-        (m) => m.status === "SUBMITTED" || m.status === "UNDER_REVIEW"
-      )
+  const allIndicators = area.criteria.flatMap((c) => c.indicators)
+  const totalIndicators = allIndicators.length
+
+  // Total required docs = sum of requiredDocs per indicator
+  let totalRequiredDocs = 0
+  let approvedDocCount = 0
+  let submittedDocCount = 0
+
+  allIndicators.forEach((ind) => {
+    const reqCount = parseRequiredDocsCount(ind.requiredDocs)
+    totalRequiredDocs += reqCount
+
+    const approvedMappings = ind.mappings.filter((m) => m.status === "APPROVED").length
+    approvedDocCount += Math.min(approvedMappings, reqCount)
+
+    const submittedMappings = ind.mappings.filter(
+      (m) => m.status === "SUBMITTED" || m.status === "UNDER_REVIEW"
     ).length
-  const totalDocuments = new Set(allMappings.map((m) => m.document.id)).size
+    submittedDocCount += Math.min(submittedMappings, reqCount)
+  })
+
+  // Indicator-level compliance (for the ring): indicators with at least 1 APPROVED mapping
+  const approvedIndicatorCount = allIndicators.filter((i) =>
+    i.mappings.some((m) => m.status === "APPROVED")
+  ).length
+
   const compliancePercent =
     totalIndicators > 0
-      ? Math.round((approvedCount / totalIndicators) * 100)
+      ? Math.round((approvedIndicatorCount / totalIndicators) * 100)
       : 0
 
-  return { totalIndicators, approvedCount, submittedCount, totalDocuments, compliancePercent }
+  return {
+    totalIndicators,
+    totalRequiredDocs,
+    approvedDocCount,
+    approvedIndicatorCount,
+    submittedDocCount,
+    compliancePercent,
+  }
 }
 
 // ─── Indicator Row ─────────────────────────────────────────────────────────────
@@ -348,7 +369,7 @@ export function HierarchicalDrillDown({ showPercentages = true }: { showPercenta
                         {stats.totalIndicators} indicators
                       </span>
                       <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full border", accent.border, accent.text, accent.light)}>
-                        {stats.totalDocuments}/{stats.totalIndicators} documents
+                        {stats.approvedDocCount}/{stats.totalRequiredDocs} documents
                       </span>
                     </div>
                   </div>
@@ -361,7 +382,7 @@ export function HierarchicalDrillDown({ showPercentages = true }: { showPercenta
                           Approved
                         </p>
                         <p className={cn("text-sm font-bold", accent.text)}>
-                          {stats.approvedCount}/{stats.totalIndicators}
+                          {stats.approvedDocCount}/{stats.totalRequiredDocs}
                         </p>
                       </div>
                     </div>
@@ -374,13 +395,18 @@ export function HierarchicalDrillDown({ showPercentages = true }: { showPercenta
                 {/* ── Level 2: Criteria ── */}
                 <div className={cn("border-t border-slate-100", accent.light, "px-5 py-4 space-y-4")}>
                   {area.criteria.map((criterion) => {
-                    const critDocCount = criterion.indicators.reduce(
-                      (acc, i) => acc + i.mappings.length,
+                    const critRequiredDocs = criterion.indicators.reduce(
+                      (acc, i) => acc + parseRequiredDocsCount(i.requiredDocs),
                       0
                     )
-                    const critApprovedCount = criterion.indicators.filter(
-                      (i) => i.mappings.some((m) => m.status === "APPROVED")
-                    ).length
+                    const critApprovedCount = criterion.indicators.reduce(
+                      (acc, i) => {
+                        const reqCount = parseRequiredDocsCount(i.requiredDocs)
+                        const approved = i.mappings.filter((m) => m.status === "APPROVED").length
+                        return acc + Math.min(approved, reqCount)
+                      },
+                      0
+                    )
 
                     return (
                       <div key={criterion.id}>
@@ -421,7 +447,7 @@ export function HierarchicalDrillDown({ showPercentages = true }: { showPercenta
                               {criterion.name}
                             </p>
                             <div className="flex items-center gap-2 shrink-0">
-                              {critDocCount > 0 && (
+                              {critApprovedCount > 0 && (
                                 <span
                                   className={cn(
                                     "text-[10px] font-bold px-2 py-0.5 rounded-full border",
@@ -430,11 +456,11 @@ export function HierarchicalDrillDown({ showPercentages = true }: { showPercenta
                                     accent.light
                                   )}
                                 >
-                                  {critDocCount} doc{critDocCount > 1 ? "s" : ""}
+                                  {critApprovedCount}/{critRequiredDocs} docs
                                 </span>
                               )}
                               <span className="text-[10px] text-slate-400">
-                                {critApprovedCount}/{criterion.indicators.length} approved
+                                {critApprovedCount}/{critRequiredDocs} approved
                               </span>
                             </div>
                           </div>

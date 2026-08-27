@@ -71,7 +71,7 @@ export function DataTable<TData, TValue>({
                   className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-3 text-slate-700 whitespace-nowrap">
+                    <td key={cell.id} className="px-4 py-3 text-slate-700 min-w-0">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}

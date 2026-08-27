@@ -40,17 +40,30 @@ export function SubmissionReviewPanel({ open, onClose, submission }: SubmissionR
   const reviewMutation = useReviewSubmission()
   const markUnderReviewMutation = useMarkSubmissionUnderReview()
 
+  // Stable ref to prevent infinite loop — useMutation returns a new object every render
+  const markUnderReviewRef = React.useRef(markUnderReviewMutation.mutate)
+  React.useEffect(() => {
+    markUnderReviewRef.current = markUnderReviewMutation.mutate
+  })
+
+  // Guard ref to prevent re-triggering for the same submission
+  const lastAutoTransitionedId = React.useRef<string | null>(null)
+
   React.useEffect(() => {
     if (open && submission) {
       setRemarks("")
       setHasConfirmedReview(false)
       
-      // Auto-transition to UNDER_REVIEW if it's currently SUBMITTED
-      if (submission.status === "SUBMITTED") {
-        markUnderReviewMutation.mutate(submission.id)
+      // Auto-transition to UNDER_REVIEW if it's currently SUBMITTED (only once per submission)
+      if (submission.status === "SUBMITTED" && lastAutoTransitionedId.current !== submission.id) {
+        lastAutoTransitionedId.current = submission.id
+        markUnderReviewRef.current(submission.id)
       }
     }
-  }, [open, submission, markUnderReviewMutation])
+    if (!open) {
+      lastAutoTransitionedId.current = null
+    }
+  }, [open, submission])
 
   if (!submission) return null
 

@@ -49,7 +49,8 @@ export function FacultyDashboardClient({
 
   const myAreasCount = new Set(assignments.map(a => a.areaId)).size
   const pendingDraftsCount = submissions.filter(s => s.status === "DRAFT" || s.status === "RETURNED").length
-  const underReviewCount = submissions.filter(s => s.status === "SUBMITTED").length
+  const submittedForReviewCount = submissions.filter(s => s.status === "SUBMITTED").length
+  const underReviewCount = submissions.filter(s => s.status === "UNDER_REVIEW").length
   const approvedDocsCount = submissions.filter(s => s.status === "APPROVED").length
 
   let totalIndicators = 0
@@ -155,7 +156,7 @@ export function FacultyDashboardClient({
                 Welcome back, {user?.name?.split(' ')[0] ?? "Faculty"}
               </h1>
               <p className="text-blue-100/90 max-w-xl text-base md:text-lg leading-relaxed mt-2 font-light">
-                You have <strong className="text-white font-semibold">{underReviewCount} documents</strong> currently under review.
+                You have <strong className="text-white font-semibold">{submittedForReviewCount + underReviewCount} documents</strong> submitted or under review.
               </p>
             </div>
             
@@ -183,7 +184,7 @@ export function FacultyDashboardClient({
         </motion.div>
 
         {/* STATS ROW */}
-        <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-5">
           <div className="bg-white rounded-[1.5rem] p-6 border border-slate-200/60 shadow-sm flex flex-col justify-between group hover:border-blue-300 transition-all hover:shadow-md">
             <div className="flex justify-between items-start">
               <div>
@@ -202,7 +203,7 @@ export function FacultyDashboardClient({
           <div className="bg-white rounded-[1.5rem] p-6 border border-slate-200/60 shadow-sm flex flex-col justify-between group hover:border-amber-300 transition-all hover:shadow-md relative overflow-hidden">
             <div className="flex justify-between items-start relative z-10">
               <div>
-                <p className="text-sm font-semibold text-slate-500 mb-1">Pending Drafts</p>
+                <p className="text-sm font-semibold text-slate-500 mb-1">Action Needed</p>
                 <h3 className="text-4xl font-black text-slate-800 tracking-tight">{pendingDraftsCount}</h3>
               </div>
               <div className="p-3.5 bg-amber-50 text-amber-600 rounded-2xl group-hover:bg-amber-500 group-hover:text-white transition-all shadow-sm">
@@ -217,15 +218,31 @@ export function FacultyDashboardClient({
           <div className="bg-white rounded-[1.5rem] p-6 border border-slate-200/60 shadow-sm flex flex-col justify-between group hover:border-violet-300 transition-all hover:shadow-md">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-semibold text-slate-500 mb-1">Drafts</p>
-                <h3 className="text-4xl font-black text-slate-800 tracking-tight">{underReviewCount}</h3>
+                <p className="text-sm font-semibold text-slate-500 mb-1">Submitted</p>
+                <h3 className="text-4xl font-black text-slate-800 tracking-tight">{submittedForReviewCount}</h3>
               </div>
-              <div className="p-3.5 bg-violet-50 text-violet-600 rounded-2xl group-hover:bg-violet-600 group-hover:text-white transition-all shadow-sm">
-                <Clock size={24} />
+              <div className="p-3.5 bg-blue-50 text-blue-600 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm">
+                <FileText size={24} />
               </div>
             </div>
             <p className="text-xs text-slate-500 mt-5 font-medium">
-              Awaiting dean&apos;s approval
+              Awaiting dean&apos;s review
+            </p>
+          </div>
+
+          <div className="bg-white rounded-[1.5rem] p-6 border border-slate-200/60 shadow-sm flex flex-col justify-between group hover:border-violet-300 transition-all hover:shadow-md relative overflow-hidden">
+            {underReviewCount > 0 && <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/10 rounded-bl-full -z-0"></div>}
+            <div className="flex justify-between items-start relative z-10">
+              <div>
+                <p className="text-sm font-semibold text-slate-500 mb-1">Under Review</p>
+                <h3 className="text-4xl font-black text-slate-800 tracking-tight">{underReviewCount}</h3>
+              </div>
+              <div className={`p-3.5 rounded-2xl transition-all shadow-sm ${underReviewCount > 0 ? 'bg-violet-100 text-violet-600 group-hover:bg-violet-600 group-hover:text-white' : 'bg-slate-50 text-slate-400 group-hover:bg-slate-200'}`}>
+                <Clock size={24} />
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 mt-5 font-medium relative z-10">
+              Being reviewed by dean
             </p>
           </div>
 
