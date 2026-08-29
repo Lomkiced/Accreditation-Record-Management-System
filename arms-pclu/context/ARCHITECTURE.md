@@ -148,26 +148,32 @@ A document is uploaded once and can be mapped to multiple indicators via the `Do
 ### Canonical Compliance Metric
 All compliance calculations across all portals use a unified formula:
 ```
-compliance% = (indicators with â‰¥1 APPROVED mapping) / totalIndicators Ã— 100
+compliance% = (approved documents × 100) / total required documents
 ```
+Where:
+- **approved documents** = sum of APPROVED mappings per indicator, capped at `requiredDocs` per indicator
+- **total required documents** = sum of `requiredDocs` across all indicators (defaults to 1 if unspecified)
+
 This is enforced in `getDashboardStats`, `getComplianceData`, `getComplianceDataWithCounts`, `computeAreaCompliance` (HierarchicalDrillDown), `AreaCard`, and `CriterionList`.
 
-> **Faculty Portal Exception:** The Faculty "My Areas" view factors in `requiredDocs` per indicator to compute a granular per-requirement percentage. This means a single indicator can have multiple required documents, and completion is measured against how many of those are APPROVED. All admin/dean views use the indicator-level metric for consistency.
+> **Faculty Portal Exception:** The Faculty "My Areas" view may additionally use a per-indicator breakdown to compute granular completion. All admin/dean views use the document-level metric for consistency.
 
 ### Progress by Area (Dean Dashboard)
 `ProgressByArea` component displays per-area compliance with:
-- **Indicator badge**: `provided/total` (e.g., `3/12`) â€” "provided" = indicators with â‰¥1 APPROVED, SUBMITTED, or UNDER_REVIEW mapping.
-- **Progress bar**: animated horizontal bar with percentage.
+- **Document badge**: `approved/totalRequired` (e.g., `8/36`) — "approved" = approved mappings capped at requiredDocs per indicator.
+- **Progress bar**: animated horizontal bar with percentage (`approved docs × 100 / total required docs`).
 - **Status badge**: Complete / In Progress / Needs Attention.
 
 ### Hierarchical Evidence Drill-Down (Admin Dashboard)
 `HierarchicalDrillDown` shows a 3-level accordion (Area â†’ Criterion â†’ Indicator â†’ Documents) with compliance rings, document counts, and per-mapping status badges.
 
 ### Soft-Delete/Archiving
-Documents can be archived (`isArchived: true`). All active queries explicitly filter for `{ isArchived: false }`. The hierarchy cache also filters archived documents from mappings.
+- **Documents**: Can be archived (`isArchived: true`). All active queries explicitly filter for `{ isArchived: false }`. The hierarchy cache also filters archived documents from mappings.
+- **Users**: Can be archived (`isActive: false`). Archiving disables the user's Supabase Auth account (ban) and hides them from active user lists. All their documents, mappings, and submissions are preserved. Archived users can be restored or permanently deleted from the Archived Users view.
 
 ### Dashboard Stats
-"Approved Documents" counts non-archived documents with â‰¥1 APPROVED mapping â€” not all documents in the system.
+- "Approved Documents" counts non-archived documents with ≥1 APPROVED mapping — not all documents in the system.
+- "Pending Reviews" counts only mappings with SUBMITTED or UNDER_REVIEW status whose parent document is NOT archived.
 
 ### Global Upload Evidence Picker
 Faculty can upload evidence from the My Areas listing via a cascading Area â†’ Criterion â†’ Indicator picker dialog, eliminating deep navigation.

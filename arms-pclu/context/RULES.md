@@ -135,9 +135,11 @@ All development on ARMS must strictly follow these principles. Violations should
 
 > **CRITICAL**: All portals must use the same compliance calculation:
 > ```
-> compliance% = (indicators with ≥1 APPROVED mapping) / totalIndicators × 100
+> compliance% = (approved documents × 100) / total required documents
 > ```
+> Where "approved documents" = sum of APPROVED mappings per indicator (capped at `requiredDocs` per indicator),
+> and "total required documents" = sum of `requiredDocs` across all indicators (defaults to 1 if unspecified).
 >
-> The Faculty portal's `My Areas` view may additionally factor in `requiredDocs` count for a more granular percentage, but the admin/dean dashboards and area cards must always use the indicator-level metric.
+> The Faculty portal's `My Areas` view may additionally use a per-indicator breakdown for granular completion, but the admin/dean dashboards and area cards must always use the document-level metric.
 
 Any new compliance-related feature must reference `dashboard.actions.ts` → `_fetchComplianceData` as the canonical source of truth.

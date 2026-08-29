@@ -149,14 +149,15 @@ function computeAreaCompliance(area: AreaWithHierarchy) {
     submittedDocCount += Math.min(submittedMappings, reqCount)
   })
 
-  // Indicator-level compliance (for the ring): indicators with at least 1 APPROVED mapping
+  // Indicator-level count (for display purposes)
   const approvedIndicatorCount = allIndicators.filter((i) =>
     i.mappings.some((m) => m.status === "APPROVED")
   ).length
 
+  // Document-level compliance for the ring: approved docs × 100 / total required docs
   const compliancePercent =
-    totalIndicators > 0
-      ? Math.round((approvedIndicatorCount / totalIndicators) * 100)
+    totalRequiredDocs > 0
+      ? Math.round((approvedDocCount * 100) / totalRequiredDocs)
       : 0
 
   return {

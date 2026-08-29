@@ -62,15 +62,15 @@ function AreaRow({ area, index }: { area: AreaComplianceWithCounts; index: numbe
         </p>
       </div>
 
-      {/* Indicator count badge */}
+      {/* Document count badge */}
       <div className="w-[100px] shrink-0 text-center">
         <span
-          title={`${area.providedEvidences} indicators provided out of ${area.totalIndicators} total indicators`}
+          title={`${area.approvedDocs} approved documents out of ${area.totalRequiredDocs} total required documents`}
           className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full"
         >
-          {area.providedEvidences}
+          {area.approvedDocs}
           <span className="text-slate-400">/</span>
-          {area.totalIndicators}
+          {area.totalRequiredDocs}
         </span>
       </div>
 
@@ -135,7 +135,7 @@ export function ProgressByArea() {
           Area
         </p>
         <p className="text-xs font-bold text-slate-400 uppercase tracking-wider w-[100px] shrink-0 text-center">
-          Indicators
+          Documents
         </p>
         <p className="text-xs font-bold text-slate-400 uppercase tracking-wider flex-1">
           Progress
@@ -161,8 +161,8 @@ export function ProgressByArea() {
       {/* Legend */}
       <div className="mt-5 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-center gap-6">
         <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium text-slate-500">Indicators =</span>
-          <span className="text-xs font-semibold text-slate-700">provided / total indicators</span>
+          <span className="text-xs font-medium text-slate-500">Documents =</span>
+          <span className="text-xs font-semibold text-slate-700">approved / total required docs</span>
         </div>
         <div className="w-px h-3 bg-slate-200" />
         <div className="flex items-center gap-1.5">

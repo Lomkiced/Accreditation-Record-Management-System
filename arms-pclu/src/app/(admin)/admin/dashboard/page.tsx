@@ -1,4 +1,3 @@
-import Link from "next/link"
 import {
   Archive,
   CheckCircle2,
@@ -7,7 +6,6 @@ import {
   Users,
   AlertCircle,
   FileText,
-  ChevronRight,
 } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { StatCard } from "@/components/dashboard/StatCard"
@@ -119,13 +117,6 @@ export default async function AdminDashboardPage() {
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">Documents awaiting your review</p>
           </div>
-          <Link
-            href="/admin/repository"
-            className="text-xs text-blue-600 hover:underline font-medium inline-flex items-center gap-1"
-          >
-            View all
-            <ChevronRight className="w-3 h-3" />
-          </Link>
         </div>
 
         <div className="flex-1">
