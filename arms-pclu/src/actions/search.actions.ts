@@ -20,52 +20,49 @@ export async function searchDocuments(query: string, areaId?: string): Promise<S
 
   const isFaculty = user.role === "FACULTY"
 
-  // Base where clause for the mapping
-  const whereClause: any = {}
+  const whereClause: any = { isArchived: false }
 
   if (isFaculty) {
     whereClause.userId = user.id
   }
 
-  if (areaId && areaId !== "all") {
-    whereClause.indicator = {
+  if (query) {
+    whereClause.OR = [
+      { title: { contains: query, mode: "insensitive" } },
+      { fileName: { contains: query, mode: "insensitive" } },
+    ]
+  }
+
+  const mappingFilter: any = (areaId && areaId !== "all") ? {
+    indicator: {
       criterion: {
         areaId: areaId
       }
     }
-  }
+  } : undefined
 
-  if (query) {
-    whereClause.document = {
-      OR: [
-        { title: { contains: query, mode: "insensitive" } },
-        { fileName: { contains: query, mode: "insensitive" } },
-      ]
+  if (mappingFilter) {
+    whereClause.mappings = {
+      some: mappingFilter
     }
   }
 
-  const mappings = await prisma.documentMapping.findMany({
+  const docs = await prisma.document.findMany({
     where: whereClause,
-    take: 20, // Limit to 20 results for quick search
+    take: 20,
     orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      status: true,
-      document: {
-        select: {
-          id: true,
-          title: true,
-          fileName: true,
-          fileUrl: true,
-          createdAt: true,
-          user: { select: { name: true } },
-        },
-      },
-      indicator: {
-        select: {
-          criterion: {
+    include: {
+      user: { select: { name: true } },
+      mappings: {
+        where: mappingFilter,
+        include: {
+          indicator: {
             select: {
-              area: { select: { name: true } },
+              criterion: {
+                select: {
+                  area: { select: { name: true } },
+                },
+              },
             },
           },
         },
@@ -73,23 +70,33 @@ export async function searchDocuments(query: string, areaId?: string): Promise<S
     },
   })
 
-  // Map to distinct SearchResult
-  const resultsMap = new Map<string, SearchResult>()
-  
-  for (const m of mappings) {
-    if (!resultsMap.has(m.document.id)) {
-      resultsMap.set(m.document.id, {
-        id: m.document.id,
-        title: m.document.title,
-        fileName: m.document.fileName,
-        fileUrl: m.document.fileUrl,
-        createdAt: m.document.createdAt,
-        facultyName: m.document.user.name,
-        status: m.status,
-        areaName: m.indicator.criterion.area.name
-      })
+  return docs.map(doc => {
+    let status = "UNMAPPED"
+    let areaName = "Not Mapped"
+    
+    if (doc.mappings && doc.mappings.length > 0) {
+      const m = doc.mappings[0]
+      status = m.status
+      areaName = m.indicator.criterion.area.name
+      
+      if (doc.mappings.length > 1) {
+         areaName = `${areaName} (+${doc.mappings.length - 1} more)`
+         const allSameStatus = doc.mappings.every(map => map.status === m.status)
+         if (!allSameStatus) {
+            status = "VARIES"
+         }
+      }
     }
-  }
 
-  return Array.from(resultsMap.values())
+    return {
+      id: doc.id,
+      title: doc.title,
+      fileName: doc.fileName,
+      fileUrl: doc.fileUrl,
+      createdAt: doc.createdAt,
+      facultyName: doc.user.name,
+      status: status,
+      areaName: areaName,
+    }
+  })
 }
