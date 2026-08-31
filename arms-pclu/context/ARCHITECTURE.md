@@ -147,9 +147,9 @@ A document is uploaded once and can be mapped to multiple indicators via the `Do
 
 ### Canonical Compliance Metric
 All compliance calculations across all portals use a unified formula:
-```
-compliance% = (approved documents × 100) / total required documents
-```
+
+`compliance% = (fully provided indicators × 100) / total indicators`
+
 Where:
 - **approved documents** = sum of APPROVED mappings per indicator, capped at `requiredDocs` per indicator
 - **total required documents** = sum of `requiredDocs` across all indicators (defaults to 1 if unspecified)

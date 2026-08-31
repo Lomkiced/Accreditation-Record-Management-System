@@ -22,10 +22,6 @@ export async function searchDocuments(query: string, areaId?: string): Promise<S
 
   const whereClause: any = { isArchived: false }
 
-  if (isFaculty) {
-    whereClause.userId = user.id
-  }
-
   if (query) {
     whereClause.OR = [
       { title: { contains: query, mode: "insensitive" } },

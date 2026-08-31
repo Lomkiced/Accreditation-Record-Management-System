@@ -136,26 +136,27 @@ const _fetchDashboardStats = unstable_cache(
       }),
     ])
 
-    // Document-level compliance: approved docs × 100 / total required docs
-    let totalRequiredDocs = 0
-    let approvedDocCount = 0
+    // Indicator-level compliance: fully provided indicators × 100 / total indicators
+    let fullyApprovedIndicators = 0
+    const totalIndicators = indicators.length
 
     indicators.forEach((ind) => {
       const reqCount = parseRequiredDocsCount(ind.requiredDocs)
-      totalRequiredDocs += reqCount
-      approvedDocCount += Math.min(ind._count.mappings, reqCount)
+      if (ind._count.mappings >= reqCount) {
+        fullyApprovedIndicators += 1
+      }
     })
 
     const compliancePercent =
-      totalRequiredDocs > 0
-        ? Math.round((approvedDocCount * 100) / totalRequiredDocs)
+      totalIndicators > 0
+        ? Math.round((fullyApprovedIndicators * 100) / totalIndicators)
         : 0
 
     return {
       totalDocuments,
       pendingReviews,
       activeFaculty,
-      approvedMappings: approvedDocCount,
+      approvedMappings: fullyApprovedIndicators,
       compliancePercent,
     }
   },
@@ -301,21 +302,23 @@ const _fetchComplianceData = unstable_cache(
     const approvedCountMap = new Map(approvedGroups.map((g) => [g.indicatorId, g._count._all]))
 
     return areas.map((area) => {
-      let totalRequiredDocs = 0
-      let approvedDocCount = 0
+      let fullyApprovedIndicators = 0
+      let totalIndicators = 0
 
       area.criteria.forEach((c) => {
         c.indicators.forEach((ind) => {
+          totalIndicators += 1
           const reqCount = parseRequiredDocsCount(ind.requiredDocs)
-          totalRequiredDocs += reqCount
           const approvedMappings = approvedCountMap.get(ind.id) ?? 0
-          approvedDocCount += Math.min(approvedMappings, reqCount)
+          if (approvedMappings >= reqCount) {
+            fullyApprovedIndicators += 1
+          }
         })
       })
 
       const value =
-        totalRequiredDocs > 0
-          ? Math.round((approvedDocCount * 100) / totalRequiredDocs)
+        totalIndicators > 0
+          ? Math.round((fullyApprovedIndicators * 100) / totalIndicators)
           : 0
 
       return { name: area.name, value }
@@ -391,6 +394,7 @@ const _fetchComplianceDataWithCounts = unstable_cache(
 
       let totalRequiredDocs = 0
       let approvedDocCount = 0
+      let fullyApprovedIndicators = 0
 
       area.criteria.forEach((c) => {
         c.indicators.forEach((ind) => {
@@ -398,6 +402,9 @@ const _fetchComplianceDataWithCounts = unstable_cache(
           totalRequiredDocs += reqCount
           const approvedMappings = approvedCountMap.get(ind.id) ?? 0
           approvedDocCount += Math.min(approvedMappings, reqCount)
+          if (approvedMappings >= reqCount) {
+            fullyApprovedIndicators += 1
+          }
         })
       })
 
@@ -406,8 +413,8 @@ const _fetchComplianceDataWithCounts = unstable_cache(
       ).length
 
       const value =
-        totalRequiredDocs > 0
-          ? Math.round((approvedDocCount * 100) / totalRequiredDocs)
+        totalIndicators > 0
+          ? Math.round((fullyApprovedIndicators * 100) / totalIndicators)
           : 0
 
       return {

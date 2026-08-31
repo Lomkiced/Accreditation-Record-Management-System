@@ -134,9 +134,8 @@ All development on ARMS must strictly follow these principles. Violations should
 ## 6. Compliance Metric Consistency
 
 > **CRITICAL**: All portals must use the same compliance calculation:
-> ```
-> compliance% = (approved documents × 100) / total required documents
-> ```
+> `compliance% = (fully provided indicators × 100) / total indicators`
+>
 > Where "approved documents" = sum of APPROVED mappings per indicator (capped at `requiredDocs` per indicator),
 > and "total required documents" = sum of `requiredDocs` across all indicators (defaults to 1 if unspecified).
 >

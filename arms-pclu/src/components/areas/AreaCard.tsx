@@ -40,10 +40,21 @@ export function AreaCard({ area, mode = "dean" }: AreaCardProps) {
   const indicators = area.criteria.flatMap((c) => c.indicators)
   const totalIndicators = indicators.length
 
-  // Indicators with at least one APPROVED mapping
-  const approvedIndicators = indicators.filter((ind) =>
-    (ind as any).mappings?.some((m: { status: string }) => m.status === "APPROVED")
-  ).length
+  // Indicators with required amount of APPROVED mappings (completely provided)
+  const approvedIndicators = indicators.filter((ind) => {
+    const mappings = (ind as any).mappings ?? [];
+    const approvedCount = mappings.filter((m: { status: string }) => m.status === "APPROVED").length;
+    let reqCount = 1;
+    const reqDocs = (ind as any).requiredDocs as string | null | undefined;
+    if (reqDocs) {
+      if (!isNaN(Number(reqDocs))) {
+        reqCount = Math.max(1, Number(reqDocs));
+      } else {
+        reqCount = reqDocs.split(",").filter((s: string) => s.trim().length > 0).length || 1;
+      }
+    }
+    return approvedCount >= reqCount;
+  }).length
 
   // Indicators with at least one SUBMITTED or UNDER_REVIEW mapping (pending)
   const pendingIndicators = indicators.filter((ind) =>
@@ -76,27 +87,7 @@ export function AreaCard({ area, mode = "dean" }: AreaCardProps) {
           </span>
         )
 
-      // Use the same requiredDocs-aware calculation as the Faculty portal
-      // to ensure percentages are aligned across all portals.
-      let totalRequired = 0
-      let totalApproved = 0
-      indicators.forEach((ind) => {
-        let reqCount = 1
-        const reqDocs = (ind as any).requiredDocs as string | null | undefined
-        if (reqDocs) {
-          if (!isNaN(Number(reqDocs))) {
-            reqCount = Math.max(1, Number(reqDocs))
-          } else {
-            reqCount = reqDocs.split(",").filter((s: string) => s.trim().length > 0).length || 1
-          }
-        }
-        totalRequired += reqCount
-        const approvedCount = ((ind as any).mappings ?? []).filter(
-          (m: { status: string }) => m.status === "APPROVED"
-        ).length
-        totalApproved += Math.min(approvedCount, reqCount)
-      })
-      const pct = totalRequired === 0 ? 0 : Math.round((totalApproved / totalRequired) * 100)
+      const pct = totalIndicators === 0 ? 0 : Math.round((approvedIndicators / totalIndicators) * 100)
 
       if (pct === 100)
         return (

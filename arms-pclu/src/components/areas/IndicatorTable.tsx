@@ -60,10 +60,23 @@ export function IndicatorTable({
     )
   }
 
-  const renderEvidence = (mappings: LeanMapping[] | FullMapping[] | undefined) => {
+  const renderEvidence = (ind: IndicatorRow) => {
+    const mappings = ind.mappings;
     if (!mappings || mappings.length === 0) {
       return <span className="text-xs text-slate-400 italic">No evidence</span>
     }
+    
+    let reqCount = 1;
+    if (ind.requiredDocs) {
+      if (!isNaN(Number(ind.requiredDocs))) {
+        reqCount = Math.max(1, Number(ind.requiredDocs));
+      } else {
+        reqCount = ind.requiredDocs.split(",").filter((s: string) => s.trim().length > 0).length || 1;
+      }
+    }
+    const approvedCount = mappings.filter(m => m.status === "APPROVED").length;
+    const isFullyApproved = approvedCount >= reqCount;
+
     // Prefer APPROVED, otherwise fallback to the most recent SUBMITTED/UNDER_REVIEW
     const approved = mappings.find(m => m.status === "APPROVED")
     const latest = approved || mappings.find(m => m.status !== "DRAFT" && m.status !== "RETURNED")
@@ -72,21 +85,20 @@ export function IndicatorTable({
       return <span className="text-xs text-slate-400 italic">No evidence</span>
     }
 
-    const isApproved = latest.status === "APPROVED"
-    const Icon = isApproved ? CheckCircle : Clock
-    const colorClass = isApproved ? "text-emerald-500" : "text-amber-500"
+    const Icon = isFullyApproved ? CheckCircle : Clock
+    const colorClass = isFullyApproved ? "text-emerald-500" : "text-amber-500"
     // "document" only exists on FullMapping — lean mappings won't have it
     const fullMapping = latest as Partial<FullMapping>
     const docTitle = fullMapping.document?.title ?? null
 
     if (!docTitle) {
       // Lean shape: just show status indicator
-      const notApprovedCount = mappings.filter(m => m.status !== "APPROVED").length
+      const neededCount = Math.max(0, reqCount - approvedCount);
       return (
         <div className="flex items-center gap-2">
           <Icon className={`w-3.5 h-3.5 shrink-0 ${colorClass}`} />
           <span className="text-xs font-medium text-slate-700">
-            {isApproved ? "Completely Provided" : `${notApprovedCount} needs to be submit`}
+            {isFullyApproved ? "Completely Provided" : `${neededCount} needs to be submit`}
           </span>
         </div>
       )
@@ -147,7 +159,7 @@ export function IndicatorTable({
                     <span className="text-slate-400 italic">Not specified</span>
                   )}
                 </td>
-                <td className="px-4 py-3">{renderEvidence(ind.mappings)}</td>
+                <td className="px-4 py-3">{renderEvidence(ind)}</td>
                 {!readOnly && (
                   <td className="px-4 py-3 text-right">
                     {onEdit && (
