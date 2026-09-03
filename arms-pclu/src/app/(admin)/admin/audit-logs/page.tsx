@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Search, Download, Filter } from "lucide-react"
+import { Search, Filter } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { DataTable } from "@/components/shared/DataTable"
 import { Button } from "@/components/ui/button"
@@ -105,7 +105,7 @@ export default function AuditLogsPage() {
       accessorKey: "details",
       header: "Details",
       cell: ({ row }) => (
-        <span className="text-sm text-slate-600 truncate max-w-xs block" title={row.getValue("details")}>
+        <span className="text-xs text-slate-700 leading-relaxed max-w-md block" title={row.getValue("details")}>
           {row.getValue("details")}
         </span>
       ),
@@ -117,12 +117,7 @@ export default function AuditLogsPage() {
       <PageHeader
         title="Audit Logs"
         subtitle="System-wide activity monitoring and tracking"
-        actions={
-          <Button variant="outline" className="text-slate-700 bg-white shadow-sm">
-            <Download className="w-4 h-4 mr-2" />
-            Export Logs
-          </Button>
-        }
+        actions={null}
       />
 
       <div className="space-y-4">

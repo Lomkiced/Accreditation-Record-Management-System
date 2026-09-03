@@ -142,3 +142,27 @@ All development on ARMS must strictly follow these principles. Violations should
 > The Faculty portal's `My Areas` view may additionally use a per-indicator breakdown for granular completion, but the admin/dean dashboards and area cards must always use the document-level metric.
 
 Any new compliance-related feature must reference `dashboard.actions.ts` → `_fetchComplianceData` as the canonical source of truth.
+
+---
+
+## 7. Report Data Integrity & Export Standards
+
+- **Soft-Delete Filter Mandatory**: Every report query must explicitly filter `{ document: { isArchived: false } }`. Mappings of archived documents must never be counted or listed.
+- **Canonical Count Parser**: Indicator document counts must always be parsed with `parseRequiredDocsCount()` (supporting both numeric counts and comma-separated lists), never raw `parseInt()`.
+- **Approval Timestamp Invariant**: Reports filtering by approval date must filter against mapping `updatedAt`, not draft `createdAt`.
+- **Non-Editable Export Format**: Accreditation reports intended for institutional distribution must be generated and downloaded as **tamper-proof, read-only PDF files** using `jspdf` and `jspdf-autotable`. Mutable spreadsheet formats must not be provided for official compliance exports.
+
+---
+
+## 8. Audit Log Sanitization & Security
+
+- **No Raw Identifiers in UI**: Audit log `details` displayed in the UI must never render raw database CUIDs (`cm...`), UUIDs, or internal `correlationId` hashes.
+- **Semantic Formatting**: Audit log details must be rendered as clean, natural-language activity sentences.
+- **Payload Cleanliness**: When calling `prisma.auditLog.create()`, prefer human-readable attributes (e.g., `documentTitle`, `indicatorName`, `facultyName`) over isolated foreign key IDs.
+
+---
+
+## 9. Dean Repository Invariant
+
+- **Exclusively Approved Evidence**: The Dean's Portal Repository is strictly reserved for verified, approved accreditation evidence. The data source must exclusively query `{ status: "APPROVED", document: { isArchived: false } }`. Unapproved drafts, pending reviews, and returned documents must never appear in the central repository.
+

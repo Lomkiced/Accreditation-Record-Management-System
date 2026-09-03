@@ -58,11 +58,11 @@ Manual accreditation processes suffer from:
    - Assign faculty to Areas or specific Criteria
    - Faculty sees only assigned areas in their portal
 
-4. **Document Repository (All Portals)**
-   - Upload documents with metadata (title, description, tags, document date)
-   - File versioning with history
-   - Archive/restore functionality
-   - Tag-based organization
+4. **Document Repository & Archives**
+   - **Central Repository (Dean & Admin)**: Centralized storage of verified accreditation documents. The Dean's Portal Repository strictly displays **approved documents only** (`status: APPROVED`, non-archived).
+   - **Faculty Archives**: Soft-deleted document vault designed for high document volume; supports real-time multi-attribute search, responsive pagination, grid/table view modes, and bulk metadata visibility.
+   - File versioning with history and restore capabilities.
+   - Tag-based organization.
 
 5. **Document Mapping (Faculty)**
    - Map uploaded documents to specific indicators
@@ -80,13 +80,18 @@ Manual accreditation processes suffer from:
    - **Faculty**: Assigned areas with per-area completion percentage
 
 8. **Audit Trail & Notifications**
-   - Comprehensive audit logging (all creates, updates, deletes)
-   - In-app notification system with read/unread tracking
-   - Activity feed on dashboards
+   - Comprehensive audit logging for all critical operations (creates, updates, reviews, deletes).
+   - Human-readable semantic activity logs in the UI (filtering out database CUIDs, UUIDs, and technical correlation hashes).
+   - In-app notification system with read/unread tracking.
+   - Activity feed on dashboards. (Raw log export is deprecated and omitted).
 
-9. **Reports**
-   - Compliance report generation (PDF/Excel)
-   - Per-area breakdown with status summaries
+9. **Reports & Exports**
+   - Official accreditation reports generated as **tamper-proof, non-editable PDF documents** with official PCLU letterhead, PACUCOA formatting, and certification blocks.
+   - Interactive on-screen data preview before download.
+   - 3 canonical reports:
+     1. **Compliance Summary Report**: Accurate indicator-level compliance using canonical logic (`parseRequiredDocsCount`, capped approved counts, non-archived filter).
+     2. **Faculty Contribution Report**: Accurate submission activity across all active faculty members (including non-contributing faculty) and unique assigned areas.
+     3. **Approved Documents List**: Detailed verified evidence register sorted by approval timestamp with direct viewing metadata.
 
 10. **User Management**
     - **Dean**: Manage Faculty accounts (CRUD)

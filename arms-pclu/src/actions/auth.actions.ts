@@ -176,7 +176,6 @@ export async function createFacultyAccount(
           name: newUser.name,
           email: newUser.email,
           department: newUser.department,
-          correlationId: cid,
         },
       },
     })
@@ -283,7 +282,6 @@ export async function toggleFacultyStatus(
         details: {
           targetName: targetUser.name,
           targetEmail: targetUser.email,
-          correlationId: cid,
         },
       },
     })
@@ -468,7 +466,6 @@ export async function resetFacultyPassword(
         details: {
           targetName: targetUser.name,
           targetEmail: targetUser.email,
-          correlationId: cid,
         },
       },
     })

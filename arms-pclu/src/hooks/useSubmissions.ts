@@ -7,6 +7,7 @@ import {
   uploadAndMapDocument,
   saveDocumentAsDraft,
   getAllSubmissions,
+  getApprovedSubmissions,
   reviewSubmission,
   markSubmissionUnderReview,
 } from "@/actions/submission.actions"
@@ -17,6 +18,7 @@ import { submitAllMappings, deleteDocument } from "@/actions/document.actions"
 export const submissionKeys = {
   mine: ["submissions", "mine"] as const,
   all: ["submissions", "all"] as const,
+  approved: ["submissions", "approved"] as const,
 }
 
 // ─── GET MY SUBMISSIONS ───────────────────────────────────────────────────────
@@ -95,6 +97,23 @@ export function useAllSubmissions(initialData?: AllSubmissionsData) {
     queryKey: submissionKeys.all,
     queryFn: async () => {
       const result = await getAllSubmissions()
+      if (!result.success) throw new Error(result.error)
+      return result.data
+    },
+    initialData,
+    staleTime: 1000 * 60 * 2,
+  })
+}
+
+// ─── GET APPROVED SUBMISSIONS (Dean Repository view) ─────────────────────────
+
+type ApprovedSubmissionsData = NonNullable<Extract<Awaited<ReturnType<typeof getApprovedSubmissions>>, { success: true }>["data"]>
+
+export function useApprovedSubmissions(initialData?: ApprovedSubmissionsData) {
+  return useQuery({
+    queryKey: submissionKeys.approved,
+    queryFn: async () => {
+      const result = await getApprovedSubmissions()
       if (!result.success) throw new Error(result.error)
       return result.data
     },

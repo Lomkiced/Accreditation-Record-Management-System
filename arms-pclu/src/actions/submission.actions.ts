@@ -179,9 +179,7 @@ export async function uploadAndMapDocument(
           targetId: documentId,
           details: {
             documentTitle: validated.title,
-            indicatorId: validated.indicatorId,
             indicatorName: indicator.name,
-            mappingId: mappingId,
           },
         },
       }),
@@ -296,8 +294,6 @@ export async function saveDocumentAsDraft(
           targetId: document.id,
           details: {
             documentTitle: document.title,
-            indicatorId: validated.indicatorId,
-            mappingId: mapping.id,
           },
         },
       })
@@ -660,6 +656,96 @@ export async function getAllSubmissions() {
 export type AdminSubmission = NonNullable<
   Extract<Awaited<ReturnType<typeof getAllSubmissions>>, { success: true }>["data"]
 >[number]
+
+// ─── GET APPROVED SUBMISSIONS (Dean Repository View) ─────────────────────────
+// Returns exclusively APPROVED DocumentMappings for non-archived documents.
+
+export async function getApprovedSubmissions() {
+  try {
+    await requireAdminOrDean()
+
+    const mappings = await prisma.documentMapping.findMany({
+      where: {
+        status: "APPROVED",
+        document: { isArchived: false },
+      },
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        status: true,
+        rating: true,
+        remarks: true,
+        createdAt: true,
+        updatedAt: true,
+        documentId: true,
+        indicatorId: true,
+        userId: true,
+        user: { select: { name: true } },
+        document: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            fileName: true,
+            fileUrl: true,
+            fileSize: true,
+            documentDate: true,
+            version: true,
+            createdAt: true,
+            versions: {
+              orderBy: { version: "desc" },
+              select: {
+                id: true,
+                version: true,
+                fileUrl: true,
+                fileName: true,
+                fileSize: true,
+                remarks: true,
+                createdAt: true,
+              },
+            },
+            tags: {
+              select: {
+                id: true,
+                tagId: true,
+                documentId: true,
+                tag: { select: { id: true, name: true, color: true } },
+              },
+            },
+          },
+        },
+        indicator: {
+          select: {
+            id: true,
+            name: true,
+            requiredDocs: true,
+            ratingScale: true,
+            criterion: {
+              select: {
+                id: true,
+                name: true,
+                area: { select: { id: true, name: true, order: true } },
+              },
+            },
+          },
+        },
+      },
+    })
+
+    return { success: true as const, data: mappings }
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("Forbidden")) {
+      return { error: "Admin or Dean access required." }
+    }
+    console.error("[getApprovedSubmissions]", error)
+    return { error: "Failed to load approved submissions." }
+  }
+}
+
+export type ApprovedSubmission = NonNullable<
+  Extract<Awaited<ReturnType<typeof getApprovedSubmissions>>, { success: true }>["data"]
+>[number]
+
 
 // ─── REVIEW SUBMISSION (Admin only) ──────────────────────────────────────────
 

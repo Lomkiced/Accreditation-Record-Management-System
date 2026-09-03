@@ -1,16 +1,16 @@
 import { DeanRepositoryClient } from "./DeanRepositoryClient"
-import { getAllSubmissions } from "@/actions/submission.actions"
+import { getApprovedSubmissions } from "@/actions/submission.actions"
 import { requireAdminOrDean } from "@/lib/auth/getUser"
 
 export const metadata = {
   title: "Document Repository | Dean Portal",
-  description: "Centralized storage of all uploaded accreditation documents",
+  description: "Centralized storage of all approved accreditation documents",
 }
 
 export default async function DeanRepositoryPage() {
   await requireAdminOrDean()
   
-  const submissionsResult = await getAllSubmissions()
+  const submissionsResult = await getApprovedSubmissions()
   const initialData = (submissionsResult.success ? submissionsResult.data : undefined) ?? []
 
   return (

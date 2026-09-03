@@ -176,4 +176,27 @@ This is enforced in `getDashboardStats`, `getComplianceData`, `getComplianceData
 - "Pending Reviews" counts only mappings with SUBMITTED or UNDER_REVIEW status whose parent document is NOT archived.
 
 ### Global Upload Evidence Picker
-Faculty can upload evidence from the My Areas listing via a cascading Area â†’ Criterion â†’ Indicator picker dialog, eliminating deep navigation.
+Faculty can upload evidence from the My Areas listing via a cascading Area → Criterion → Indicator picker dialog, eliminating deep navigation.
+
+### Dean Repository Architecture (Approved Only)
+The Dean's Repository route (`/dean/repository`) is fed by `getApprovedSubmissions()`, querying exclusively `{ status: "APPROVED", document: { isArchived: false } }`. Mappings are grouped by document ID so that each document row in `RepositoryTable` represents verified accreditation evidence, with filtered criteria and indicator associations.
+
+### Institutional PDF Export Architecture
+Accreditation report exports use `jspdf` and `jspdf-autotable` (`src/lib/reportPdfGenerator.ts`) to produce client-side rendered, read-only PDF files. This enforces institutional document integrity by preventing unauthorized tampering with compliance percentages and submission records. The PDF engine includes:
+- Polytechnic College of La Union (PCLU) official letterhead.
+- Automated pagination ("Page X of Y").
+- Pre-styled table themes matching the ARMS slate/navy palette.
+- Date, generation scope, and authorized role verification blocks.
+
+### Audit Log Sanitization Pipeline
+Audit log records are processed via `formatAuditDetails` in `audit.actions.ts` before transmission to client components. The pipeline:
+1. Translates internal action codes into human-readable sentences.
+2. Strips all database CUIDs, UUIDs, and system correlation hashes.
+3. Formats metadata (faculty names, document titles, indicator codes, and review remarks) for clear compliance auditing.
+
+### Faculty Archives High-Volume Architecture
+The Faculty Archives (`/faculty/archives`) is built for scalability to handle hundreds of archived files without performance degradation:
+- Multi-attribute search filters across title, filename, indicators, and tags.
+- Responsive pagination controls item rendering limits.
+- Dual presentation modes: Responsive Card Grid and High-Density Table.
+

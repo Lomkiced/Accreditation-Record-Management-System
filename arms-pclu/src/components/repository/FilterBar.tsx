@@ -32,6 +32,7 @@ interface FilterBarProps {
   onStatusesChange: (statuses: string[]) => void
   dateRange: string
   onDateRangeChange: (range: string) => void
+  hideStatusFilter?: boolean
 }
 
 export function FilterBar(props: FilterBarProps) {
@@ -51,6 +52,7 @@ export function FilterBar(props: FilterBarProps) {
     onStatusesChange,
     dateRange,
     onDateRangeChange,
+    hideStatusFilter = false,
   } = props
 
   const hasFilters =
@@ -169,34 +171,36 @@ export function FilterBar(props: FilterBarProps) {
         </DropdownMenu>
 
         {/* STATUS */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 text-xs text-slate-600 bg-slate-50">
-              Status
-              {selectedStatuses.length > 0 && ` (${selectedStatuses.length})`}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48 max-h-60 overflow-y-auto bg-white z-50">
-            {filterOptions.statuses.map((status) => (
-              <DropdownMenuCheckboxItem
-                key={status}
-                checked={selectedStatuses.includes(status)}
-                onCheckedChange={(checked) => {
-                  if (checked) {
-                    onStatusesChange([...selectedStatuses, status])
-                  } else {
-                    onStatusesChange(selectedStatuses.filter((s) => s !== status))
-                  }
-                }}
-              >
-                {status}
-              </DropdownMenuCheckboxItem>
-            ))}
-            {filterOptions.statuses.length === 0 && (
-              <div className="px-2 py-1.5 text-xs text-slate-500">No statuses found</div>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {!hideStatusFilter && filterOptions.statuses.length > 1 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-xs text-slate-600 bg-slate-50">
+                Status
+                {selectedStatuses.length > 0 && ` (${selectedStatuses.length})`}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48 max-h-60 overflow-y-auto bg-white z-50">
+              {filterOptions.statuses.map((status) => (
+                <DropdownMenuCheckboxItem
+                  key={status}
+                  checked={selectedStatuses.includes(status)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      onStatusesChange([...selectedStatuses, status])
+                    } else {
+                      onStatusesChange(selectedStatuses.filter((s) => s !== status))
+                    }
+                  }}
+                >
+                  {status}
+                </DropdownMenuCheckboxItem>
+              ))}
+              {filterOptions.statuses.length === 0 && (
+                <div className="px-2 py-1.5 text-xs text-slate-500">No statuses found</div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
         
 
         {/* DATE RANGE */}

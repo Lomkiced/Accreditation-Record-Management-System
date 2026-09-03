@@ -3,17 +3,16 @@
 import * as React from "react"
 
 import { PageHeader } from "@/components/shared/PageHeader"
-import { Button } from "@/components/ui/button"
 import { RepositoryTable, type RepositoryDocument, getDominantStatus } from "@/components/repository/RepositoryTable"
 import { DocumentDetailPanel } from "@/components/repository/DocumentDetailPanel"
 import { FilterBar } from "@/components/repository/FilterBar"
-import { useAllSubmissions } from "@/hooks/useSubmissions"
+import { useApprovedSubmissions } from "@/hooks/useSubmissions"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { getAllSubmissions } from "@/actions/submission.actions"
+import type { getApprovedSubmissions } from "@/actions/submission.actions"
 
-type AllSubmissionsData = Extract<Awaited<ReturnType<typeof getAllSubmissions>>, { success: true }>["data"]
+type ApprovedSubmissionsData = Extract<Awaited<ReturnType<typeof getApprovedSubmissions>>, { success: true }>["data"]
 
-export function DeanRepositoryClient({ initialData }: { initialData: AllSubmissionsData }) {
+export function DeanRepositoryClient({ initialData }: { initialData: ApprovedSubmissionsData }) {
   const [selectedDocument, setSelectedDocument] = React.useState<RepositoryDocument | null>(null)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [selectedAreas, setSelectedAreas] = React.useState<string[]>([])
@@ -22,9 +21,9 @@ export function DeanRepositoryClient({ initialData }: { initialData: AllSubmissi
   const [selectedStatuses, setSelectedStatuses] = React.useState<string[]>([])
   const [dateRange, setDateRange] = React.useState<string>("all")
   
-  const { data: submissions = [], isLoading } = useAllSubmissions(initialData)
+  const { data: submissions = [], isLoading } = useApprovedSubmissions(initialData)
 
-  // Group mappings by document ID
+  // Group approved mappings by document ID
   const documents = React.useMemo(() => {
     const docMap = new Map<string, RepositoryDocument>()
 
@@ -47,7 +46,7 @@ export function DeanRepositoryClient({ initialData }: { initialData: AllSubmissi
           rawDate: new Date(sub.document.createdAt),
           mappings: [],
           tags: docTags,
-          dominantStatus: "DRAFT" // Calculated below
+          dominantStatus: "APPROVED" // All mappings in this repository are APPROVED
         })
       }
 
@@ -64,7 +63,6 @@ export function DeanRepositoryClient({ initialData }: { initialData: AllSubmissi
       })
     }
 
-    // Calculate dominant status for each document
     const result = Array.from(docMap.values())
     result.forEach(doc => {
       doc.dominantStatus = getDominantStatus(doc.mappings)
@@ -149,7 +147,7 @@ export function DeanRepositoryClient({ initialData }: { initialData: AllSubmissi
     <>
       <PageHeader
         title="Document Repository"
-        subtitle="Centralized storage of all uploaded accreditation documents"
+        subtitle="Centralized storage of verified and approved accreditation documents"
         actions={null}
       />
 
@@ -169,6 +167,7 @@ export function DeanRepositoryClient({ initialData }: { initialData: AllSubmissi
           onStatusesChange={setSelectedStatuses}
           dateRange={dateRange}
           onDateRangeChange={setDateRange}
+          hideStatusFilter={true}
         />
 
         {isLoading ? (
