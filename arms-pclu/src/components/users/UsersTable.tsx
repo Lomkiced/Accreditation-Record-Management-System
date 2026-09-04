@@ -71,18 +71,7 @@ export function UsersTable({ data, onEdit, onDelete }: UsersTableProps) {
         <StatusBadge status={row.getValue("status")} size="sm" />
       ),
     },
-    {
-      accessorKey: "lastLogin",
-      header: "Last Login",
-      cell: ({ row }) => {
-        const lastLogin = row.getValue("lastLogin") as string | null
-        return (
-          <span className="text-sm text-slate-500">
-            {lastLogin ? lastLogin : "Never"}
-          </span>
-        )
-      },
-    },
+
     {
       id: "actions",
       header: () => <div className="text-right">Actions</div>,

@@ -12,19 +12,21 @@ interface AuthGuardProps {
 export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
   const router = useRouter()
   const { user, isLoading, isAuthenticated } = useAuthStore()
-  const [showContent, setShowContent] = useState(false)
-
-  // Production-safe: debug logging removed
+  const [showContent, setShowContent] = useState(() => {
+    return !isLoading && isAuthenticated && !!user && (!requiredRole || user.role === requiredRole)
+  })
 
   useEffect(() => {
     if (isLoading) return
 
     if (!isAuthenticated || !user) {
+      setShowContent(false)
       router.replace("/login")
       return
     }
 
     if (requiredRole && user.role !== requiredRole) {
+      setShowContent(false)
       const fallback =
         user.role === "ADMIN"
           ? "/admin/dashboard"

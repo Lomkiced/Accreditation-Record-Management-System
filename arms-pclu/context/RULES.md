@@ -140,8 +140,8 @@ All development on ARMS must strictly follow these principles. Violations should
 >    Where "approved docs" = sum of APPROVED mappings per indicator (capped at `requiredDocs` per indicator, non-archived), and "total required docs" = sum of `requiredDocs` across all indicators in the area.
 >
 > 2. **Admin Dashboard Overall Compliance Rate**:
->    `compliance_rate% = (total approved non-archived documents × 100) / all non-archived documents`
->    Subtitle must explicitly state `X of Y documents approved`.
+>    `compliance_rate% = (approved docs capped per indicator × 100) / total required docs across all indicators`
+>    Subtitle must explicitly state `X of Y required documents approved` (never dividing by uploaded documents, ensuring draft submissions do not lower compliance rate).
 
 Any new compliance-related feature must reference `dashboard.actions.ts` as the canonical source of truth.
 
@@ -180,5 +180,15 @@ Any new compliance-related feature must reference `dashboard.actions.ts` as the 
 ## 11. Task Assignment Exclusivity & Destructive Action Safeguards
 
 - **No Overlapping Assignments**: An Area or Criterion can only be actively assigned to one faculty member at a time. The assignment picker must disable already-assigned items and display the current assignee.
+- **Explicit Scope Disambiguation**: Assignment modals must present explicit Scope choices ("Entire Area" vs "Specific Criteria") with clear disabled states and collision warnings.
 - **Destructive Deletion Confirmation**: All assignment removals in the Dean's Portal require an explicit confirmation modal dialog (`AlertDialog`) detailing the affected faculty and scope before execution.
+
+---
+
+## 12. Client Navigation & Query Performance Standards
+
+- **Eager AuthGuard State Hydration**: `AuthGuard` must evaluate initial authenticated state synchronously from Zustand store to prevent layout flash or routing delay on client navigations.
+- **Fast User Queries**: User administration endpoints query PostgreSQL directly without blocking on external authentication APIs. Tables display verified system attributes without inaccurate timestamp estimates.
+- **Global Search Optimization**: The global search dialog must be pre-mounted in layout with debouncing (<= 150ms) and client-side caching (staleTime >= 5min) to deliver instantaneous results.
+
 

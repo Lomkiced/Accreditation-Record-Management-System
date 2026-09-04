@@ -84,7 +84,7 @@ export default async function AdminDashboardPage() {
         <StatCard
           title="Compliance Rate"
           value={`${stats.compliancePercent}%`}
-          subtitle={`${stats.totalDocuments} of ${stats.totalAllDocuments} documents approved`}
+          subtitle={`${stats.approvedDocCount} of ${stats.totalRequiredDocs} required documents approved`}
           icon={TrendingUp}
           color="emerald"
           trend={

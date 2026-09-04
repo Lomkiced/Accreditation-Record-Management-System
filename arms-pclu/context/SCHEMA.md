@@ -198,15 +198,17 @@ The `DocumentMapping` table is the **heart of the system**. It creates a many-to
 ```
 Prevents duplicate mappings — a document can only be linked to a given indicator once.
 
-### 3. Assignment Flexibility
+### 3. Assignment Flexibility & Exclusivity
 ```prisma
 @@unique([userId, areaId, criterionId])
 ```
 - When `criterionId` is `null`, the faculty is assigned to the **entire area** (all criteria).
 - When `criterionId` is set, the faculty is assigned to only that specific criterion.
+- Application-level constraints ensure that if an entire area is assigned, individual criteria cannot be assigned to another faculty member (and vice-versa) until released.
 
-### 4. Soft-Delete via `isArchived`
-Documents are never hard-deleted. Instead, `isArchived: true` hides them from active views. All queries must explicitly filter `{ isArchived: false }`.
+### 4. Soft-Delete via `isArchived` & `isActive`
+- **Documents**: `isArchived: true` hides records from active views. All active queries explicitly filter `{ isArchived: false }`.
+- **Users**: `isActive: false` archives user accounts while retaining all historical documents, audit logs, and mappings. Fast user administration queries read directly from Prisma without blocking on external authentication APIs.
 
 ### 5. Cascade Deletes
 All child relationships use `onDelete: Cascade`:

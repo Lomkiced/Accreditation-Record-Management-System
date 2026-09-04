@@ -28,18 +28,21 @@ export interface GlobalSearchResponse {
   faculties: FacultySearchResult[]
 }
 
-export async function searchDocuments(query: string, areaId?: string): Promise<SearchResult[]> {
-  const user = await getCurrentUser()
+export async function searchDocuments(
+  query: string,
+  areaId?: string,
+  currentUser?: any
+): Promise<SearchResult[]> {
+  const user = currentUser ?? (await getCurrentUser())
   if (!user) return []
 
-  const isFaculty = user.role === "FACULTY"
-
+  const trimmed = query.trim()
   const whereClause: any = { isArchived: false }
 
-  if (query) {
+  if (trimmed) {
     whereClause.OR = [
-      { title: { contains: query, mode: "insensitive" } },
-      { fileName: { contains: query, mode: "insensitive" } },
+      { title: { contains: trimmed, mode: "insensitive" } },
+      { fileName: { contains: trimmed, mode: "insensitive" } },
     ]
   }
 
@@ -59,13 +62,21 @@ export async function searchDocuments(query: string, areaId?: string): Promise<S
 
   const docs = await prisma.document.findMany({
     where: whereClause,
-    take: 20,
+    take: 12,
     orderBy: { createdAt: "desc" },
-    include: {
+    select: {
+      id: true,
+      title: true,
+      fileName: true,
+      fileUrl: true,
+      createdAt: true,
       user: { select: { name: true } },
       mappings: {
         where: mappingFilter,
-        include: {
+        take: 3,
+        select: {
+          id: true,
+          status: true,
           indicator: {
             select: {
               criterion: {
@@ -112,14 +123,14 @@ export async function searchDocuments(query: string, areaId?: string): Promise<S
 }
 
 export async function globalSearch(query: string, areaId?: string): Promise<GlobalSearchResponse> {
+  const trimmed = query?.trim() ?? ""
+  if (!trimmed) return { documents: [], faculties: [] }
+
   const user = await getCurrentUser()
   if (!user) return { documents: [], faculties: [] }
 
-  const trimmed = query.trim()
-  if (!trimmed) return { documents: [], faculties: [] }
-
   const [documents, faculties] = await Promise.all([
-    searchDocuments(trimmed, areaId),
+    searchDocuments(trimmed, areaId, user),
     prisma.user.findMany({
       where: {
         role: "FACULTY",
@@ -131,7 +142,7 @@ export async function globalSearch(query: string, areaId?: string): Promise<Glob
           { designation: { contains: trimmed, mode: "insensitive" } },
         ],
       },
-      take: 10,
+      take: 6,
       orderBy: { name: "asc" },
       select: {
         id: true,

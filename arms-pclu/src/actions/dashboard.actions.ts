@@ -33,9 +33,13 @@ export interface DashboardStats {
   totalAllDocuments: number
   pendingReviews: number
   activeFaculty: number
-  /** Number of approved documents (capped per indicator by requiredDocs). */
+  /** Number of indicators where approved mappings meet or exceed requiredDocs. */
   approvedMappings: number
-  /** (total approved non-archived documents × 100) / (all non-archived documents) */
+  /** Total required documents across all indicators in the institution. */
+  totalRequiredDocs: number
+  /** Total approved documents counting towards requirements (capped per indicator). */
+  approvedDocCount: number
+  /** Compliance % = (approvedDocCount × 100) / totalRequiredDocs */
   compliancePercent: number
 }
 
@@ -94,7 +98,7 @@ function parseRequiredDocsCount(requiredDocs: string | null | undefined): number
  * Inner function: runs the actual Prisma queries.
  * Wrapped by unstable_cache below for server-side caching.
  *
- * compliancePercent: (total approved non-archived documents × 100) / (all non-archived documents)
+ * compliancePercent: (approved non-archived documents capped by requirement × 100) / (total required documents)
  */
 const _fetchDashboardStats = unstable_cache(
   async (): Promise<DashboardStats> => {
@@ -128,33 +132,43 @@ const _fetchDashboardStats = unstable_cache(
       prisma.user.count({
         where: { role: "FACULTY", isActive: true },
       }),
-      // Fetch all indicators with their requiredDocs and approved mapping counts
+      // Fetch all indicators with their requiredDocs and approved mapping counts (non-archived)
       prisma.indicator.findMany({
         select: {
           id: true,
           requiredDocs: true,
           _count: {
             select: {
-              mappings: { where: { status: "APPROVED" } },
+              mappings: {
+                where: {
+                  status: "APPROVED",
+                  document: { isArchived: false },
+                },
+              },
             },
           },
         },
       }),
     ])
 
-    // Indicator-level counts for informational stats
+    let totalRequiredDocs = 0
+    let approvedDocCount = 0
     let fullyApprovedIndicators = 0
+
     indicators.forEach((ind) => {
       const reqCount = parseRequiredDocsCount(ind.requiredDocs)
-      if (ind._count.mappings >= reqCount) {
+      totalRequiredDocs += reqCount
+      const approved = ind._count.mappings
+      approvedDocCount += Math.min(approved, reqCount)
+      if (approved >= reqCount) {
         fullyApprovedIndicators += 1
       }
     })
 
-    // Compliance formula: (approved non-archived docs × 100) / (all non-archived docs)
+    // Accreditation Compliance formula: (approved documents capped by requiredDocs × 100) / (total required documents)
     const compliancePercent =
-      totalAllDocuments > 0
-        ? Math.round((totalDocuments * 100) / totalAllDocuments)
+      totalRequiredDocs > 0
+        ? Math.round((approvedDocCount * 100) / totalRequiredDocs)
         : 0
 
     return {
@@ -163,6 +177,8 @@ const _fetchDashboardStats = unstable_cache(
       pendingReviews,
       activeFaculty,
       approvedMappings: fullyApprovedIndicators,
+      totalRequiredDocs,
+      approvedDocCount,
       compliancePercent,
     }
   },

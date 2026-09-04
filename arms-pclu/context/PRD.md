@@ -55,8 +55,9 @@ Manual accreditation processes suffer from:
    - Required document specification per indicator
 
 3. **Task Assignment (Dean)**
-   - Assign faculty to Areas or specific Criteria.
+   - Assign faculty to Areas or specific Criteria via a responsive 680px Assignment Modal with explicit scope selection (Entire Area vs Specific Criteria).
    - Assignment conflict prevention: criteria/areas already assigned to other active faculty members cannot be reassigned until released.
+   - Multiline criterion display with real-time assignment status badges and quick action controls (Select All / Deselect All).
    - Assignment deletion protected by an explicit confirmation modal.
    - Faculty sees only assigned areas in their portal.
 
@@ -79,14 +80,20 @@ Manual accreditation processes suffer from:
    - Professional review information panel with clean formatting (free from character encoding corruption).
    - Bulk status management.
 
-7. **Global Search Engine (All Portals)**
-   - Global search in the top navigation header across all portals.
+7. **Global Search Engine & Performance (All Portals)**
+   - Ultra-fast global search in the top navigation header across all portals.
    - Searches both **documents** (by title and filename) and **faculty members** (by name, email, department, designation).
+   - High performance: pre-mounted search dialog (no dynamic chunk download lag), 150ms debounce, 5-minute TanStack Query caching, and keyboard shortcut `Ctrl+K`.
+   - Fast client navigation with eager synchronous AuthGuard state hydration eliminating skeleton flickering.
 
 8. **Dashboards**
-   - **Admin**: Stat cards (including Compliance Rate: `(total approved docs × 100) / all documents`), pending submissions table, hierarchical evidence drill-down.
+   - **Admin**: Stat cards (including Compliance Rate computed as `(approved documents capped per indicator × 100) / total required documents` with accurate subtitle showing approved vs total required documents), pending submissions table, hierarchical evidence drill-down.
    - **Dean**: Stat cards, accurate Progress by Area (`(approved docs × 100) / total required docs`), pending submissions, compliance overview.
    - **Faculty**: Assigned areas with per-area completion percentage.
+
+9. **User Management (Dean & Admin)**
+   - Filter, search, and manage faculty and administrative accounts.
+   - Streamlined Users Table displaying Name, Email, Role, Department, Designation, Status, and Actions (omitting inaccurate auth last-login timestamps to ensure ultra-fast sub-second data fetching directly from PostgreSQL).
 
 9. **Audit Trail & Notifications**
    - Comprehensive audit logging for all critical operations (creates, updates, reviews, deletes).

@@ -30,16 +30,31 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
   const [query, setQuery] = React.useState("")
   const [areaId, setAreaId] = React.useState("all")
   const [activeTab, setActiveTab] = React.useState<"ALL" | "DOCUMENTS" | "FACULTIES">("ALL")
-  const debouncedQuery = useDebounce(query, 300)
+  const debouncedQuery = useDebounce(query, 150)
   const router = useRouter()
   const { user } = useAuthStore()
 
   const { data: areas = [] } = useAreas()
 
-  const { data, isLoading } = useQuery({
+  // Cmd/Ctrl+K shortcut listener
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault()
+        onOpenChange(!open)
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [open, onOpenChange])
+
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: ["global-search", debouncedQuery, areaId],
     queryFn: () => globalSearch(debouncedQuery, areaId),
-    enabled: open && debouncedQuery.length > 0,
+    enabled: open && debouncedQuery.trim().length > 0,
+    staleTime: 1000 * 60 * 5, // 5 min cache
+    gcTime: 1000 * 60 * 10,
+    placeholderData: (previousData) => previousData,
   })
 
   const documents = data?.documents || []
@@ -78,10 +93,13 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search documents or faculty members..."
+            placeholder="Search documents or faculty members... (Ctrl+K)"
             className="flex-1 border-0 shadow-none focus-visible:ring-0 text-base"
             autoFocus
           />
+          {isFetching && (
+            <Loader2 className="w-4 h-4 animate-spin text-blue-500 mr-2 shrink-0" />
+          )}
           <div className="mr-2">
             <Select value={areaId} onValueChange={setAreaId}>
               <SelectTrigger className="w-[160px] h-9 bg-slate-50 border-slate-200 text-xs font-medium">

@@ -148,20 +148,24 @@ src/
 - **In-Place Versioning Updates**: When updating an existing document submission, the system modifies the existing `Document` record in-place (`version + 1`), captures a version snapshot in `DocumentVersion`, resets the mapping status to `SUBMITTED`, and notifies reviewers. It strictly avoids creating duplicate `Document` records.
 
 ### Canonical Compliance Metric & Dashboard Stats
-- **Admin Dashboard Compliance Rate**: Computed directly as `(total approved non-archived documents × 100) / all non-archived documents`. Subtitle clearly indicates approved count vs overall document count.
+- **Admin Dashboard Compliance Rate**: Standard institutional accreditation formula: `(approved documents capped per indicator × 100) / total required documents across all indicators`. The StatCard subtitle indicates `{approvedDocCount} of {totalRequiredDocs} required documents approved`, ensuring draft uploads do not distort compliance.
 - **Dean Dashboard Progress by Area**: Calculated as `(approved docs × 100) / total required docs` (capped per indicator by requiredDocs, filtering `isArchived: false`). Matches the document counter badge (`approved / totalRequired`) and Faculty Portal area completion.
 
-### Task Assignment Collision Prevention
+### Task Assignment Collision Prevention & Modal Architecture
 - Assignment queries verify active assignments across all faculty.
-- If a Criterion or Area is already assigned to a faculty member, `AssignmentModal` marks it as unavailable with an assigned tag, and server actions prevent duplicate assignment collisions.
+- `AssignmentModal` utilizes a 680px responsive layout with explicit **Assignment Scope cards** ("Entire Area" vs "Specific Criteria").
+- Multi-line criterion title layout with clean badges for existing assignees and quick actions ("Select all" / "Clear").
+- If a Criterion or Area is already assigned to a faculty member, the system blocks duplicate collisions.
 - Deletions in `AssignmentPanel` require confirmation via an `AlertDialog` before execution.
 
-### Global Search Engine (Documents & Faculty)
+### Global Search Engine & Routing Performance Optimization
 - `search.actions.ts` provides unified search querying both non-archived documents (by title and filename) and active faculty members (by name, email, department, designation).
-- `GlobalSearchDialog` displays structured result groups with direct document links and faculty details.
+- `GlobalSearchDialog` is directly pre-mounted in `TopHeader` (eliminating `next/dynamic` chunk download latency on user click), debounced at 150ms, cached in TanStack Query for 5 minutes (`staleTime: 1000 * 60 * 5`), with smooth background fetch indicators and `Ctrl+K` keyboard shortcut support.
+- Fast client routing: `AuthGuard` initializes authentication state synchronously from the Zustand store, preventing full-screen skeleton flash delays during client-side navigation.
 
-### User Last Login Synchronization
-- `user.actions.ts` synchronizes authentication activity by fetching `last_sign_in_at` from Supabase Auth admin client (`adminSupabase.auth.admin.listUsers()`), falling back to user audit log activity timestamps, and formats dates cleanly for the Users table.
+### User Management & Fast Indexed Queries
+- `user.actions.ts` executes high-speed, direct Prisma queries to list active and archived faculty/admin users.
+- Inaccurate auth `lastLogin` fetching via `adminSupabase.auth.admin.listUsers()` has been eliminated, reducing page load times from several seconds to milliseconds with 0 external network round-trips.
 
 ### Soft-Delete/Archiving
 - **Documents**: Can be archived (`isArchived: true`). All active queries explicitly filter for `{ isArchived: false }`. The hierarchy cache also filters archived documents from mappings.
