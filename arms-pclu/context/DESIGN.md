@@ -184,23 +184,36 @@ The design conveys **professionalism, trustworthiness, and academic authority** 
 
 ## High-Volume Archive UI Pattern
 
-When presenting hundreds of records (e.g., Faculty Archives):
-- **Header Stats Row**: Display quick metrics (Total Archived, Storage Retained, Date Range).
-- **Search & Filter Bar**:
+When presenting archived records (e.g., Faculty Archives):
+- **Streamlined Stats**: Single prominent, professional counter card/pill for **Total Archived Documents** (eliminating secondary clutter such as storage size and activity timestamps).
+- **Search & Filter Controls**:
   - Full-width search bar with leading search icon and instant clear button (`✕`).
   - Sort selector: Date Archived, Title, File Size.
-  - View mode toggle: Responsive Grid vs. Compact Data Table.
+  - View mode toggle: High-Density Data Table vs. Responsive Grid Cards.
 - **Pagination Standard**:
   - Bottom-anchored pagination with item range indicator (`Showing 1 to 12 of 148 documents`).
-  - Page size dropdown (`12 / 24 / 48 per page`).
+  - Page size selector (`12 / 24 / 48 per page`).
   - First, Previous, Next, Last and numbered buttons with active highlight (`bg-blue-600 text-white`).
-- **Empty & No-Result States**: Distinct illustration and messaging for "No documents archived" vs. "No documents match your search".
+- **Empty & No-Result States**: Distinct visual feedback and clear action for "No documents archived" vs. "No documents match your search".
+
+---
+
+## Global Search UI Pattern
+
+The top navigation header features an omni-search modal (`Cmd+K` or search button):
+- **Unified Query**: Searches across both documents and faculty members.
+- **Grouped Presentation**: Clean section headers separating **Documents** and **Faculty Members** with result counts.
+- **Rich Result Items**:
+  - Documents display title, status pill, area name, faculty uploader, and date.
+  - Faculty members display avatar initials, full name, department, designation, and assigned areas count.
+- **Direct Actions**: Clicking a document opens/previews the file; clicking a faculty member displays their contact info or navigates to assignments/profile.
 
 ---
 
 ## Institutional PDF Export Standards
 
 Accreditation PDF exports must adhere to formal institutional publication standards:
+- **Configuration Panel**: Labeled with accessible, clear terminology ("Report Settings") rather than technical parameter jargon.
 - **Primary Header**: Polytechnic College of La Union (PCLU) centered navy header (`#0F172A`), subtitle "Accreditation Record Management System (ARMS)".
 - **Color Accent**: Deep Navy (`#0F172A`) header bars with white bold text; alternate rows in soft slate tint (`#F8FAFC`).
 - **Typography**: Clean Helvetica/Arial tabular fonts with strict cell padding and text truncation to avoid overflow.

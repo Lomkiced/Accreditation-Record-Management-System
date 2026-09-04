@@ -29,11 +29,13 @@ export interface AreaComplianceWithCounts {
 export interface DashboardStats {
   /** Number of non-archived documents that have at least one APPROVED mapping. */
   totalDocuments: number
+  /** Number of all non-archived documents in the system. */
+  totalAllDocuments: number
   pendingReviews: number
   activeFaculty: number
   /** Number of approved documents (capped per indicator by requiredDocs). */
   approvedMappings: number
-  /** (approved documents × 100) / total required documents */
+  /** (total approved non-archived documents × 100) / (all non-archived documents) */
   compliancePercent: number
 }
 
@@ -92,15 +94,13 @@ function parseRequiredDocsCount(requiredDocs: string | null | undefined): number
  * Inner function: runs the actual Prisma queries.
  * Wrapped by unstable_cache below for server-side caching.
  *
- * FIX #1 (pendingReviews): Now filters out mappings whose parent document is
- *         archived (`isArchived: true`) so the count matches the submissions page.
- * FIX #2 (compliancePercent): Uses document-level compliance:
- *         (approved documents × 100) / total required documents.
+ * compliancePercent: (total approved non-archived documents × 100) / (all non-archived documents)
  */
 const _fetchDashboardStats = unstable_cache(
   async (): Promise<DashboardStats> => {
     const [
       totalDocuments,
+      totalAllDocuments,
       pendingReviews,
       activeFaculty,
       indicators,
@@ -112,7 +112,13 @@ const _fetchDashboardStats = unstable_cache(
           mappings: { some: { status: "APPROVED" } },
         },
       }),
-      // FIX #1: Only count pending mappings for NON-archived documents
+      // Count all non-archived documents in the system
+      prisma.document.count({
+        where: {
+          isArchived: false,
+        },
+      }),
+      // Only count pending mappings for NON-archived documents
       prisma.documentMapping.count({
         where: {
           status: { in: ["SUBMITTED", "UNDER_REVIEW"] },
@@ -136,10 +142,8 @@ const _fetchDashboardStats = unstable_cache(
       }),
     ])
 
-    // Indicator-level compliance: fully provided indicators × 100 / total indicators
+    // Indicator-level counts for informational stats
     let fullyApprovedIndicators = 0
-    const totalIndicators = indicators.length
-
     indicators.forEach((ind) => {
       const reqCount = parseRequiredDocsCount(ind.requiredDocs)
       if (ind._count.mappings >= reqCount) {
@@ -147,13 +151,15 @@ const _fetchDashboardStats = unstable_cache(
       }
     })
 
+    // Compliance formula: (approved non-archived docs × 100) / (all non-archived docs)
     const compliancePercent =
-      totalIndicators > 0
-        ? Math.round((fullyApprovedIndicators * 100) / totalIndicators)
+      totalAllDocuments > 0
+        ? Math.round((totalDocuments * 100) / totalAllDocuments)
         : 0
 
     return {
       totalDocuments,
+      totalAllDocuments,
       pendingReviews,
       activeFaculty,
       approvedMappings: fullyApprovedIndicators,
@@ -369,17 +375,23 @@ const _fetchComplianceDataWithCounts = unstable_cache(
       },
     })
 
-    // Single query: group by indicatorId for APPROVED mappings (with counts)
+    // Single query: group by indicatorId for APPROVED mappings (with counts, non-archived)
     const approvedGroups = await prisma.documentMapping.groupBy({
       by: ["indicatorId"],
-      where: { status: "APPROVED" },
+      where: {
+        status: "APPROVED",
+        document: { isArchived: false },
+      },
       _count: { _all: true },
     })
 
-    // Single query: group by indicatorId for APPROVED or SUBMITTED (provided) mappings
+    // Single query: group by indicatorId for APPROVED or SUBMITTED (provided) mappings (non-archived)
     const providedGroups = await prisma.documentMapping.groupBy({
       by: ["indicatorId"],
-      where: { status: { in: ["APPROVED", "SUBMITTED", "UNDER_REVIEW"] } },
+      where: {
+        status: { in: ["APPROVED", "SUBMITTED", "UNDER_REVIEW"] },
+        document: { isArchived: false },
+      },
       _count: { _all: true },
     })
 
@@ -412,9 +424,10 @@ const _fetchComplianceDataWithCounts = unstable_cache(
         providedIndicatorIds.has(id)
       ).length
 
+      // Accurate Area progress: (approved documents × 100) / total required documents
       const value =
-        totalIndicators > 0
-          ? Math.round((fullyApprovedIndicators * 100) / totalIndicators)
+        totalRequiredDocs > 0
+          ? Math.round((approvedDocCount * 100) / totalRequiredDocs)
           : 0
 
       return {

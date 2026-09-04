@@ -1,10 +1,8 @@
-"use client"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { X } from "lucide-react"
+import { X, FileText, Upload, Layers } from "lucide-react"
 import {
   Sheet,
   SheetContent,
@@ -18,14 +16,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { FileUploadZone } from "@/components/shared/FileUploadZone"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { VersionHistory } from "./VersionHistory"
-import { cn } from "@/lib/utils"
+import { cn, formatFileSize } from "@/lib/utils"
 import { toast } from "sonner"
 import { uploadFileToStorage } from "@/lib/supabase/storage"
-import { useSubmitDocument, useSaveDraft } from "@/hooks/useSubmissions"
+import { useSubmitDocument, useSubmitBatchDocuments, useSaveDraft } from "@/hooks/useSubmissions"
 import { useAuth } from "@/hooks/useAuth"
 
 const SubmissionSchema = z.object({
-  title: z.string().min(1, "Document title is required"),
+  title: z.string().optional(),
   description: z.string().optional(),
   documentDate: z.string().min(1, "Document date is required"),
 })
@@ -68,12 +66,14 @@ export function SubmissionUploadForm({
   criterionName,
   existingSubmission,
 }: SubmissionUploadFormProps) {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [uploadProgress, setUploadProgress] = useState<number>(0)
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadingItemIndex, setUploadingItemIndex] = useState<number | null>(null)
 
   const { user } = useAuth()
   const submitDocument = useSubmitDocument()
+  const submitBatchDocuments = useSubmitBatchDocuments()
   const saveDraft = useSaveDraft()
 
   const isApproved = existingSubmission?.status === "APPROVED"
@@ -83,51 +83,65 @@ export function SubmissionUploadForm({
     defaultValues: {
       title: existingSubmission?.title ?? "",
       description: existingSubmission?.description ?? "",
-      documentDate: "",
+      documentDate: new Date().toISOString().split("T")[0],
     },
   })
 
+  // Sync form values when existingSubmission changes
+  useEffect(() => {
+    if (existingSubmission) {
+      form.reset({
+        title: existingSubmission.title ?? "",
+        description: existingSubmission.description ?? "",
+        documentDate: new Date().toISOString().split("T")[0],
+      })
+      setSelectedFiles([])
+    } else {
+      form.reset({
+        title: "",
+        description: "",
+        documentDate: new Date().toISOString().split("T")[0],
+      })
+      setSelectedFiles([])
+    }
+  }, [existingSubmission, form, open])
+
   const handleClose = () => {
     form.reset()
-    setSelectedFile(null)
+    setSelectedFiles([])
     setUploadProgress(0)
+    setUploadingItemIndex(null)
     onClose()
   }
 
-  // ─── Upload file to Supabase Storage and return metadata ────────────────────
-  const resolveFileMetadata = async (): Promise<{
-    fileUrl: string
-    fileName: string
-    fileSize: number
-  } | null> => {
-    if (!selectedFile) return null
-    if (!user?.id) {
-      toast.error("Authentication error. Please refresh and try again.")
-      return null
+  const handleFilesChosen = (files: File[]) => {
+    if (existingSubmission) {
+      // Single file replacement when updating
+      setSelectedFiles(files.slice(0, 1))
+    } else {
+      setSelectedFiles((prev) => {
+        const existingNames = new Set(prev.map((f) => f.name))
+        const newFiles = files.filter((f) => !existingNames.has(f.name))
+        const combined = [...prev, ...newFiles]
+        // Auto-fill title if empty and only 1 file
+        if (combined.length === 1 && !form.getValues("title")) {
+          const defaultTitle = combined[0].name.replace(/\.[^/.]+$/, "")
+          form.setValue("title", defaultTitle)
+        }
+        return combined
+      })
     }
+  }
 
-    setIsUploading(true)
-    try {
-      const result = await uploadFileToStorage(
-        selectedFile,
-        user.id,
-        (pct) => setUploadProgress(pct)
-      )
-      return result
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "File upload failed."
-      toast.error(message)
-      return null
-    } finally {
-      setIsUploading(false)
-    }
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
   // ─── Save as Draft ───────────────────────────────────────────────────────────
   const handleSaveDraft = async () => {
     const values = form.getValues()
-    if (!values.title) {
+    const title = values.title || (selectedFiles[0] ? selectedFiles[0].name.replace(/\.[^/.]+$/, "") : "")
+    if (!title) {
       form.setError("title", { message: "Title is required even for drafts" })
       return
     }
@@ -140,13 +154,22 @@ export function SubmissionUploadForm({
       return
     }
 
-    // Upload file if one is selected
-    const fileMeta = selectedFile ? await resolveFileMetadata() : null
-    if (selectedFile && !fileMeta) return // upload failed
+    let fileMeta: { fileUrl: string; fileName: string; fileSize: number } | null = null
+    if (selectedFiles[0]) {
+      setIsUploading(true)
+      try {
+        fileMeta = await uploadFileToStorage(selectedFiles[0], user!.id, (pct) => setUploadProgress(pct))
+      } catch (err) {
+        toast.error("File upload failed")
+        setIsUploading(false)
+        return
+      }
+      setIsUploading(false)
+    }
 
     const result = await saveDraft.mutateAsync({
       indicatorId: indicator.id,
-      title: values.title,
+      title: title,
       description: values.description || undefined,
       documentDate: values.documentDate,
       fileUrl: fileMeta?.fileUrl,
@@ -159,51 +182,162 @@ export function SubmissionUploadForm({
 
   // ─── Submit for Review ───────────────────────────────────────────────────────
   const handleSubmit = async (values: SubmissionFormValues) => {
-    if (!selectedFile && !existingSubmission) {
-      toast.error("Please attach a document file")
+    if (!selectedFiles.length && !existingSubmission) {
+      toast.error("Please attach at least one document file.")
       return
     }
     if (!indicator) {
       toast.error("No indicator selected.")
       return
     }
-
-    // Upload file to storage first
-    const fileMeta = selectedFile ? await resolveFileMetadata() : null
-    if (selectedFile && !fileMeta) return // upload failed
-
-    if (!fileMeta) {
-      toast.error("A file is required to submit for review.")
+    if (!user?.id) {
+      toast.error("Authentication required. Please log in.")
       return
     }
 
-    const result = await submitDocument.mutateAsync({
-      indicatorId: indicator.id,
-      title: values.title,
-      description: values.description || undefined,
-      documentDate: values.documentDate,
-      fileUrl: fileMeta.fileUrl,
-      fileName: fileMeta.fileName,
-      fileSize: fileMeta.fileSize,
-    })
+    // SCENARIO 1: Updating an existing submission (Single file update in-place)
+    if (existingSubmission) {
+      let fileMeta: { fileUrl: string; fileName: string; fileSize: number } | null = null
 
-    if (result?.success) handleClose()
+      if (selectedFiles[0]) {
+        setIsUploading(true)
+        try {
+          fileMeta = await uploadFileToStorage(
+            selectedFiles[0],
+            user.id,
+            (pct) => setUploadProgress(pct)
+          )
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "File upload failed.")
+          setIsUploading(false)
+          return
+        }
+        setIsUploading(false)
+      }
+
+      if (!fileMeta) {
+        toast.error("Please attach an updated document file.")
+        return
+      }
+
+      const result = await submitDocument.mutateAsync({
+        indicatorId: indicator.id,
+        documentId: existingSubmission.id, // Update in-place!
+        title: values.title?.trim() || existingSubmission.title,
+        description: values.description?.trim() || undefined,
+        documentDate: values.documentDate,
+        fileUrl: fileMeta.fileUrl,
+        fileName: fileMeta.fileName,
+        fileSize: fileMeta.fileSize,
+      })
+
+      if (result?.success) handleClose()
+      return
+    }
+
+    // SCENARIO 2: Single file new submission
+    if (selectedFiles.length === 1) {
+      const file = selectedFiles[0]
+      const title = values.title?.trim() || file.name.replace(/\.[^/.]+$/, "")
+
+      setIsUploading(true)
+      let fileMeta: { fileUrl: string; fileName: string; fileSize: number } | null = null
+      try {
+        fileMeta = await uploadFileToStorage(file, user.id, (pct) => setUploadProgress(pct))
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "File upload failed.")
+        setIsUploading(false)
+        return
+      }
+      setIsUploading(false)
+
+      if (!fileMeta) {
+        toast.error("A file is required to submit.")
+        return
+      }
+
+      const result = await submitDocument.mutateAsync({
+        indicatorId: indicator.id,
+        title,
+        description: values.description?.trim() || undefined,
+        documentDate: values.documentDate,
+        fileUrl: fileMeta.fileUrl,
+        fileName: fileMeta.fileName,
+        fileSize: fileMeta.fileSize,
+      })
+
+      if (result?.success) handleClose()
+      return
+    }
+
+    // SCENARIO 3: Batch upload multiple files concurrently / sequentially
+    if (selectedFiles.length > 1) {
+      setIsUploading(true)
+      const uploadedMetas: Array<{
+        title: string
+        description?: string
+        fileUrl: string
+        fileName: string
+        fileSize: number
+      }> = []
+
+      try {
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i]
+          setUploadingItemIndex(i)
+          setUploadProgress(Math.round(((i) / selectedFiles.length) * 100))
+
+          const meta = await uploadFileToStorage(file, user.id, (pct) => {
+            const step = 100 / selectedFiles.length
+            const currentTotal = Math.round((i * step) + (pct * (step / 100)))
+            setUploadProgress(currentTotal)
+          })
+
+          uploadedMetas.push({
+            title: file.name.replace(/\.[^/.]+$/, ""),
+            description: values.description?.trim() || undefined,
+            fileUrl: meta.fileUrl,
+            fileName: meta.fileName,
+            fileSize: meta.fileSize,
+          })
+        }
+        setUploadProgress(100)
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to upload files.")
+        setIsUploading(false)
+        setUploadingItemIndex(null)
+        return
+      } finally {
+        setIsUploading(false)
+        setUploadingItemIndex(null)
+      }
+
+      const result = await submitBatchDocuments.mutateAsync({
+        indicatorId: indicator.id,
+        documentDate: values.documentDate,
+        files: uploadedMetas,
+      })
+
+      if (result?.success) handleClose()
+    }
   }
 
   const isPending =
-    isUploading || submitDocument.isPending || saveDraft.isPending
+    isUploading || submitDocument.isPending || submitBatchDocuments.isPending || saveDraft.isPending
+
+  const isBatch = !existingSubmission && selectedFiles.length > 1
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
       <SheetContent
         side="right"
-        className="w-[520px] sm:max-w-[520px] overflow-y-auto p-0"
+        className="w-[540px] sm:max-w-[540px] overflow-y-auto p-0"
       >
         <SheetHeader className="px-6 py-4 border-b border-slate-200 sticky top-0 bg-white z-10">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <SheetTitle className="text-base font-semibold text-slate-900 leading-tight">
-                {indicator?.name ?? "Upload Evidence"}
+                {existingSubmission ? "Update Evidence Document" : indicator?.name ?? "Upload Evidence"}
               </SheetTitle>
               <p className="text-xs text-slate-400 mt-0.5 truncate">
                 {areaName} → {criterionName}
@@ -220,7 +354,7 @@ export function SubmissionUploadForm({
           {indicator?.requiredDocs && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">
-                Required Document
+                Required Document(s)
               </p>
               <p className="text-sm text-blue-800">{indicator.requiredDocs}</p>
             </div>
@@ -238,34 +372,95 @@ export function SubmissionUploadForm({
             </div>
           )}
 
-
-
-          {/* File upload */}
+          {/* File upload zone */}
           {!isApproved && (
             <div>
-              <Label className="text-sm font-medium text-slate-700 mb-2 block">
-                {existingSubmission
-                  ? "Attach Updated Document"
-                  : "Attach Document"}
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-sm font-medium text-slate-700">
+                  {existingSubmission ? "Attach Updated File" : "Select Document(s)"}
+                  {!existingSubmission && <span className="text-red-500 ml-1">*</span>}
+                </Label>
                 {!existingSubmission && (
-                  <span className="text-red-500 ml-1">*</span>
+                  <span className="text-xs text-blue-600 font-medium flex items-center gap-1">
+                    <Layers className="w-3.5 h-3.5" />
+                    Multi-file supported
+                  </span>
                 )}
-              </Label>
+              </div>
+
               <FileUploadZone
-                onFileSelect={(file) => setSelectedFile(file)}
+                multiple={!existingSubmission}
+                onFilesSelect={handleFilesChosen}
+                onFileSelect={(file) => {
+                  if (file) setSelectedFiles([file])
+                  else setSelectedFiles([])
+                }}
                 accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png"
                 maxSize={25 * 1024 * 1024}
               />
+
+              {/* Selected Files List */}
+              {selectedFiles.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between text-xs text-slate-500">
+                    <span className="font-semibold text-slate-700">
+                      {selectedFiles.length} file{selectedFiles.length > 1 ? "s" : ""} selected
+                    </span>
+                    {selectedFiles.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedFiles([])}
+                        className="text-red-600 hover:text-red-700 text-xs font-medium"
+                      >
+                        Clear all
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="divide-y divide-slate-100 border border-slate-200 rounded-lg bg-white overflow-hidden max-h-[160px] overflow-y-auto">
+                    {selectedFiles.map((file, idx) => (
+                      <div
+                        key={`${file.name}-${idx}`}
+                        className="p-2.5 flex items-center justify-between gap-3 text-xs hover:bg-slate-50 transition-colors"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-6 h-6 rounded bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                            <FileText className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium text-slate-800 truncate" title={file.name}>
+                              {file.name}
+                            </p>
+                            <p className="text-[10px] text-slate-400">{formatFileSize(file.size)}</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(idx)}
+                          className="text-slate-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Upload progress bar */}
               {isUploading && (
-                <div className="mt-2">
-                  <div className="flex justify-between text-xs text-slate-500 mb-1">
-                    <span>Uploading...</span>
+                <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                  <div className="flex justify-between text-xs text-blue-700 font-medium mb-1.5">
+                    <span>
+                      {uploadingItemIndex !== null
+                        ? `Uploading (${uploadingItemIndex + 1}/${selectedFiles.length}): ${selectedFiles[uploadingItemIndex]?.name}`
+                        : "Uploading files..."}
+                    </span>
                     <span>{uploadProgress}%</span>
                   </div>
-                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-2 bg-blue-200/50 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-blue-500 transition-all duration-300 rounded-full"
+                      className="h-full bg-blue-600 transition-all duration-300 rounded-full"
                       style={{ width: `${uploadProgress}%` }}
                     />
                   </div>
@@ -276,50 +471,50 @@ export function SubmissionUploadForm({
 
           {/* Form fields */}
           {!isApproved && (
-            <form
-              onSubmit={form.handleSubmit(handleSubmit)}
-              className="space-y-4"
-            >
-              {/* Document Title */}
-              <div>
-                <Label
-                  htmlFor="title"
-                  className="text-sm font-medium text-slate-700 mb-1.5 block"
-                >
-                  Document Title
-                  <span className="text-red-500 ml-1">*</span>
-                </Label>
-                <Input
-                  id="title"
-                  placeholder="e.g., Faculty TOR — Dr. Juan Dela Cruz"
-                  {...form.register("title")}
-                  className={cn(
-                    form.formState.errors.title &&
-                      "border-red-400 focus-visible:ring-red-400"
-                  )}
-                />
-                {form.formState.errors.title && (
-                  <p className="text-xs text-red-500 mt-1">
-                    {form.formState.errors.title.message}
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+              {/* Batch upload notification */}
+              {isBatch && (
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-600">
+                  <p className="font-semibold text-slate-800">Batch Upload Mode</p>
+                  <p className="mt-0.5">
+                    Each of the {selectedFiles.length} files will be submitted as an individual evidence document. Titles default to filenames.
                   </p>
-                )}
-              </div>
+                </div>
+              )}
+
+              {/* Document Title (for single file or update) */}
+              {!isBatch && (
+                <div>
+                  <Label htmlFor="title" className="text-sm font-medium text-slate-700 mb-1.5 block">
+                    Document Title
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
+                  <Input
+                    id="title"
+                    placeholder="e.g., Faculty TOR — Dr. Juan Dela Cruz"
+                    {...form.register("title")}
+                    className={cn(
+                      form.formState.errors.title && "border-red-400 focus-visible:ring-red-400"
+                    )}
+                  />
+                  {form.formState.errors.title && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {form.formState.errors.title.message}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Description */}
               <div>
-                <Label
-                  htmlFor="description"
-                  className="text-sm font-medium text-slate-700 mb-1.5 block"
-                >
+                <Label htmlFor="description" className="text-sm font-medium text-slate-700 mb-1.5 block">
                   Description / Remarks
-                  <span className="text-slate-400 font-normal ml-1">
-                    (optional)
-                  </span>
+                  <span className="text-slate-400 font-normal ml-1">(optional)</span>
                 </Label>
                 <Textarea
                   id="description"
-                  placeholder="Add any notes for the admin reviewer..."
-                  rows={3}
+                  placeholder="Add any notes for the reviewer..."
+                  rows={2}
                   {...form.register("description")}
                   className="resize-none"
                 />
@@ -327,10 +522,7 @@ export function SubmissionUploadForm({
 
               {/* Document Date */}
               <div>
-                <Label
-                  htmlFor="documentDate"
-                  className="text-sm font-medium text-slate-700 mb-1.5 block"
-                >
+                <Label htmlFor="documentDate" className="text-sm font-medium text-slate-700 mb-1.5 block">
                   Document Date
                   <span className="text-red-500 ml-1">*</span>
                 </Label>
@@ -339,8 +531,7 @@ export function SubmissionUploadForm({
                   type="date"
                   {...form.register("documentDate")}
                   className={cn(
-                    form.formState.errors.documentDate &&
-                      "border-red-400 focus-visible:ring-red-400"
+                    form.formState.errors.documentDate && "border-red-400 focus-visible:ring-red-400"
                   )}
                 />
                 {form.formState.errors.documentDate && (
@@ -355,49 +546,55 @@ export function SubmissionUploadForm({
                 <Button
                   type="submit"
                   disabled={isPending}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium"
                 >
-                  {isPending && (submitDocument.isPending || isUploading) ? (
+                  {isPending ? (
                     <>
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                      {isUploading ? "Uploading file..." : "Submitting..."}
+                      {isUploading
+                        ? `Uploading (${uploadProgress}%)...`
+                        : "Submitting..."}
                     </>
                   ) : existingSubmission ? (
-                    "Resubmit for Review"
+                    "Save & Resubmit Update"
+                  ) : isBatch ? (
+                    `Submit ${selectedFiles.length} Documents for Review`
                   ) : (
                     "Submit for Review"
                   )}
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleSaveDraft}
-                  disabled={isPending}
-                  className="w-full"
-                >
-                  {saveDraft.isPending ? (
-                    <>
-                      <span className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin mr-2" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Save as Draft"
-                  )}
-                </Button>
+
+                {!existingSubmission && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleSaveDraft}
+                    disabled={isPending || selectedFiles.length > 1}
+                    className="w-full"
+                  >
+                    {saveDraft.isPending ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin mr-2" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save as Draft"
+                    )}
+                  </Button>
+                )}
               </div>
             </form>
           )}
 
           {/* Version history */}
-          {existingSubmission &&
-            existingSubmission.versions?.length > 0 && (
-              <div className="border-t border-slate-200 pt-4">
-                <p className="text-sm font-semibold text-slate-700 mb-3">
-                  Submission History
-                </p>
-                <VersionHistory versions={existingSubmission.versions} />
-              </div>
-            )}
+          {existingSubmission && existingSubmission.versions?.length > 0 && (
+            <div className="border-t border-slate-200 pt-4">
+              <p className="text-sm font-semibold text-slate-700 mb-3">
+                Submission History
+              </p>
+              <VersionHistory versions={existingSubmission.versions} />
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>

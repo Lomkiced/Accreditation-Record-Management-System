@@ -133,15 +133,17 @@ All development on ARMS must strictly follow these principles. Violations should
 
 ## 6. Compliance Metric Consistency
 
-> **CRITICAL**: All portals must use the same compliance calculation:
-> `compliance% = (fully provided indicators × 100) / total indicators`
+> **CRITICAL**: All portals must use consistent and accurate metrics:
 >
-> Where "approved documents" = sum of APPROVED mappings per indicator (capped at `requiredDocs` per indicator),
-> and "total required documents" = sum of `requiredDocs` across all indicators (defaults to 1 if unspecified).
+> 1. **Area Progress (Dean & Faculty)**:
+>    `area_progress% = (approved docs × 100) / total required docs`
+>    Where "approved docs" = sum of APPROVED mappings per indicator (capped at `requiredDocs` per indicator, non-archived), and "total required docs" = sum of `requiredDocs` across all indicators in the area.
 >
-> The Faculty portal's `My Areas` view may additionally use a per-indicator breakdown for granular completion, but the admin/dean dashboards and area cards must always use the document-level metric.
+> 2. **Admin Dashboard Overall Compliance Rate**:
+>    `compliance_rate% = (total approved non-archived documents × 100) / all non-archived documents`
+>    Subtitle must explicitly state `X of Y documents approved`.
 
-Any new compliance-related feature must reference `dashboard.actions.ts` → `_fetchComplianceData` as the canonical source of truth.
+Any new compliance-related feature must reference `dashboard.actions.ts` as the canonical source of truth.
 
 ---
 
@@ -150,7 +152,7 @@ Any new compliance-related feature must reference `dashboard.actions.ts` → `_f
 - **Soft-Delete Filter Mandatory**: Every report query must explicitly filter `{ document: { isArchived: false } }`. Mappings of archived documents must never be counted or listed.
 - **Canonical Count Parser**: Indicator document counts must always be parsed with `parseRequiredDocsCount()` (supporting both numeric counts and comma-separated lists), never raw `parseInt()`.
 - **Approval Timestamp Invariant**: Reports filtering by approval date must filter against mapping `updatedAt`, not draft `createdAt`.
-- **Non-Editable Export Format**: Accreditation reports intended for institutional distribution must be generated and downloaded as **tamper-proof, read-only PDF files** using `jspdf` and `jspdf-autotable`. Mutable spreadsheet formats must not be provided for official compliance exports.
+- **Non-Editable Export Format**: Accreditation reports intended for institutional distribution must be generated and downloaded as institutional, read-only PDF files using `jspdf` and `jspdf-autotable`. The configuration interface must use intuitive terminology ("Report Settings").
 
 ---
 
@@ -165,4 +167,18 @@ Any new compliance-related feature must reference `dashboard.actions.ts` → `_f
 ## 9. Dean Repository Invariant
 
 - **Exclusively Approved Evidence**: The Dean's Portal Repository is strictly reserved for verified, approved accreditation evidence. The data source must exclusively query `{ status: "APPROVED", document: { isArchived: false } }`. Unapproved drafts, pending reviews, and returned documents must never appear in the central repository.
+
+---
+
+## 10. In-Place Document Updates vs. Creation
+
+- **No Duplicate Documents on Re-upload**: When faculty updates an existing evidence item, the action MUST update the existing `Document` record in-place (`version + 1`) and create a `DocumentVersion` snapshot. It must NEVER call `prisma.document.create()` or orphan previous mappings.
+- **Multi-File Batch Uploads**: New evidence uploads may accept multiple files simultaneously, processing each file cleanly through storage and creating separate mappings under the target indicator without artificial single-file blockers.
+
+---
+
+## 11. Task Assignment Exclusivity & Destructive Action Safeguards
+
+- **No Overlapping Assignments**: An Area or Criterion can only be actively assigned to one faculty member at a time. The assignment picker must disable already-assigned items and display the current assignee.
+- **Destructive Deletion Confirmation**: All assignment removals in the Dean's Portal require an explicit confirmation modal dialog (`AlertDialog`) detailing the affected faculty and scope before execution.
 

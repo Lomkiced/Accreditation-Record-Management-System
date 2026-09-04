@@ -14,6 +14,20 @@ export interface SearchResult {
   areaName: string
 }
 
+export interface FacultySearchResult {
+  id: string
+  name: string
+  email: string
+  department: string
+  designation: string
+  assignedAreasCount: number
+}
+
+export interface GlobalSearchResponse {
+  documents: SearchResult[]
+  faculties: FacultySearchResult[]
+}
+
 export async function searchDocuments(query: string, areaId?: string): Promise<SearchResult[]> {
   const user = await getCurrentUser()
   if (!user) return []
@@ -95,4 +109,52 @@ export async function searchDocuments(query: string, areaId?: string): Promise<S
       areaName: areaName,
     }
   })
+}
+
+export async function globalSearch(query: string, areaId?: string): Promise<GlobalSearchResponse> {
+  const user = await getCurrentUser()
+  if (!user) return { documents: [], faculties: [] }
+
+  const trimmed = query.trim()
+  if (!trimmed) return { documents: [], faculties: [] }
+
+  const [documents, faculties] = await Promise.all([
+    searchDocuments(trimmed, areaId),
+    prisma.user.findMany({
+      where: {
+        role: "FACULTY",
+        isActive: true,
+        OR: [
+          { name: { contains: trimmed, mode: "insensitive" } },
+          { email: { contains: trimmed, mode: "insensitive" } },
+          { department: { contains: trimmed, mode: "insensitive" } },
+          { designation: { contains: trimmed, mode: "insensitive" } },
+        ],
+      },
+      take: 10,
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        department: true,
+        designation: true,
+        _count: {
+          select: { assignments: true },
+        },
+      },
+    }),
+  ])
+
+  return {
+    documents,
+    faculties: faculties.map((f) => ({
+      id: f.id,
+      name: f.name,
+      email: f.email,
+      department: f.department,
+      designation: f.designation,
+      assignedAreasCount: f._count.assignments,
+    })),
+  }
 }

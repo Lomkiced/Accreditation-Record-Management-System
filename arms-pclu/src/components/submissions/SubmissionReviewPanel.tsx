@@ -110,7 +110,7 @@ export function SubmissionReviewPanel({ open, onClose, submission }: SubmissionR
 
             {submission.document.description && (
               <div className="mt-4 bg-slate-50 border-l-4 border-slate-300 p-3 italic text-sm text-slate-600 rounded-r-lg">
-                â€œ{submission.document.description}â€
+                &ldquo;{submission.document.description}&rdquo;
               </div>
             )}
           </div>
@@ -260,7 +260,7 @@ export function SubmissionReviewPanel({ open, onClose, submission }: SubmissionR
               <h3 className="text-sm font-semibold text-slate-800">Review Information</h3>
               {submission.status === "RETURNED" && (
                 <div className="mt-2 text-xs text-red-600 bg-red-50 p-3 rounded italic">
-                  â€œ{submission.remarks}â€
+                  &ldquo;{submission.remarks}&rdquo;
                 </div>
               )}
               {submission.status === "APPROVED" && (

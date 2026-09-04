@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import {
   getMySubmissions,
   uploadAndMapDocument,
+  uploadAndMapBatchDocuments,
   saveDocumentAsDraft,
   getAllSubmissions,
   getApprovedSubmissions,
@@ -43,12 +44,37 @@ export function useSubmitDocument() {
 
   return useMutation({
     mutationFn: (data: Parameters<typeof uploadAndMapDocument>[0]) => uploadAndMapDocument({ ...data }),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      if (!res.success) {
+        toast.error(res.error)
+        return
+      }
       queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
       toast.success("Document submitted for review.")
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to submit document.")
+    },
+  })
+}
+
+// ─── SUBMIT BATCH DOCUMENTS (SUBMITTED status) ───────────────────────────────
+
+export function useSubmitBatchDocuments() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: Parameters<typeof uploadAndMapBatchDocuments>[0]) => uploadAndMapBatchDocuments(data),
+    onSuccess: (res) => {
+      if (!res.success) {
+        toast.error(res.error)
+        return
+      }
+      queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
+      toast.success(`${res.data?.count ?? "Files"} documents submitted for review.`)
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to submit batch documents.")
     },
   })
 }

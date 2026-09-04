@@ -16,6 +16,7 @@ type ActionResult<T = undefined> =
 
 const uploadAndMapSchema = z.object({
   indicatorId: z.string().uuid("Invalid indicator ID"),
+  documentId: z.string().uuid("Invalid document ID").optional(),
   title: z.string().min(1, "Document title is required").max(255),
   description: z.string().optional(),
   documentDate: z.string().min(1, "Document date is required"),
@@ -23,6 +24,20 @@ const uploadAndMapSchema = z.object({
   fileName: z.string().min(1, "File name is required"),
   fileSize: z.number().positive("File size must be positive"),
   rating: z.number().int().min(1).max(10).optional(),
+})
+
+const uploadAndMapBatchSchema = z.object({
+  indicatorId: z.string().uuid("Invalid indicator ID"),
+  documentDate: z.string().min(1, "Document date is required"),
+  files: z.array(
+    z.object({
+      title: z.string().min(1, "Title is required").max(255),
+      description: z.string().optional(),
+      fileUrl: z.string().url("Invalid file URL"),
+      fileName: z.string().min(1, "File name is required"),
+      fileSize: z.number().positive("File size must be positive"),
+    })
+  ).min(1, "At least one file is required"),
 })
 
 const saveDraftSchema = z.object({
@@ -74,26 +89,156 @@ export async function uploadAndMapDocument(
     })
     if (!indicator) return { error: "Indicator not found." }
 
-    // Find how many approved/submitted documents this faculty has for this indicator
+    // Case 1: Updating an explicit existing document in-place
+    if (validated.documentId) {
+      const existingDoc = await prisma.document.findUnique({
+        where: { id: validated.documentId },
+        include: { mappings: true },
+      })
+
+      if (!existingDoc) return { error: "Document to update not found." }
+      if (existingDoc.userId !== currentUser.id) {
+        return { error: "You do not have permission to update this document." }
+      }
+
+      const [updatedDoc, mapping] = await prisma.$transaction(async (tx) => {
+        // Create version snapshot of the previous state
+        if (existingDoc.fileUrl) {
+          await tx.documentVersion.create({
+            data: {
+              documentId: existingDoc.id,
+              fileUrl: existingDoc.fileUrl,
+              fileName: existingDoc.fileName ?? "Previous version",
+              fileSize: existingDoc.fileSize,
+              version: existingDoc.version,
+              remarks: "Updated by faculty",
+            },
+          })
+        }
+
+        // Update document in-place, increment version
+        const d = await tx.document.update({
+          where: { id: existingDoc.id },
+          data: {
+            title: validated.title,
+            description: validated.description ?? null,
+            documentDate: new Date(validated.documentDate),
+            fileUrl: validated.fileUrl,
+            fileName: validated.fileName,
+            fileSize: validated.fileSize,
+            version: existingDoc.version + 1,
+          },
+        })
+
+        // Update or create mapping for this indicator
+        const existingMapping = existingDoc.mappings.find(
+          (m) => m.indicatorId === validated.indicatorId
+        )
+
+        let m
+        if (existingMapping) {
+          m = await tx.documentMapping.update({
+            where: { id: existingMapping.id },
+            data: {
+              status: "SUBMITTED",
+              rating: validated.rating ?? null,
+              remarks: null,
+            },
+          })
+        } else {
+          m = await tx.documentMapping.create({
+            data: {
+              documentId: d.id,
+              indicatorId: validated.indicatorId,
+              userId: currentUser.id,
+              status: "SUBMITTED",
+              rating: validated.rating ?? null,
+            },
+          })
+        }
+
+        return [d, m]
+      })
+
+      await Promise.allSettled([
+        prisma.auditLog.create({
+          data: {
+            userId: currentUser.id,
+            action: "UPLOAD_NEW_VERSION",
+            module: "DOCUMENT",
+            targetId: updatedDoc.id,
+            details: {
+              documentTitle: updatedDoc.title,
+              indicatorName: indicator.name,
+              newVersion: updatedDoc.version,
+            },
+          },
+        }),
+        prisma.user.findMany({
+          where: { role: { in: ["ADMIN", "DEAN"] }, isActive: true },
+          select: { id: true, role: true },
+        }).then((reviewers) => {
+          if (reviewers.length > 0) {
+            return prisma.notification.createMany({
+              data: reviewers.map((r) => ({
+                userId: r.id,
+                message: `${currentUser.name} uploaded an updated version of "${updatedDoc.title}".`,
+                type: "SUBMISSION",
+                link: r.role === "ADMIN" ? "/admin/submissions" : "/dean/submissions",
+              })),
+            })
+          }
+        }),
+      ]).catch(console.error)
+
+      revalidatePath("/faculty/submissions")
+      revalidatePath("/admin/submissions")
+      revalidatePath("/dean/submissions")
+      revalidatePath("/admin/dashboard")
+      revalidatePath("/dean/dashboard")
+      revalidateTag("areas-hierarchy")
+      revalidateTag("dashboard")
+
+      return {
+        success: true,
+        data: { documentId: updatedDoc.id, mappingId: mapping.id },
+      }
+    }
+
+    // Find all user mappings for this indicator
     const allUserMappingsForIndicator = await prisma.documentMapping.findMany({
       where: {
         indicatorId: validated.indicatorId,
         userId: currentUser.id,
       },
-      include: { document: true }
-    });
+      include: { document: true },
+    })
 
-    // Check if they are returning an existing draft/returned document
-    // We only update an existing mapping if it's RETURNED or DRAFT. 
-    // If they are uploading a completely new file for multiple requirements, we create a new one.
-    const returnedMapping = allUserMappingsForIndicator.find(m => m.status === "RETURNED" || m.status === "DRAFT");
-    
+    // Check if they are returning an existing draft/returned document without explicit doc ID
+    const returnedMapping = allUserMappingsForIndicator.find(
+      (m) => m.status === "RETURNED" || m.status === "DRAFT"
+    )
+
     let documentId: string
     let mappingId: string
 
     if (returnedMapping) {
       // It IS returned or draft, so we update the document (creates V2)
       const [doc, map] = await prisma.$transaction(async (tx) => {
+        // Snapshot previous version if fileUrl existed
+        if (returnedMapping.document.fileUrl) {
+          await tx.documentVersion.create({
+            data: {
+              documentId: returnedMapping.documentId,
+              fileUrl: returnedMapping.document.fileUrl,
+              fileName: returnedMapping.document.fileName ?? "Previous version",
+              fileSize: returnedMapping.document.fileSize,
+              version: returnedMapping.document.version,
+              remarks: returnedMapping.remarks ?? "Resubmitted by faculty",
+            },
+          })
+        }
+
         const d = await tx.document.update({
           where: { id: returnedMapping.documentId },
           data: {
@@ -121,23 +266,6 @@ export async function uploadAndMapDocument(
       documentId = doc.id
       mappingId = map.id
     } else {
-      // Check if they exceed the requiredDocs limit
-      let reqCount = 1;
-      if (indicator.requiredDocs) {
-        if (!isNaN(Number(indicator.requiredDocs))) {
-          reqCount = Math.max(1, Number(indicator.requiredDocs));
-        } else {
-          reqCount = indicator.requiredDocs.split(',').filter(s => s.trim().length > 0).length || 1;
-        }
-      }
-
-      const activeMappings = allUserMappingsForIndicator.filter(m => m.status !== "RETURNED" && m.status !== "DRAFT");
-      if (activeMappings.length >= reqCount) {
-        return {
-          error: "You have already submitted the required number of documents for this indicator.",
-        }
-      }
-
       // Atomic transaction: Document + DocumentMapping together (V1)
       const [doc, map] = await prisma.$transaction(async (tx) => {
         const d = await tx.document.create({
@@ -229,6 +357,109 @@ export async function uploadAndMapDocument(
     }
     console.error("[uploadAndMapDocument]", error)
     return { error: "Failed to submit document. Please try again." }
+  }
+}
+
+// ─── UPLOAD AND MAP BATCH DOCUMENTS ──────────────────────────────────────────
+//
+// Supports uploading multiple evidence documents in a single operation.
+//
+export async function uploadAndMapBatchDocuments(
+  formData: z.infer<typeof uploadAndMapBatchSchema>
+): Promise<ActionResult<{ count: number; documentIds: string[] }>> {
+  try {
+    const currentUser = await requireUser()
+    const validated = uploadAndMapBatchSchema.parse(formData)
+
+    const indicator = await prisma.indicator.findUnique({
+      where: { id: validated.indicatorId },
+      select: { id: true, name: true },
+    })
+    if (!indicator) return { error: "Indicator not found." }
+
+    const createdDocs = await prisma.$transaction(async (tx) => {
+      const results: string[] = []
+      for (const item of validated.files) {
+        const doc = await tx.document.create({
+          data: {
+            userId: currentUser.id,
+            title: sanitizeString(item.title),
+            description: item.description ? sanitizeString(item.description) : null,
+            documentDate: new Date(validated.documentDate),
+            fileUrl: item.fileUrl,
+            fileName: item.fileName,
+            fileSize: item.fileSize,
+            version: 1,
+          },
+        })
+
+        await tx.documentMapping.create({
+          data: {
+            documentId: doc.id,
+            indicatorId: validated.indicatorId,
+            userId: currentUser.id,
+            status: "SUBMITTED",
+          },
+        })
+
+        results.push(doc.id)
+      }
+      return results
+    })
+
+    // Audit log & Notifications
+    await Promise.allSettled([
+      prisma.auditLog.create({
+        data: {
+          userId: currentUser.id,
+          action: "SUBMIT_DOCUMENT",
+          module: "DOCUMENT",
+          targetId: createdDocs[0] || indicator.id,
+          details: {
+            count: createdDocs.length,
+            indicatorName: indicator.name,
+            batch: true,
+          },
+        },
+      }),
+      prisma.user.findMany({
+        where: { role: { in: ["ADMIN", "DEAN"] }, isActive: true },
+        select: { id: true, role: true },
+      }).then((reviewers) => {
+        if (reviewers.length > 0) {
+          return prisma.notification.createMany({
+            data: reviewers.map((r) => ({
+              userId: r.id,
+              message: `${currentUser.name} uploaded ${createdDocs.length} evidence documents for "${indicator.name}".`,
+              type: "SUBMISSION",
+              link: r.role === "ADMIN" ? "/admin/submissions" : "/dean/submissions",
+            })),
+          })
+        }
+      }),
+    ]).catch(console.error)
+
+    revalidatePath("/faculty/submissions")
+    revalidatePath("/admin/submissions")
+    revalidatePath("/dean/submissions")
+    revalidatePath("/admin/dashboard")
+    revalidatePath("/dean/dashboard")
+    revalidateTag("areas-hierarchy")
+    revalidateTag("dashboard")
+
+    return {
+      success: true,
+      data: { count: createdDocs.length, documentIds: createdDocs },
+    }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { error: error.errors[0]?.message ?? "Validation failed." }
+    }
+    if (error instanceof Error && error.message.startsWith("Unauthorized")) {
+      return { error: "You must be logged in to submit documents." }
+    }
+    console.error("[uploadAndMapBatchDocuments]", error)
+    return { error: "Failed to upload batch documents. Please try again." }
   }
 }
 

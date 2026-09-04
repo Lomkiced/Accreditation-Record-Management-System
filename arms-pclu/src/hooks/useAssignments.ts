@@ -6,6 +6,7 @@ import {
   getAssignmentsForFaculty,
   getFacultyWithAssignmentCounts,
   getAssignedScopeForFaculty,
+  getAllActiveAssignments,
   createAssignment,
   deleteAssignment,
 } from "@/actions/assignment.actions"
@@ -67,6 +68,20 @@ export function useFacultyList(initialData?: FacultyListData) {
   })
 }
 
+// ─── GET ALL ACTIVE ASSIGNMENTS (Admin / Dean) ───────────────────────────────
+
+export function useActiveAssignments() {
+  return useQuery({
+    queryKey: assignmentKeys.all,
+    queryFn: async () => {
+      const result = await getAllActiveAssignments()
+      if (!result.success) throw new Error(result.error)
+      return result.data
+    },
+    staleTime: 1000 * 60 * 2,
+  })
+}
+
 // ─── CREATE ASSIGNMENT ────────────────────────────────────────────────────────
 
 export function useCreateAssignment() {
@@ -79,6 +94,9 @@ export function useCreateAssignment() {
       return result.data
     },
     onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: assignmentKeys.all,
+      })
       queryClient.invalidateQueries({
         queryKey: assignmentKeys.forFaculty(variables.userId),
       })
@@ -133,6 +151,9 @@ export function useDeleteAssignment(userId: string) {
       toast.error("Failed to delete assignment.")
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: assignmentKeys.all,
+      })
       queryClient.invalidateQueries({
         queryKey: assignmentKeys.forFaculty(userId),
       })

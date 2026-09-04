@@ -145,6 +145,41 @@ export async function getFacultyWithAssignmentCounts() {
   }
 }
 
+// ─── GET ALL ACTIVE ASSIGNMENTS (Admin or Dean) ──────────────────────────────
+
+export async function getAllActiveAssignments() {
+  try {
+    await requireAdminOrDean()
+
+    const assignments = await prisma.assignment.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        userId: true,
+        areaId: true,
+        criterionId: true,
+        user: {
+          select: { id: true, name: true, email: true },
+        },
+        area: {
+          select: { id: true, name: true, order: true },
+        },
+        criterion: {
+          select: { id: true, name: true, order: true },
+        },
+      },
+    })
+
+    return { success: true as const, data: assignments }
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("Forbidden")) {
+      return { error: "Admin or Dean access required." }
+    }
+    console.error("[getAllActiveAssignments]", error)
+    return { error: "Failed to load active assignments." }
+  }
+}
+
 // ─── CREATE ASSIGNMENT (Admin only) ──────────────────────────────────────────
 
 export async function createAssignment(
@@ -182,6 +217,54 @@ export async function createAssignment(
       })
       if (!criterion || criterion.areaId !== validated.areaId) {
         return { error: "Criterion does not belong to the selected area." }
+      }
+    }
+
+    // Collision guard: prevent assigning area or criteria already assigned to another faculty
+    if (validated.criterionId) {
+      const existingConflict = await prisma.assignment.findFirst({
+        where: {
+          areaId: validated.areaId,
+          OR: [
+            { criterionId: validated.criterionId },
+            { criterionId: null },
+          ],
+        },
+        include: {
+          user: { select: { name: true } },
+          criterion: { select: { name: true } },
+        },
+      })
+
+      if (existingConflict) {
+        if (existingConflict.userId === validated.userId) {
+          return {
+            error: `This faculty member is already assigned to this ${existingConflict.criterionId ? "criterion" : "entire area"}.`,
+          }
+        }
+        const conflictTarget = existingConflict.criterionId
+          ? `Criterion "${existingConflict.criterion?.name || "Selected criterion"}"`
+          : `The entire area "${area.name}"`
+        return {
+          error: `${conflictTarget} is already assigned to ${existingConflict.user.name}.`,
+        }
+      }
+    } else {
+      const existingConflicts = await prisma.assignment.findMany({
+        where: {
+          areaId: validated.areaId,
+        },
+        include: {
+          user: { select: { name: true } },
+          criterion: { select: { name: true } },
+        },
+      })
+
+      if (existingConflicts.length > 0) {
+        const assignedNames = [...new Set(existingConflicts.map((c) => c.user.name))].join(", ")
+        return {
+          error: `Cannot assign entire area "${area.name}" because assignments already exist for: ${assignedNames}. Please assign individual unassigned criteria instead.`,
+        }
       }
     }
 

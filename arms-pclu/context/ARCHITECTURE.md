@@ -142,30 +142,26 @@ src/
 
 ## Key Implementations
 
-### Document Management
-A document is uploaded once and can be mapped to multiple indicators via the `DocumentMapping` pivot table. Each mapping tracks its own approval status independently â€” a single document can be APPROVED for one indicator and UNDER_REVIEW for another.
+### Document Management & Uploads
+- A document is uploaded and can be mapped to multiple indicators via `DocumentMapping`.
+- **Multi-File Batch Upload**: In the Faculty Portal, users can select and batch-upload multiple files concurrently. Each file is transferred to Supabase Storage and created as an active evidence submission under the target indicator without artificial throttling.
+- **In-Place Versioning Updates**: When updating an existing document submission, the system modifies the existing `Document` record in-place (`version + 1`), captures a version snapshot in `DocumentVersion`, resets the mapping status to `SUBMITTED`, and notifies reviewers. It strictly avoids creating duplicate `Document` records.
 
-### Canonical Compliance Metric
-All compliance calculations across all portals use a unified formula:
+### Canonical Compliance Metric & Dashboard Stats
+- **Admin Dashboard Compliance Rate**: Computed directly as `(total approved non-archived documents × 100) / all non-archived documents`. Subtitle clearly indicates approved count vs overall document count.
+- **Dean Dashboard Progress by Area**: Calculated as `(approved docs × 100) / total required docs` (capped per indicator by requiredDocs, filtering `isArchived: false`). Matches the document counter badge (`approved / totalRequired`) and Faculty Portal area completion.
 
-`compliance% = (fully provided indicators × 100) / total indicators`
+### Task Assignment Collision Prevention
+- Assignment queries verify active assignments across all faculty.
+- If a Criterion or Area is already assigned to a faculty member, `AssignmentModal` marks it as unavailable with an assigned tag, and server actions prevent duplicate assignment collisions.
+- Deletions in `AssignmentPanel` require confirmation via an `AlertDialog` before execution.
 
-Where:
-- **approved documents** = sum of APPROVED mappings per indicator, capped at `requiredDocs` per indicator
-- **total required documents** = sum of `requiredDocs` across all indicators (defaults to 1 if unspecified)
+### Global Search Engine (Documents & Faculty)
+- `search.actions.ts` provides unified search querying both non-archived documents (by title and filename) and active faculty members (by name, email, department, designation).
+- `GlobalSearchDialog` displays structured result groups with direct document links and faculty details.
 
-This is enforced in `getDashboardStats`, `getComplianceData`, `getComplianceDataWithCounts`, `computeAreaCompliance` (HierarchicalDrillDown), `AreaCard`, and `CriterionList`.
-
-> **Faculty Portal Exception:** The Faculty "My Areas" view may additionally use a per-indicator breakdown to compute granular completion. All admin/dean views use the document-level metric for consistency.
-
-### Progress by Area (Dean Dashboard)
-`ProgressByArea` component displays per-area compliance with:
-- **Document badge**: `approved/totalRequired` (e.g., `8/36`) — "approved" = approved mappings capped at requiredDocs per indicator.
-- **Progress bar**: animated horizontal bar with percentage (`approved docs × 100 / total required docs`).
-- **Status badge**: Complete / In Progress / Needs Attention.
-
-### Hierarchical Evidence Drill-Down (Admin Dashboard)
-`HierarchicalDrillDown` shows a 3-level accordion (Area â†’ Criterion â†’ Indicator â†’ Documents) with compliance rings, document counts, and per-mapping status badges.
+### User Last Login Synchronization
+- `user.actions.ts` synchronizes authentication activity by fetching `last_sign_in_at` from Supabase Auth admin client (`adminSupabase.auth.admin.listUsers()`), falling back to user audit log activity timestamps, and formats dates cleanly for the Users table.
 
 ### Soft-Delete/Archiving
 - **Documents**: Can be archived (`isArchived: true`). All active queries explicitly filter for `{ isArchived: false }`. The hierarchy cache also filters archived documents from mappings.
@@ -175,14 +171,11 @@ This is enforced in `getDashboardStats`, `getComplianceData`, `getComplianceData
 - "Approved Documents" counts non-archived documents with ≥1 APPROVED mapping — not all documents in the system.
 - "Pending Reviews" counts only mappings with SUBMITTED or UNDER_REVIEW status whose parent document is NOT archived.
 
-### Global Upload Evidence Picker
-Faculty can upload evidence from the My Areas listing via a cascading Area → Criterion → Indicator picker dialog, eliminating deep navigation.
-
 ### Dean Repository Architecture (Approved Only)
 The Dean's Repository route (`/dean/repository`) is fed by `getApprovedSubmissions()`, querying exclusively `{ status: "APPROVED", document: { isArchived: false } }`. Mappings are grouped by document ID so that each document row in `RepositoryTable` represents verified accreditation evidence, with filtered criteria and indicator associations.
 
 ### Institutional PDF Export Architecture
-Accreditation report exports use `jspdf` and `jspdf-autotable` (`src/lib/reportPdfGenerator.ts`) to produce client-side rendered, read-only PDF files. This enforces institutional document integrity by preventing unauthorized tampering with compliance percentages and submission records. The PDF engine includes:
+Accreditation report exports use `jspdf` and `jspdf-autotable` (`src/lib/reportPdfGenerator.ts`) to produce client-side rendered, read-only PDF files. The configuration UI provides a simplified, user-friendly "Report Settings" interface. The PDF engine includes:
 - Polytechnic College of La Union (PCLU) official letterhead.
 - Automated pagination ("Page X of Y").
 - Pre-styled table themes matching the ARMS slate/navy palette.
@@ -195,7 +188,8 @@ Audit log records are processed via `formatAuditDetails` in `audit.actions.ts` b
 3. Formats metadata (faculty names, document titles, indicator codes, and review remarks) for clear compliance auditing.
 
 ### Faculty Archives High-Volume Architecture
-The Faculty Archives (`/faculty/archives`) is built for scalability to handle hundreds of archived files without performance degradation:
+The Faculty Archives (`/faculty/archives`) is built for scalability and clarity:
+- Streamlined professional UI displaying the total archived documents counter.
 - Multi-attribute search filters across title, filename, indicators, and tags.
 - Responsive pagination controls item rendering limits.
 - Dual presentation modes: Responsive Card Grid and High-Density Table.

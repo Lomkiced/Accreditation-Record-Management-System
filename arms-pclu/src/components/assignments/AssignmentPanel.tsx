@@ -9,19 +9,33 @@ import type { Faculty } from "./FacultyList"
 import { AssignmentModal } from "./AssignmentModal"
 import { useAssignments, useDeleteAssignment } from "@/hooks/useAssignments"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+
 interface AssignmentPanelProps {
   selectedFaculty: Faculty | null
 }
 
 export function AssignmentPanel({ selectedFaculty }: AssignmentPanelProps) {
   const [isModalOpen, setIsModalOpen] = React.useState(false)
+  const [assignmentToDelete, setAssignmentToDelete] = React.useState<{
+    id: string
+    areaName: string
+    criterionName: string | null
+  } | null>(null)
 
   const { data: assignments, isLoading, isError } = useAssignments(
     selectedFaculty?.id ?? ""
   )
   const deleteAssignment = useDeleteAssignment(selectedFaculty?.id ?? "")
-
-
 
   if (!selectedFaculty) {
     return (
@@ -114,7 +128,14 @@ export function AssignmentPanel({ selectedFaculty }: AssignmentPanelProps) {
                       size="icon"
                       className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50"
                       disabled={deleteAssignment.isPending}
-                      onClick={() => deleteAssignment.mutate(assignment.id)}
+                      onClick={() =>
+                        setAssignmentToDelete({
+                          id: assignment.id,
+                          areaName: assignment.area.name,
+                          criterionName: assignment.criterion ? assignment.criterion.name : null,
+                        })
+                      }
+                      title="Delete assignment"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
@@ -131,6 +152,48 @@ export function AssignmentPanel({ selectedFaculty }: AssignmentPanelProps) {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog
+        open={!!assignmentToDelete}
+        onOpenChange={(open) => !open && setAssignmentToDelete(null)}
+      >
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-slate-900">
+              Remove Assignment?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-600 text-sm">
+              Are you sure you want to remove the assignment for{" "}
+              <strong className="text-slate-800">
+                {assignmentToDelete?.areaName}
+              </strong>{" "}
+              ({assignmentToDelete?.criterionName || "All Criteria"}) from{" "}
+              <strong className="text-slate-800">{selectedFaculty.name}</strong>?
+              The faculty member will no longer have submission or management
+              access for this scope.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteAssignment.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={deleteAssignment.isPending}
+              onClick={() => {
+                if (assignmentToDelete) {
+                  deleteAssignment.mutate(assignmentToDelete.id, {
+                    onSettled: () => setAssignmentToDelete(null),
+                  })
+                }
+              }}
+            >
+              {deleteAssignment.isPending ? "Removing..." : "Remove Assignment"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AssignmentModal
         open={isModalOpen}

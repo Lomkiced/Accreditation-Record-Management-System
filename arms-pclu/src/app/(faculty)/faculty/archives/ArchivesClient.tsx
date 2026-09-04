@@ -16,8 +16,6 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Archive,
-  HardDrive,
-  Calendar,
   Layers,
   ExternalLink
 } from "lucide-react"
@@ -115,18 +113,6 @@ export function ArchivesClient() {
 
   // Quick summary stats
   const totalArchivedCount = documents.length
-  const totalStorageBytes = React.useMemo(() => {
-    return documents.reduce((acc, doc) => acc + (doc.fileSize || 0), 0)
-  }, [documents])
-
-  const lastArchivedDate = React.useMemo(() => {
-    if (documents.length === 0) return null
-    return new Date(documents[0].updatedAt).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric"
-    })
-  }, [documents])
 
   // Filtered & Sorted Documents
   const filteredDocuments = React.useMemo(() => {
@@ -201,17 +187,18 @@ export function ArchivesClient() {
   if (isLoading) {
     return (
       <div className="space-y-4 mt-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white p-5 rounded-xl border border-slate-200">
-              <Skeleton className="h-4 w-24 mb-2" />
-              <Skeleton className="h-7 w-16" />
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+          <div className="flex items-center gap-3">
+            <Skeleton className="w-11 h-11 rounded-xl" />
+            <div className="space-y-1.5">
+              <Skeleton className="h-6 w-36" />
+              <Skeleton className="h-4 w-64" />
             </div>
-          ))}
-        </div>
-        <div className="bg-white p-4 rounded-xl border border-slate-200 flex gap-4">
-          <Skeleton className="h-10 flex-1" />
-          <Skeleton className="h-10 w-36" />
+          </div>
+          <div className="flex gap-4">
+            <Skeleton className="h-10 flex-1" />
+            <Skeleton className="h-10 w-36" />
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -228,43 +215,33 @@ export function ArchivesClient() {
 
   return (
     <div className="space-y-6 mt-4">
-      {/* ─── SUMMARY STATS BAR ────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-            <Archive className="w-5 h-5" />
+      {/* ─── ARCHIVES SUMMARY & SEARCH CONTROLS ───────────────────────── */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+              <Archive className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-slate-900">{totalArchivedCount}</span>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Total Archived Documents
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Previously submitted accreditation evidence preserved in soft-deleted storage
+              </p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Archived Documents</p>
-            <p className="text-2xl font-bold text-slate-900 mt-0.5">{totalArchivedCount}</p>
-          </div>
+          {searchQuery.trim() && (
+            <span className="text-xs font-medium text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-100 self-start sm:self-center">
+              {filteredDocuments.length} matching search
+            </span>
+          )}
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
-            <HardDrive className="w-5 h-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Storage Retained</p>
-            <p className="text-2xl font-bold text-slate-900 mt-0.5">{formatBytes(totalStorageBytes)}</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 shrink-0">
-            <Calendar className="w-5 h-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Latest Activity</p>
-            <p className="text-sm font-semibold text-slate-800 mt-1 truncate">
-              {lastArchivedDate ? `Archived ${lastArchivedDate}` : "No activity"}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* ─── SEARCH, SORT, AND VIEW CONTROLS ─────────────────────────── */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-3">
+        {/* ─── SEARCH, SORT, AND VIEW CONTROLS ─────────────────────────── */}
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
           {/* Search Bar */}
           <div className="relative flex-1">

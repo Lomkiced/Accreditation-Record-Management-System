@@ -5,7 +5,9 @@ import { UploadCloud, FileText, X } from "lucide-react"
 import { cn, formatFileSize } from "@/lib/utils"
 
 interface FileUploadZoneProps {
-  onFileSelect: (file: File | null) => void
+  onFileSelect?: (file: File | null) => void
+  onFilesSelect?: (files: File[]) => void
+  multiple?: boolean
   accept?: string
   maxSize?: number
   disabled?: boolean
@@ -13,6 +15,8 @@ interface FileUploadZoneProps {
 
 export function FileUploadZone({
   onFileSelect,
+  onFilesSelect,
+  multiple = false,
   accept = ".pdf,.docx,.xlsx,.jpg,.png",
   maxSize = 25 * 1024 * 1024,
   disabled = false,
@@ -32,47 +36,62 @@ export function FileUploadZone({
     setIsDragging(false)
   }
 
-  const validateAndSetFile = (file: File) => {
+  const validateFiles = (files: FileList | File[]) => {
     setError(null)
-    
-    if (file.size > maxSize) {
-      setError(`File size exceeds ${formatFileSize(maxSize)} limit.`)
-      return
+    const fileArray = Array.from(files)
+    if (fileArray.length === 0) return
+
+    const acceptedTypes = accept.split(",").map((t) => t.trim().toLowerCase())
+    const validFiles: File[] = []
+    const errors: string[] = []
+
+    for (const file of fileArray) {
+      if (file.size > maxSize) {
+        errors.push(`"${file.name}" exceeds ${formatFileSize(maxSize)} limit.`)
+        continue
+      }
+      const fileExt = `.${file.name.split(".").pop()?.toLowerCase()}`
+      if (!acceptedTypes.includes(fileExt)) {
+        errors.push(`"${file.name}" is an unsupported file type. Accepted: ${accept}`)
+        continue
+      }
+      validFiles.push(file)
     }
 
-    const fileExt = `.${file.name.split('.').pop()?.toLowerCase()}`
-    const acceptedTypes = accept.split(',').map(t => t.trim().toLowerCase())
-    
-    if (!acceptedTypes.includes(fileExt)) {
-      setError(`Invalid file type. Accepted: ${accept}`)
-      return
+    if (errors.length > 0) {
+      setError(errors.slice(0, 2).join(" "))
     }
 
-    setSelectedFile(file)
-    onFileSelect(file)
+    if (validFiles.length > 0) {
+      if (multiple && onFilesSelect) {
+        onFilesSelect(validFiles)
+      } else if (onFileSelect) {
+        setSelectedFile(validFiles[0])
+        onFileSelect(validFiles[0])
+      }
+    }
   }
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
     if (disabled) return
-
-    const files = e.dataTransfer.files
-    if (files.length > 0) {
-      validateAndSetFile(files[0])
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      validateFiles(e.dataTransfer.files)
     }
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (files && files.length > 0) {
-      validateAndSetFile(files[0])
+    if (e.target.files && e.target.files.length > 0) {
+      validateFiles(e.target.files)
     }
+    // reset input so the same files can be re-selected if needed
+    e.target.value = ""
   }
 
   const clearFile = () => {
     setSelectedFile(null)
-    onFileSelect(null)
+    onFileSelect?.(null)
     setError(null)
     if (inputRef.current) inputRef.current.value = ""
   }
@@ -95,9 +114,10 @@ export function FileUploadZone({
       <input
         ref={inputRef}
         type="file"
+        multiple={multiple}
         className={cn(
           "absolute inset-0 w-full h-full opacity-0 cursor-pointer",
-          selectedFile && "pointer-events-none",
+          !multiple && selectedFile && "pointer-events-none",
           disabled && "cursor-not-allowed"
         )}
         accept={accept}
@@ -105,7 +125,7 @@ export function FileUploadZone({
         disabled={disabled}
       />
 
-      {selectedFile ? (
+      {!multiple && selectedFile ? (
         <div className="flex items-center justify-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
             <FileText className="w-5 h-5 text-blue-600" />
@@ -129,9 +149,12 @@ export function FileUploadZone({
         <>
           <UploadCloud className="w-10 h-10 text-slate-300 mx-auto mb-3" />
           <p className="text-sm font-medium text-slate-600">
-            Drag & drop your file here or <span className="text-blue-600">click to browse</span>
+            {multiple
+              ? "Drag & drop one or multiple files here or "
+              : "Drag & drop your file here or "}
+            <span className="text-blue-600 font-semibold">click to browse</span>
           </p>
-          <p className="text-xs text-slate-400 mt-1">PDF, DOCX, XLSX, JPG, PNG up to 25MB</p>
+          <p className="text-xs text-slate-400 mt-1">PDF, DOCX, XLSX, JPG, PNG up to 25MB each</p>
         </>
       )}
     </div>

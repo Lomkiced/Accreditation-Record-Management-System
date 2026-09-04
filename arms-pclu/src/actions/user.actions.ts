@@ -18,35 +18,86 @@ export type UserWithCounts = {
   lastLogin: string | null
 }
 
+// ─── HELPER: Fetch Supabase Auth Last Sign-In Map ───────────────────────────
+
+async function getAuthUsersLastLoginMap(): Promise<Map<string, string>> {
+  const map = new Map<string, string>()
+  try {
+    const adminSupabase = createAdminClient()
+    const { data, error } = await adminSupabase.auth.admin.listUsers({ perPage: 1000 })
+    if (!error && data?.users) {
+      for (const u of data.users) {
+        if (u.last_sign_in_at) {
+          map.set(u.id, u.last_sign_in_at)
+          if (u.email) {
+            map.set(u.email.toLowerCase(), u.last_sign_in_at)
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[getAuthUsersLastLoginMap] Failed to list Supabase auth users:", err)
+  }
+  return map
+}
+
+function formatLastLogin(dateString?: string | Date | null): string | null {
+  if (!dateString) return null
+  const d = new Date(dateString)
+  if (isNaN(d.getTime())) return null
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+}
+
 // ─── GET USERS (active only) ─────────────────────────────────────────────────
 
 export async function getUsers(roles: Role[] = ["FACULTY"]): Promise<UserWithCounts[]> {
   await requireAdminOrDean()
 
-  const users = await prisma.user.findMany({
-    where: {
-      role: { in: roles },
-      isActive: true,
-    },
-    include: {
-      _count: {
-        select: { assignments: true },
+  const [users, authLastLoginMap] = await Promise.all([
+    prisma.user.findMany({
+      where: {
+        role: { in: roles },
+        isActive: true,
       },
-    },
-    orderBy: { name: "asc" },
-  })
+      include: {
+        _count: {
+          select: { assignments: true },
+        },
+        auditLogs: {
+          take: 1,
+          orderBy: { createdAt: "desc" },
+          select: { createdAt: true },
+        },
+      },
+      orderBy: { name: "asc" },
+    }),
+    getAuthUsersLastLoginMap(),
+  ])
   
-  return users.map(user => ({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    department: user.department,
-    designation: user.designation,
-    status: user.isActive ? "ACTIVE" : "INACTIVE",
-    assignedAreas: user._count.assignments,
-    lastLogin: null, // Tracked in Supabase Auth, not DB
-  }))
+  return users.map((user) => {
+    const authLastSignIn =
+      authLastLoginMap.get(user.authId) ||
+      (user.email ? authLastLoginMap.get(user.email.toLowerCase()) : null)
+    const timestamp = authLastSignIn || user.auditLogs?.[0]?.createdAt || null
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      department: user.department,
+      designation: user.designation,
+      status: user.isActive ? "ACTIVE" : "INACTIVE",
+      assignedAreas: user._count.assignments,
+      lastLogin: formatLastLogin(timestamp),
+    }
+  })
 }
 
 // ─── GET ARCHIVED USERS ──────────────────────────────────────────────────────
@@ -54,30 +105,45 @@ export async function getUsers(roles: Role[] = ["FACULTY"]): Promise<UserWithCou
 export async function getArchivedUsers(roles: Role[] = ["FACULTY"]): Promise<UserWithCounts[]> {
   await requireAdminOrDean()
 
-  const users = await prisma.user.findMany({
-    where: {
-      role: { in: roles },
-      isActive: false,
-    },
-    include: {
-      _count: {
-        select: { assignments: true },
+  const [users, authLastLoginMap] = await Promise.all([
+    prisma.user.findMany({
+      where: {
+        role: { in: roles },
+        isActive: false,
       },
-    },
-    orderBy: { name: "asc" },
-  })
+      include: {
+        _count: {
+          select: { assignments: true },
+        },
+        auditLogs: {
+          take: 1,
+          orderBy: { createdAt: "desc" },
+          select: { createdAt: true },
+        },
+      },
+      orderBy: { name: "asc" },
+    }),
+    getAuthUsersLastLoginMap(),
+  ])
   
-  return users.map(user => ({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    department: user.department,
-    designation: user.designation,
-    status: "INACTIVE" as const,
-    assignedAreas: user._count.assignments,
-    lastLogin: null,
-  }))
+  return users.map((user) => {
+    const authLastSignIn =
+      authLastLoginMap.get(user.authId) ||
+      (user.email ? authLastLoginMap.get(user.email.toLowerCase()) : null)
+    const timestamp = authLastSignIn || user.auditLogs?.[0]?.createdAt || null
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      department: user.department,
+      designation: user.designation,
+      status: "INACTIVE" as const,
+      assignedAreas: user._count.assignments,
+      lastLogin: formatLastLogin(timestamp),
+    }
+  })
 }
 
 // ─── ARCHIVE USER ACCOUNT (Soft Delete) ──────────────────────────────────────

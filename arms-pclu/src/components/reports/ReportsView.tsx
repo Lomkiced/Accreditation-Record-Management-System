@@ -9,7 +9,6 @@ import {
   FileCheck2, 
   Lock, 
   Eye, 
-  CheckCircle2, 
   AlertCircle,
   RefreshCw,
   Table as TableIcon
@@ -170,7 +169,7 @@ export function ReportsView() {
     <>
       <PageHeader
         title="Reports & Official Certification"
-        subtitle="Generate and download verified, tamper-proof institutional PDF reports for PACUCOA accreditation"
+        subtitle="Generate and export verified institutional reports for PACUCOA accreditation"
       />
 
       <div className="space-y-6">
@@ -222,14 +221,9 @@ export function ReportsView() {
                 <FileCheck2 className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-slate-900">Configure Report Parameters</h2>
-                <p className="text-xs text-slate-500">Filters are applied strictly to non-archived verified database records</p>
+                <h2 className="text-base font-bold text-slate-900">Report Settings</h2>
+                <p className="text-xs text-slate-500">Select the date range and area options for your official accreditation report</p>
               </div>
-            </div>
-
-            <div className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Tamper-Proof Export Format</span>
             </div>
           </div>
         
