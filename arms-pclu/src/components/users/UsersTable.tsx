@@ -20,59 +20,76 @@ interface UsersTableProps {
   data: UserWithCounts[]
   onEdit: (user: UserWithCounts) => void
   onDelete: (user: UserWithCounts) => void
+  hideDepartment?: boolean
+  hideStatus?: boolean
 }
 
-export function UsersTable({ data, onEdit, onDelete }: UsersTableProps) {
-  const columns: ColumnDef<UserWithCounts>[] = [
-    {
-      accessorKey: "name",
-      header: "User",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-3">
-          <AvatarInitials name={row.original.name} size="md" />
-          <div className="flex flex-col">
-            <span className="font-bold text-slate-900 leading-tight">{row.original.name}</span>
-            <span className="text-xs text-slate-500">{row.original.email}</span>
+export function UsersTable({ 
+  data, 
+  onEdit, 
+  onDelete, 
+  hideDepartment = false, 
+  hideStatus = false 
+}: UsersTableProps) {
+  const columns = React.useMemo<ColumnDef<UserWithCounts>[]>(() => {
+    const cols: ColumnDef<UserWithCounts>[] = [
+      {
+        accessorKey: "name",
+        header: "User",
+        cell: ({ row }) => (
+          <div className="flex items-center gap-3">
+            <AvatarInitials name={row.original.name} size="md" />
+            <div className="flex flex-col">
+              <span className="font-bold text-slate-900 leading-tight">{row.original.name}</span>
+              <span className="text-xs text-slate-500">{row.original.email}</span>
+            </div>
           </div>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "role",
-      header: "Role",
-      cell: ({ row }) => {
-        const role = row.original.role
-        const color = role === "ADMIN" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
-        return (
-          <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${color}`}>
-            {role}
-          </span>
-        )
+        ),
       },
-    },
-    {
-      accessorKey: "department",
-      header: "Department",
-      cell: ({ row }) => (
-        <span className="text-sm text-slate-700">{row.getValue("department")}</span>
-      ),
-    },
-    {
+      {
+        accessorKey: "role",
+        header: "Role",
+        cell: ({ row }) => {
+          const role = row.original.role
+          const color = role === "ADMIN" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
+          return (
+            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${color}`}>
+              {role}
+            </span>
+          )
+        },
+      },
+    ]
+
+    if (!hideDepartment) {
+      cols.push({
+        accessorKey: "department",
+        header: "Department",
+        cell: ({ row }) => (
+          <span className="text-sm text-slate-700">{row.getValue("department")}</span>
+        ),
+      })
+    }
+
+    cols.push({
       accessorKey: "designation",
       header: "Designation",
       cell: ({ row }) => (
         <span className="text-sm text-slate-500">{row.getValue("designation")}</span>
       ),
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => (
-        <StatusBadge status={row.getValue("status")} size="sm" />
-      ),
-    },
+    })
 
-    {
+    if (!hideStatus) {
+      cols.push({
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => (
+          <StatusBadge status={row.getValue("status")} size="sm" />
+        ),
+      })
+    }
+
+    cols.push({
       id: "actions",
       header: () => <div className="text-right">Actions</div>,
       cell: ({ row }) => {
@@ -107,8 +124,10 @@ export function UsersTable({ data, onEdit, onDelete }: UsersTableProps) {
           </div>
         )
       },
-    },
-  ]
+    })
+
+    return cols
+  }, [hideDepartment, hideStatus, onEdit, onDelete])
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200">

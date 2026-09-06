@@ -17,6 +17,7 @@ All development on ARMS must strictly follow these principles. Violations should
 - Components should be **open for extension** (via props, composition) but **closed for modification**.
 - Use the `mode` prop pattern (e.g., `AreaCard mode="admin" | "dean"`) to extend behavior without modifying core logic.
 - Use `allowedRoles` prop to restrict role options without changing `UserFormPanel` internals.
+- Use column visibility props (e.g., `UsersTable hideDepartment hideStatus`) to adapt tables across portals while preserving shared data structures.
 
 ### Liskov Substitution Principle (LSP)
 - Component prop types must be consistent. If a component accepts `IndicatorRow`, any data shape matching that interface should work correctly.
@@ -190,5 +191,13 @@ Any new compliance-related feature must reference `dashboard.actions.ts` as the 
 - **Eager AuthGuard State Hydration**: `AuthGuard` must evaluate initial authenticated state synchronously from Zustand store to prevent layout flash or routing delay on client navigations.
 - **Fast User Queries**: User administration endpoints query PostgreSQL directly without blocking on external authentication APIs. Tables display verified system attributes without inaccurate timestamp estimates.
 - **Global Search Optimization**: The global search dialog must be pre-mounted in layout with debouncing (<= 150ms) and client-side caching (staleTime >= 5min) to deliver instantaneous results.
+
+---
+
+## 13. Submission Feedback & UI Attribution Integrity
+
+- **Contextual Anchoring**: Reviewer return remarks must be directly coupled to the specific document row (`Reviewer Return Remarks: [remarks]`), never detached as floating warning banners at the bottom of criteria blocks.
+- **Production Data Cleanliness**: Test remarks and debug indicators must never be persisted in production databases or surfaced in production environments.
+
 
 

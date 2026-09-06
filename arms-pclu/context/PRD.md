@@ -73,6 +73,7 @@ Manual accreditation processes suffer from:
    - **In-Place File Updates**: Updating a file revisions the existing document in-place (`version + 1` with `DocumentVersion` snapshot) rather than creating a duplicate document.
    - Per-mapping status workflow: `DRAFT → SUBMITTED → UNDER_REVIEW → APPROVED / RETURNED`.
    - Evidence upload via cascading picker (Area → Criterion → Indicator) and direct indicator upload.
+   - **Contextual Return Remarks**: When a submission is returned, reviewer remarks are directly coupled beneath the respective document entry (`Reviewer Return Remarks: [remarks]`) rather than floating as ambiguous system banners.
 
 6. **Submission Review (Dean)**
    - View pending submissions.
@@ -92,10 +93,11 @@ Manual accreditation processes suffer from:
    - **Faculty**: Assigned areas with per-area completion percentage.
 
 9. **User Management (Dean & Admin)**
-   - Filter, search, and manage faculty and administrative accounts.
-   - Streamlined Users Table displaying Name, Email, Role, Department, Designation, Status, and Actions (omitting inaccurate auth last-login timestamps to ensure ultra-fast sub-second data fetching directly from PostgreSQL).
+   - **Dean's Portal**: Tailored exclusively for faculty account administration. Clean, streamlined interface without redundant department filter dropdowns or secondary inactive toggle buttons (managed via top Active/Archived tabs). The Users table cleanly displays User (Name/Email), Role, Designation, and Actions.
+   - **Admin's Portal**: Full system-wide user administration across Admin, Dean, and Faculty roles with comprehensive department and role filters.
+   - Both portals query PostgreSQL directly for ultra-fast, sub-second rendering without blocking on external auth APIs.
 
-9. **Audit Trail & Notifications**
+10. **Audit Trail & Notifications**
    - Comprehensive audit logging for all critical operations (creates, updates, reviews, deletes).
    - Human-readable semantic activity logs in the UI (filtering out database CUIDs, UUIDs, and technical correlation hashes).
    - In-app notification system with read/unread tracking.

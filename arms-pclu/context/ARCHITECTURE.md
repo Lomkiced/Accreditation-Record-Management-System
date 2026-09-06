@@ -146,6 +146,7 @@ src/
 - A document is uploaded and can be mapped to multiple indicators via `DocumentMapping`.
 - **Multi-File Batch Upload**: In the Faculty Portal, users can select and batch-upload multiple files concurrently. Each file is transferred to Supabase Storage and created as an active evidence submission under the target indicator without artificial throttling.
 - **In-Place Versioning Updates**: When updating an existing document submission, the system modifies the existing `Document` record in-place (`version + 1`), captures a version snapshot in `DocumentVersion`, resets the mapping status to `SUBMITTED`, and notifies reviewers. It strictly avoids creating duplicate `Document` records.
+- **Inline Submission Return Remarks**: When a document is returned during evaluation, reviewer remarks are directly coupled to the corresponding submission item (`Reviewer Return Remarks: [remarks]`), eliminating ambiguous, detached bottom banners.
 
 ### Canonical Compliance Metric & Dashboard Stats
 - **Admin Dashboard Compliance Rate**: Standard institutional accreditation formula: `(approved documents capped per indicator × 100) / total required documents across all indicators`. The StatCard subtitle indicates `{approvedDocCount} of {totalRequiredDocs} required documents approved`, ensuring draft uploads do not distort compliance.
@@ -166,6 +167,9 @@ src/
 ### User Management & Fast Indexed Queries
 - `user.actions.ts` executes high-speed, direct Prisma queries to list active and archived faculty/admin users.
 - Inaccurate auth `lastLogin` fetching via `adminSupabase.auth.admin.listUsers()` has been eliminated, reducing page load times from several seconds to milliseconds with 0 external network round-trips.
+- **Portal-Tailored Views**: `UsersTable` provides configurable column visibility via `hideDepartment` and `hideStatus` props.
+  - **Dean's Portal**: Streamlined exclusively for faculty account management. Suppresses redundant department filters, department table column, and secondary active/inactive status dropdowns (using the dedicated top Active/Archived tabbed view). Displays User (Avatar, Name, Email), Role, Designation, and Actions.
+  - **Admin's Portal**: Full cross-role administrative view with department and role filters, displaying all system attributes.
 
 ### Soft-Delete/Archiving
 - **Documents**: Can be archived (`isArchived: true`). All active queries explicitly filter for `{ isArchived: false }`. The hierarchy cache also filters archived documents from mappings.

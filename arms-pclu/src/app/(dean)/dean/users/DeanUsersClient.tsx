@@ -11,7 +11,6 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
 import { useUsers, useArchiveUser, useRestoreUser, useDeleteUser, useArchivedUsers } from "@/hooks/useUsers"
 import { type UserWithCounts } from "@/actions/user.actions"
 import { toast } from "sonner"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 export function DeanUsersClient({ initialData }: { initialData: UserWithCounts[] }) {
   const [isModalOpen, setIsModalOpen] = React.useState(false)
@@ -22,8 +21,6 @@ export function DeanUsersClient({ initialData }: { initialData: UserWithCounts[]
   const [activeView, setActiveView] = React.useState<"active" | "archived">("active")
   
   const [searchQuery, setSearchQuery] = React.useState("")
-  const [selectedDept, setSelectedDept] = React.useState<string>("All")
-  const [statusFilter, setStatusFilter] = React.useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL")
   
   const { data: users = [], isLoading } = useUsers(["FACULTY"], initialData)
   const { data: archivedUsers = [], isLoading: isLoadingArchived } = useArchivedUsers(["FACULTY"])
@@ -33,23 +30,15 @@ export function DeanUsersClient({ initialData }: { initialData: UserWithCounts[]
 
   const currentList = activeView === "active" ? users : archivedUsers
 
-  const departments = React.useMemo(() => {
-    const depts = new Set<string>()
-    currentList.forEach(u => { if (u.department) depts.add(u.department) })
-    return Array.from(depts).sort()
-  }, [currentList])
-
   const filteredUsers = React.useMemo(() => {
     return currentList.filter(user => {
       if (searchQuery) {
         const q = searchQuery.toLowerCase()
         if (!user.name.toLowerCase().includes(q) && !user.email.toLowerCase().includes(q)) return false
       }
-      if (selectedDept !== "All" && user.department !== selectedDept) return false
-      if (activeView === "active" && statusFilter !== "ALL" && user.status !== statusFilter) return false
       return true
     })
-  }, [currentList, searchQuery, selectedDept, statusFilter, activeView])
+  }, [currentList, searchQuery])
 
   const handleAdd = () => {
     setEditingUser(undefined)
@@ -170,42 +159,7 @@ export function DeanUsersClient({ initialData }: { initialData: UserWithCounts[]
             />
           </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9 text-slate-600 bg-slate-50">
-                {selectedDept === "All" ? "Department" : selectedDept}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="bg-white z-50">
-              <DropdownMenuItem onClick={() => setSelectedDept("All")}>All Departments</DropdownMenuItem>
-              {departments.map(dept => (
-                <DropdownMenuItem key={dept} onClick={() => setSelectedDept(dept)}>{dept}</DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          {activeView === "active" && (
-            <div className="flex bg-slate-100 p-1 rounded-md ml-2">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className={`h-7 text-xs ${statusFilter === "ALL" ? "bg-white shadow-sm" : "text-slate-600"}`}
-                onClick={() => setStatusFilter("ALL")}
-              >All</Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className={`h-7 text-xs ${statusFilter === "ACTIVE" ? "bg-white shadow-sm" : "text-slate-600"}`}
-                onClick={() => setStatusFilter("ACTIVE")}
-              >Active</Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className={`h-7 text-xs ${statusFilter === "INACTIVE" ? "bg-white shadow-sm" : "text-slate-600"}`}
-                onClick={() => setStatusFilter("INACTIVE")}
-              >Inactive</Button>
-            </div>
-          )}
+
 
           <div className="ml-auto text-sm text-slate-500">
             Showing {filteredUsers.length} results
@@ -221,6 +175,8 @@ export function DeanUsersClient({ initialData }: { initialData: UserWithCounts[]
             data={filteredUsers} 
             onEdit={handleEdit}
             onDelete={setArchivingUser}
+            hideDepartment
+            hideStatus
           />
         ) : filteredUsers.length === 0 ? (
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm py-16 text-center">
@@ -245,9 +201,11 @@ export function DeanUsersClient({ initialData }: { initialData: UserWithCounts[]
                     <p className="text-sm font-semibold text-slate-800 truncate">{user.name}</p>
                     <p className="text-xs text-slate-400 truncate">{user.email}</p>
                   </div>
-                  <span className="text-xs text-slate-400 shrink-0">
-                    {user.department}
-                  </span>
+                  {user.designation && (
+                    <span className="text-xs text-slate-400 shrink-0">
+                      {user.designation}
+                    </span>
+                  )}
                   <div className="flex items-center gap-2 shrink-0">
                     <Button
                       variant="outline"

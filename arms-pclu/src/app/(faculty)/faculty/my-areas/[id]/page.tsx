@@ -313,60 +313,65 @@ export default function MyAreaDetailPage({ params }: { params: { id: string } })
                           {indSubmissions.length > 0 && (
                             <div className="ml-10 space-y-2">
                               {indSubmissions.map((submission) => (
-                                <div key={submission.id} className="flex items-center gap-3 p-2.5 bg-white rounded-lg border border-slate-100 shadow-sm hover:border-slate-200 transition-colors">
-                                  <FileText className="w-4 h-4 text-blue-500 shrink-0" />
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-slate-700 truncate" title={submission.document.title}>
-                                      {submission.document.title}
-                                    </p>
-                                    {submission.document.fileName && (
-                                      <p className="text-[11px] text-slate-400 truncate">{submission.document.fileName}</p>
+                                <div key={submission.id} className="space-y-1.5">
+                                  <div className="flex items-center gap-3 p-2.5 bg-white rounded-lg border border-slate-100 shadow-sm hover:border-slate-200 transition-colors">
+                                    <FileText className="w-4 h-4 text-blue-500 shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-slate-700 truncate" title={submission.document.title}>
+                                        {submission.document.title}
+                                      </p>
+                                      {submission.document.fileName && (
+                                        <p className="text-[11px] text-slate-400 truncate">{submission.document.fileName}</p>
+                                      )}
+                                    </div>
+                                    <StatusBadge status={submission.status} size="sm" />
+                                    
+                                    {/* Action Button */}
+                                    {submission.status === "APPROVED" ? (
+                                      <div className="flex items-center gap-1 text-[11px] text-emerald-600 font-medium shrink-0">
+                                        <CheckCircle className="w-3.5 h-3.5" />
+                                      </div>
+                                    ) : (
+                                      <Button 
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-xs h-7 px-2 text-slate-500 hover:text-blue-600 shrink-0"
+                                        onClick={() => setUploadModalData({
+                                          indicator: ind,
+                                          areaName: area.name,
+                                          criterionName: criterion.name,
+                                          existingSubmission: {
+                                            id: submission.documentId,
+                                            title: submission.document.title,
+                                            description: submission.document.description,
+                                            status: submission.status,
+                                            version: submission.document.version,
+                                            versions: (submission.document.versions || []).map((v: any) => ({
+                                              version: v.version,
+                                              fileUrl: v.fileUrl,
+                                              fileName: v.fileName,
+                                              createdAt: v.createdAt.toString(),
+                                              status: submission.status,
+                                              remarks: v.remarks
+                                            }))
+                                          }
+                                        })}
+                                      >
+                                        {submission.status === "DRAFT" ? "Continue" : "Update"}
+                                      </Button>
                                     )}
                                   </div>
-                                  <StatusBadge status={submission.status} size="sm" />
-                                  
-                                  {/* Action Button */}
-                                  {submission.status === "APPROVED" ? (
-                                    <div className="flex items-center gap-1 text-[11px] text-emerald-600 font-medium shrink-0">
-                                      <CheckCircle className="w-3.5 h-3.5" />
-                                    </div>
-                                  ) : (
-                                    <Button 
-                                      variant="ghost"
-                                      size="sm"
-                                      className="text-xs h-7 px-2 text-slate-500 hover:text-blue-600 shrink-0"
-                                      onClick={() => setUploadModalData({
-                                        indicator: ind,
-                                        areaName: area.name,
-                                        criterionName: criterion.name,
-                                        existingSubmission: {
-                                          id: submission.documentId,
-                                          title: submission.document.title,
-                                          description: submission.document.description,
-                                          status: submission.status,
-                                          version: submission.document.version,
-                                          versions: (submission.document.versions || []).map((v: any) => ({
-                                            version: v.version,
-                                            fileUrl: v.fileUrl,
-                                            fileName: v.fileName,
-                                            createdAt: v.createdAt.toString(),
-                                            status: submission.status,
-                                            remarks: v.remarks
-                                          }))
-                                        }
-                                      })}
-                                    >
-                                      {submission.status === "DRAFT" ? "Continue" : "Update"}
-                                    </Button>
-                                  )}
-                                </div>
-                              ))}
 
-                              {/* Returned remarks shown inline */}
-                              {indSubmissions.filter(s => s.status === "RETURNED" && s.remarks).map(s => (
-                                <div key={`remark-${s.id}`} className="flex items-start gap-2 bg-red-50 text-red-700 text-xs p-2.5 rounded-lg border border-red-100 ml-0">
-                                  <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                                  <span className="font-medium leading-relaxed">{s.remarks}</span>
+                                  {/* Returned remarks directly tied to this specific submission */}
+                                  {submission.status === "RETURNED" && submission.remarks && (
+                                    <div className="flex items-start gap-2 bg-red-50 text-red-700 text-xs p-2.5 rounded-lg border border-red-100 ml-2">
+                                      <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                                      <div>
+                                        <span className="font-semibold">Reviewer Return Remarks: </span>
+                                        <span className="leading-relaxed">{submission.remarks}</span>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
 
