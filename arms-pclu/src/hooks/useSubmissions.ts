@@ -13,6 +13,8 @@ import {
   markSubmissionUnderReview,
 } from "@/actions/submission.actions"
 import { submitAllMappings, deleteDocument } from "@/actions/document.actions"
+import { areaKeys } from "./useAreas"
+import { dashboardKeys } from "./useDashboard"
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
 
@@ -286,6 +288,10 @@ export function useDeleteDocument() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
       queryClient.invalidateQueries({ queryKey: submissionKeys.all })
+      queryClient.invalidateQueries({ queryKey: ["archives"] })
+      queryClient.invalidateQueries({ queryKey: areaKeys.all })
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
+      queryClient.invalidateQueries({ queryKey: ["repository"] })
     }
   })
 }

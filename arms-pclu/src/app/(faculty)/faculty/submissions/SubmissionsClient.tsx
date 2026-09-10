@@ -31,6 +31,18 @@ import { cn } from "@/lib/utils"
 import { useSubmitAllMappings, useDeleteDocument } from "@/hooks/useSubmissions"
 import { useArchiveDocument } from "@/hooks/useArchives"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { FacultyRepositoryView } from "@/components/repository/FacultyRepositoryView"
+
 // ─── Status Badge Configuration ────────────────────────────────────────────────
 const STATUS_CONFIG: Record<
   string,
@@ -66,33 +78,40 @@ interface SubmissionsClientProps {
 }
 
 export function SubmissionsClient({ documents }: SubmissionsClientProps) {
+  const [activeTab, setActiveTab] = React.useState<"submissions" | "repository">("submissions")
   const [isUploadOpen, setIsUploadOpen] = React.useState(false)
   const [isNewVersionOpen, setIsNewVersionOpen] = React.useState(false)
   const [selectedDocument, setSelectedDocument] = React.useState<DocumentWithMappings | null>(null)
   const [isDeleting, setIsDeleting] = React.useState<string | null>(null)
+  const [confirmAction, setConfirmAction] = React.useState<{
+    docId: string
+    title: string
+    type: "archive" | "delete" | "submit"
+  } | null>(null)
   
   const submitAllMappings = useSubmitAllMappings()
   const archiveDocument = useArchiveDocument()
   const deleteDocument = useDeleteDocument()
 
-  const handleArchive = (docId: string) => {
-    if (!window.confirm("Are you sure you want to archive this document? It will be moved to your Archives vault.")) {
-      return
-    }
-    setIsDeleting(docId)
-    archiveDocument.mutate(docId, {
-      onSettled: () => setIsDeleting(null)
-    })
-  }
+  const handleConfirmAction = () => {
+    if (!confirmAction) return
+    const { docId, type } = confirmAction
 
-  const handleDeleteUntagged = (docId: string) => {
-    if (!window.confirm("Are you sure you want to permanently delete this untagged document?")) {
-      return
+    if (type === "submit") {
+      submitAllMappings.mutate(docId)
+    } else if (type === "delete") {
+      setIsDeleting(docId)
+      deleteDocument.mutate(docId, {
+        onSettled: () => setIsDeleting(null)
+      })
+    } else if (type === "archive") {
+      setIsDeleting(docId)
+      archiveDocument.mutate(docId, {
+        onSettled: () => setIsDeleting(null)
+      })
     }
-    setIsDeleting(docId)
-    deleteDocument.mutate(docId, {
-      onSettled: () => setIsDeleting(null)
-    })
+
+    setConfirmAction(null)
   }
 
   return (
@@ -101,10 +120,10 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            My Submissions
+            Submissions & Repository
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Manage your uploaded evidence and view mapping statuses.
+            Manage your uploaded evidence, track approvals, and explore verified accreditation records.
           </p>
         </div>
         <Button
@@ -115,6 +134,44 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
           Upload Evidence
         </Button>
       </div>
+
+      {/* Tabs Navigation */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+        <button
+          onClick={() => setActiveTab("submissions")}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all",
+            activeTab === "submissions"
+              ? "bg-blue-50 text-blue-700 shadow-xs border border-blue-200"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+          )}
+        >
+          <FileText className="w-4 h-4" />
+          My Submissions ({documents.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab("repository")}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all",
+            activeTab === "repository"
+              ? "bg-blue-50 text-blue-700 shadow-xs border border-blue-200"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+          )}
+        >
+          <Archive className="w-4 h-4" />
+          Approved Repository
+        </button>
+      </div>
+
+      {/* Tab 2: Approved Documents Repository */}
+      {activeTab === "repository" && (
+        <FacultyRepositoryView />
+      )}
+
+      {/* Tab 1: My Submissions */}
+      {activeTab === "submissions" && (
+        <>
 
       {/* Main Content Area */}
       {documents.length === 0 ? (
@@ -256,12 +313,7 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
                             <DropdownMenuContent side="bottom" align="end">
                               {doc.mappings.some(m => m.status === "DRAFT" || m.status === "RETURNED") && (
                                 <DropdownMenuItem
-                                  onSelect={(e) => {
-                                    e.preventDefault()
-                                    if (window.confirm("Submit all draft/returned mappings for review?")) {
-                                      submitAllMappings.mutate(doc.id)
-                                    }
-                                  }}
+                                  onSelect={() => setConfirmAction({ docId: doc.id, title: doc.title, type: "submit" })}
                                   className="cursor-pointer font-medium text-blue-600 focus:text-blue-700 focus:bg-blue-50"
                                 >
                                   {submitAllMappings.isPending ? (
@@ -296,7 +348,7 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
                               </DropdownMenuItem>
                               {doc.mappings.length === 0 && (
                                 <DropdownMenuItem
-                                  onSelect={() => handleDeleteUntagged(doc.id)}
+                                  onSelect={() => setConfirmAction({ docId: doc.id, title: doc.title, type: "delete" })}
                                   className="cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50"
                                 >
                                   <Trash className="mr-2 h-4 w-4" />
@@ -304,7 +356,7 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
                                 </DropdownMenuItem>
                               )}
                               <DropdownMenuItem
-                                onSelect={() => handleArchive(doc.id)}
+                                onSelect={() => setConfirmAction({ docId: doc.id, title: doc.title, type: "archive" })}
                                 className="cursor-pointer text-amber-600 focus:text-amber-700 focus:bg-amber-50"
                               >
                                 <Archive className="mr-2 h-4 w-4" />
@@ -322,6 +374,50 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
           </div>
         </div>
       )}
+      </>
+      )}
+
+      {/* Action Confirmation Modal */}
+      <AlertDialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction?.type === "submit"
+                ? "Submit for Review"
+                : confirmAction?.type === "delete"
+                ? "Delete Untagged Document"
+                : "Archive Document"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction?.type === "submit"
+                ? `Submit all draft and returned mappings for "${confirmAction.title}" to the Dean for evaluation?`
+                : confirmAction?.type === "delete"
+                ? `Are you sure you want to permanently delete "${confirmAction.title}"? This untagged document will be permanently removed.`
+                : `Are you sure you want to archive "${confirmAction?.title}"? It will be removed from your active submissions list and moved to your Archives page. Any approved institutional evidence will remain preserved in the repository.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className={cn(
+                "text-white",
+                confirmAction?.type === "submit"
+                  ? "bg-blue-600 hover:bg-blue-700"
+                  : confirmAction?.type === "delete"
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-amber-600 hover:bg-amber-700"
+              )}
+              onClick={handleConfirmAction}
+            >
+              {confirmAction?.type === "submit"
+                ? "Submit"
+                : confirmAction?.type === "delete"
+                ? "Delete"
+                : "Archive Document"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Document Upload Sheet Mounting */}
       <DocumentUploadSheet

@@ -1,6 +1,7 @@
 import { DeanUsersClient } from "./DeanUsersClient"
 import { getUsers } from "@/actions/user.actions"
 import { requireAdminOrDean } from "@/lib/auth/getUser"
+import { Suspense } from "react"
 
 export const metadata = {
   title: "Faculty Accounts | Dean Portal",
@@ -15,8 +16,8 @@ export default async function DeanUsersPage() {
   const initialData = usersResult
 
   return (
-    <>
+    <Suspense fallback={null}>
       <DeanUsersClient initialData={initialData} />
-    </>
+    </Suspense>
   )
 }

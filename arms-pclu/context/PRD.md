@@ -62,46 +62,51 @@ Manual accreditation processes suffer from:
    - Faculty sees only assigned areas in their portal.
 
 4. **Document Repository & Archives**
-   - **Central Repository (Dean & Admin)**: Centralized storage of verified accreditation documents. The Dean's Portal Repository strictly displays **approved documents only** (`status: APPROVED`, non-archived).
-   - **Faculty Archives**: Soft-deleted document vault designed for high document volume; streamlined professional UI featuring total archived count, multi-attribute search engine, sorting, responsive pagination, and grid/table view modes.
+   - **Central Repository (Dean & Admin)**: Centralized storage of verified accreditation documents. The Dean and Admin Portals strictly display **approved documents only** (`status: APPROVED`, non-archived).
+   - **Faculty Approved Repository**: Under Faculty Submissions (`/faculty/submissions`), a dedicated "Approved Repository" tab mirrors the Dean/Admin repository view, allowing faculty to explore all verified institutional evidence grouped by accreditation area.
+   - **Approved Document Retention**: If a faculty member deletes an approved document from their personal submissions list, the document is only soft-archived and removed from their personal view; the verified evidence remains preserved in the institutional repository for Dean and Admin compliance tracking.
+   - **Faculty Archives & Confirmation Modals**: All deletion and archiving actions trigger an explicit, accessible Radix `AlertDialog` confirmation modal. Soft-deleted documents move to `/faculty/archives` where faculty can restore them at any time.
    - File versioning with history and restore capabilities.
    - Tag-based organization.
 
 5. **Document Mapping & Uploads (Faculty)**
    - Map uploaded documents to specific indicators.
+   - **Indicator-Aware Selector**: The tagging selector automatically excludes areas and criteria that do not have any indicators defined, preventing invalid or orphan tagging.
    - **Multi-File Batch Upload**: Faculty can select and upload multiple evidence files at once.
    - **In-Place File Updates**: Updating a file revisions the existing document in-place (`version + 1` with `DocumentVersion` snapshot) rather than creating a duplicate document.
    - Per-mapping status workflow: `DRAFT → SUBMITTED → UNDER_REVIEW → APPROVED / RETURNED`.
    - Evidence upload via cascading picker (Area → Criterion → Indicator) and direct indicator upload.
    - **Contextual Return Remarks**: When a submission is returned, reviewer remarks are directly coupled beneath the respective document entry (`Reviewer Return Remarks: [remarks]`) rather than floating as ambiguous system banners.
 
-6. **Submission Review (Dean)**
-   - View pending submissions.
-   - Approve or return with remarks and rating.
-   - Professional review information panel with clean formatting (free from character encoding corruption).
-   - Bulk status management.
+6. **Submission Review & Taxonomy Management (Dean & Admin)**
+   - View pending submissions, approve or return with remarks and rating.
+   - CRUD for Areas, Criteria, and Indicators with drag-and-drop reordering.
+   - **Confidential Indicators**: Dean and Admin can toggle an indicator as `Confidential` (e.g., Strategic Plans, financial records).
+   - **Peer Evidence Confidentiality Gating**: When Faculty A views or searches approved documents of Faculty B, confidential items display a `🔒 Confidential` badge, with file viewing and downloading strictly locked and restricted to the document owner, Dean, and Admin.
 
 7. **Global Search Engine & Performance (All Portals)**
    - Ultra-fast global search in the top navigation header across all portals.
    - Searches both **documents** (by title and filename) and **faculty members** (by name, email, department, designation).
-   - High performance: pre-mounted search dialog (no dynamic chunk download lag), 150ms debounce, 5-minute TanStack Query caching, and keyboard shortcut `Ctrl+K`.
-   - Fast client navigation with eager synchronous AuthGuard state hydration eliminating skeleton flickering.
+   - **Role-Aware Redirection**:
+     - Dean clicking a faculty user navigates directly to Faculty Management (`/dean/users?search=...`).
+     - Admin clicking a user navigates to User Management (`/admin/users?search=...`).
+     - Faculty clicking a peer opens a dedicated `FacultyEvidenceModal` displaying their approved evidence portfolio with confidentiality restrictions enforced.
+   - High performance: pre-mounted search dialog, 150ms debounce, 5-minute TanStack Query caching, and keyboard shortcut `Ctrl+K`.
 
-8. **Dashboards**
-   - **Admin**: Stat cards (including Compliance Rate computed as `(approved documents capped per indicator × 100) / total required documents` with accurate subtitle showing approved vs total required documents), pending submissions table, hierarchical evidence drill-down.
-   - **Dean**: Stat cards, accurate Progress by Area (`(approved docs × 100) / total required docs`), pending submissions, compliance overview.
-   - **Faculty**: Assigned areas with per-area completion percentage.
+8. **Dashboards & Area Completion Coherence**
+   - Area completion percentage accurately computed based only on non-archived approved document mappings (`where: { document: { isArchived: false } }`). Empty or deleted areas strictly report 0%.
+   - Invalidation of area and dashboard query caches on document deletion, archiving, restoring, and approval.
 
 9. **User Management (Dean & Admin)**
-   - **Dean's Portal**: Tailored exclusively for faculty account administration. Clean, streamlined interface without redundant department filter dropdowns or secondary inactive toggle buttons (managed via top Active/Archived tabs). The Users table cleanly displays User (Name/Email), Role, Designation, and Actions.
+   - **Dean's Portal**: Tailored exclusively for faculty account administration (`/dean/users`). Pre-fills and filters on `?search=` query parameter from global search.
    - **Admin's Portal**: Full system-wide user administration across Admin, Dean, and Faculty roles with comprehensive department and role filters.
    - Both portals query PostgreSQL directly for ultra-fast, sub-second rendering without blocking on external auth APIs.
 
-10. **Audit Trail & Notifications**
-   - Comprehensive audit logging for all critical operations (creates, updates, reviews, deletes).
-   - Human-readable semantic activity logs in the UI (filtering out database CUIDs, UUIDs, and technical correlation hashes).
-   - In-app notification system with read/unread tracking.
-   - Activity feed on dashboards. (Raw log export is deprecated and omitted).
+10. **Audit Trail & Maintenance**
+    - Comprehensive audit logging for all critical operations (creates, updates, reviews, deletes).
+    - Human-readable semantic activity logs in the UI.
+    - **Clear Audit Logs**: Admin and Dean portals feature an explicit "Clear All Logs" action protected by a confirmation modal, deleting historical logs and creating an initial `CLEAR_AUDIT_LOGS` audit record.
+    - In-app notification system with read/unread tracking.
 
 10. **Reports & Exports**
     - Official accreditation reports generated as non-editable institutional PDF documents with official PCLU letterhead, PACUCOA formatting, and certification blocks.

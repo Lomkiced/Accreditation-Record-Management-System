@@ -572,6 +572,13 @@ export async function archiveDocument(documentId: string): Promise<ActionResult>
     revalidatePath("/faculty/dashboard")
     revalidatePath("/faculty/submissions")
     revalidatePath("/faculty/archives")
+    revalidatePath("/faculty/my-areas")
+    revalidatePath("/admin/areas")
+    revalidatePath("/dean/areas")
+    revalidatePath("/admin/dashboard")
+    revalidatePath("/dean/dashboard")
+    revalidatePath("/admin/repository")
+    revalidatePath("/dean/repository")
 
     return { success: true }
   } catch (error: any) {
@@ -603,6 +610,13 @@ export async function restoreDocument(documentId: string): Promise<ActionResult>
     revalidatePath("/faculty/dashboard")
     revalidatePath("/faculty/submissions")
     revalidatePath("/faculty/archives")
+    revalidatePath("/faculty/my-areas")
+    revalidatePath("/admin/areas")
+    revalidatePath("/dean/areas")
+    revalidatePath("/admin/dashboard")
+    revalidatePath("/dean/dashboard")
+    revalidatePath("/admin/repository")
+    revalidatePath("/dean/repository")
 
     return { success: true }
   } catch (error: any) {
@@ -626,6 +640,16 @@ export async function permanentlyDeleteDocument(documentId: string): Promise<Act
       return { error: "Unauthorized. Only the owner or an admin can permanently delete this document." }
     }
 
+    // Protect approved accreditation evidence from accidental permanent destruction by faculty
+    const hasApproved = await prisma.documentMapping.findFirst({
+      where: { documentId, status: "APPROVED" },
+    })
+    if (hasApproved && currentUser.role !== "ADMIN") {
+      return {
+        error: "This document contains approved accreditation evidence. It is preserved in the institutional repository and cannot be destroyed.",
+      }
+    }
+
     // In a full implementation, you would also delete the file from Supabase Storage here using `doc.fileUrl`
     
     await prisma.document.delete({
@@ -633,6 +657,15 @@ export async function permanentlyDeleteDocument(documentId: string): Promise<Act
     })
 
     revalidatePath("/faculty/archives")
+    revalidatePath("/faculty/submissions")
+    revalidatePath("/faculty/dashboard")
+    revalidatePath("/faculty/my-areas")
+    revalidatePath("/admin/areas")
+    revalidatePath("/dean/areas")
+    revalidatePath("/admin/dashboard")
+    revalidatePath("/dean/dashboard")
+    revalidatePath("/admin/repository")
+    revalidatePath("/dean/repository")
 
     return { success: true }
   } catch (error: any) {
@@ -888,17 +921,16 @@ export type AdminSubmission = NonNullable<
   Extract<Awaited<ReturnType<typeof getAllSubmissions>>, { success: true }>["data"]
 >[number]
 
-// ─── GET APPROVED SUBMISSIONS (Dean Repository View) ─────────────────────────
-// Returns exclusively APPROVED DocumentMappings for non-archived documents.
+// ─── GET APPROVED SUBMISSIONS (Institutional Repository View) ───────────────
+// Returns exclusively APPROVED DocumentMappings for institutional accreditation repositories.
 
 export async function getApprovedSubmissions() {
   try {
-    await requireAdminOrDean()
+    await requireUser()
 
     const mappings = await prisma.documentMapping.findMany({
       where: {
         status: "APPROVED",
-        document: { isArchived: false },
       },
       orderBy: { updatedAt: "desc" },
       select: {
@@ -951,6 +983,7 @@ export async function getApprovedSubmissions() {
             name: true,
             requiredDocs: true,
             ratingScale: true,
+            isConfidential: true,
             criterion: {
               select: {
                 id: true,

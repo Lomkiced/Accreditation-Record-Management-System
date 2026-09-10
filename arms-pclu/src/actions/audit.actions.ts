@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { requireAdminOrDeanOrThrow } from "@/lib/auth/getUser"
+import { revalidatePath } from "next/cache"
 
 type ActionResult<T = undefined> =
   | { success: true; data?: T; error?: never }
@@ -294,5 +295,39 @@ export async function getAuditLogs(): Promise<ActionResult<AuditLogWithUser[]>> 
   } catch (error) {
     console.error("[getAuditLogs] Error:", error)
     return { error: "Failed to load audit logs." }
+  }
+}
+
+// ─── CLEAR AUDIT LOGS ─────────────────────────────────────────────────────────
+export async function clearAuditLogs(): Promise<ActionResult> {
+  try {
+    const user = await requireAdminOrDeanOrThrow()
+
+    // Delete all existing audit logs
+    await prisma.auditLog.deleteMany({})
+
+    // Create a new audit log entry documenting that logs were cleared
+    await prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        action: "CLEAR_AUDIT_LOGS",
+        module: "SYSTEM",
+        details: {
+          clearedBy: user.name || user.email,
+          role: user.role,
+          clearedAt: new Date().toISOString(),
+        },
+      },
+    })
+
+    revalidatePath("/admin/audit-logs")
+    revalidatePath("/dean/audit-logs")
+    revalidatePath("/admin/dashboard")
+    revalidatePath("/dean/dashboard")
+
+    return { success: true }
+  } catch (error) {
+    console.error("[clearAuditLogs] Error:", error)
+    return { error: "Failed to clear audit logs." }
   }
 }

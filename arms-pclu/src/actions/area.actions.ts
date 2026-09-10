@@ -50,6 +50,7 @@ const AREA_LEAN_SELECT = {
           requiredDocs: true,
           ratingScale: true,
           order: true,
+          isConfidential: true,
           // Include mapping statuses for real-time compliance and doc counts
           mappings: {
             where: { document: { isArchived: false } },

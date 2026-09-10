@@ -1,6 +1,7 @@
 import { AdminUsersClient } from "./AdminUsersClient"
 import { getUsers } from "@/actions/user.actions"
 import { requireAdmin } from "@/lib/auth/getUser"
+import { Suspense } from "react"
 
 export const metadata = {
   title: "User Management | Admin Portal",
@@ -15,8 +16,8 @@ export default async function AdminUsersPage() {
   const initialData = usersResult
 
   return (
-    <>
+    <Suspense fallback={null}>
       <AdminUsersClient initialData={initialData} />
-    </>
+    </Suspense>
   )
 }

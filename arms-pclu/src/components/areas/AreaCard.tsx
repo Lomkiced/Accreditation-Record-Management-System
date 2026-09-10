@@ -53,7 +53,7 @@ export function AreaCard({ area, mode = "dean" }: AreaCardProps) {
         reqCount = reqDocs.split(",").filter((s: string) => s.trim().length > 0).length || 1;
       }
     }
-    return approvedCount >= reqCount;
+    return approvedCount > 0 && approvedCount >= reqCount;
   }).length
 
   // Indicators with at least one SUBMITTED or UNDER_REVIEW mapping (pending)

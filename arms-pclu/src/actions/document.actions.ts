@@ -871,10 +871,17 @@ export async function getIndicatorsForSelector(): Promise<
       },
     })
 
-    // If FACULTY, further filter criteria using the already-fetched assignments
+    // Filter out criteria that have no indicators, and areas with no indicators
     let filteredAreas = areas
+      .map((area) => ({
+        ...area,
+        criteria: area.criteria.filter((crit) => crit.indicators.length > 0),
+      }))
+      .filter((area) => area.criteria.length > 0)
+
+    // If FACULTY, further filter criteria using the already-fetched assignments
     if (currentUser.role === "FACULTY") {
-      filteredAreas = areas
+      filteredAreas = filteredAreas
         .map((area) => {
           const areaAssignments = facultyAssignments.filter((a) => a.areaId === area.id)
 
@@ -891,7 +898,7 @@ export async function getIndicatorsForSelector(): Promise<
             criteria: area.criteria.filter((crit) => assignedCriterionIds.has(crit.id)),
           }
         })
-        .filter((area) => area.criteria.length > 0)
+        .filter((area) => area.criteria.length > 0 && area.criteria.some((c) => c.indicators.length > 0))
     }
 
     return { success: true, data: filteredAreas }
@@ -920,20 +927,51 @@ export async function deleteDocument(documentId: string): Promise<ActionResult> 
       return { error: "You do not have permission to delete this document." }
     }
 
-    await prisma.document.delete({ where: { id: documentId } })
-
-    await prisma.auditLog.create({
-      data: {
-        userId: currentUser.id,
-        action: "DELETE_DOCUMENT",
-        module: "DOCUMENT",
-        targetId: documentId,
-        details: { title: document.title },
-      },
+    // Protect approved accreditation evidence from accidental permanent destruction by non-admins
+    const hasApproved = await prisma.documentMapping.findFirst({
+      where: { documentId, status: "APPROVED" },
     })
 
+    if (hasApproved && currentUser.role !== "ADMIN") {
+      // Soft-archive so it leaves the faculty's personal list but remains preserved in repository
+      await prisma.document.update({
+        where: { id: documentId },
+        data: { isArchived: true },
+      })
+
+      await prisma.auditLog.create({
+        data: {
+          userId: currentUser.id,
+          action: "ARCHIVE_DOCUMENT",
+          module: "DOCUMENT",
+          targetId: documentId,
+          details: { title: document.title, reason: "Faculty deleted approved document - preserved in repository" },
+        },
+      })
+    } else {
+      await prisma.document.delete({ where: { id: documentId } })
+
+      await prisma.auditLog.create({
+        data: {
+          userId: currentUser.id,
+          action: "DELETE_DOCUMENT",
+          module: "DOCUMENT",
+          targetId: documentId,
+          details: { title: document.title },
+        },
+      })
+    }
+
     revalidatePath("/admin/repository")
+    revalidatePath("/dean/repository")
     revalidatePath("/faculty/submissions")
+    revalidatePath("/faculty/archives")
+    revalidatePath("/admin/areas")
+    revalidatePath("/dean/areas")
+    revalidatePath("/faculty/my-areas")
+    revalidatePath("/admin/dashboard")
+    revalidatePath("/dean/dashboard")
+    revalidatePath("/faculty/dashboard")
 
     return { success: true }
   } catch (error) {

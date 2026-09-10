@@ -18,9 +18,12 @@ import { z } from "zod"
 import { useCreateIndicator, useUpdateIndicator } from "@/hooks/useAreas"
 import type { IndicatorWithMappings } from "@/actions/indicator.actions"
 
+import { Lock } from "lucide-react"
+
 const indicatorSchema = z.object({
   name: z.string().min(1, "Indicator name is required"),
   requiredDocs: z.string().optional(),
+  isConfidential: z.boolean().default(false),
 })
 
 type IndicatorFormValues = z.infer<typeof indicatorSchema>
@@ -46,6 +49,7 @@ export function IndicatorFormModal({
     defaultValues: {
       name: indicator?.name ?? "",
       requiredDocs: indicator?.requiredDocs ?? "",
+      isConfidential: (indicator as any)?.isConfidential ?? false,
     },
   })
 
@@ -54,6 +58,7 @@ export function IndicatorFormModal({
       form.reset({
         name: indicator?.name ?? "",
         requiredDocs: indicator?.requiredDocs ?? "",
+        isConfidential: (indicator as any)?.isConfidential ?? false,
       })
     }
   }, [open, indicator, form])
@@ -106,6 +111,27 @@ export function IndicatorFormModal({
               placeholder="e.g., Board Resolution, Institutional Manual"
               {...form.register("requiredDocs")}
             />
+          </div>
+
+          <div className="flex items-start space-x-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3 mt-2">
+            <input
+              type="checkbox"
+              id="ind-confidential"
+              className="mt-0.5 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+              {...form.register("isConfidential")}
+            />
+            <div className="space-y-0.5">
+              <Label
+                htmlFor="ind-confidential"
+                className="text-xs font-semibold text-amber-900 cursor-pointer flex items-center gap-1.5"
+              >
+                <Lock className="w-3.5 h-3.5 text-amber-600" />
+                Confidential Indicator (e.g. Strategic Plan)
+              </Label>
+              <p className="text-[11px] text-amber-700 leading-normal">
+                Restricts evidence viewing from peer faculty. Only the Dean, Admin, and uploading faculty can open the files.
+              </p>
+            </div>
           </div>
 
           <DialogFooter className="mt-6">

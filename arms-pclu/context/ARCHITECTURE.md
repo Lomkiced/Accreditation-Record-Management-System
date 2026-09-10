@@ -202,3 +202,29 @@ The Faculty Archives (`/faculty/archives`) is built for scalability and clarity:
 - Responsive pagination controls item rendering limits.
 - Dual presentation modes: Responsive Card Grid and High-Density Table.
 
+### Faculty Approved Repository & Evidence Retention
+Under `/faculty/submissions`, faculty have access to two unified views: "My Submissions" and "Approved Repository".
+- **Institutional Evidence Retention**: If a faculty member deletes an approved document, the backend intercepts the request and soft-archives the record (`isArchived: true`) instead of hard-deleting it. The document is cleanly removed from the faculty member's active submissions list, but all approved mappings remain preserved in the Dean and Admin repositories.
+- **Radix AlertDialog Confirmation**: All delete and archive actions are protected by accessible `AlertDialog` confirmation modals rather than native browser alerts.
+
+### Indicator Confidentiality & Access Gating Pipeline
+Indicators can be marked as `isConfidential` (e.g. institutional Strategic Plans, proprietary financial budgets).
+- **Access Gating**:
+  - Dean and Admin have full access to view, download, and review all documents.
+  - Document owners have full access to their own uploaded files regardless of confidentiality status.
+  - Peer faculty members can view metadata (title, area, criterion, indicator, date) to track compliance, but the file link and download actions are locked (`isConfidential: true`), showing a `🔒 Confidential` badge.
+- **Search Integration**:
+  - When a faculty member clicks another faculty user in Global Search, `FacultyEvidenceModal` loads their approved evidence with peer confidentiality gating applied.
+
+### Area Compliance Metric Coherence & Cache Invalidation
+- **Archived Document Filtering**: `criterion.actions.ts` (`getCriteriaByArea`) and `area.actions.ts` (`AREA_LEAN_SELECT`) filter mapping queries with `{ where: { document: { isArchived: false } } }`. Indicators without active non-archived approved evidence strictly evaluate to 0%, eliminating phantom completion rates on empty or cleared areas.
+- **Coordinated Invalidation**: Document mutations (`deleteDocument`, `archiveDocument`, `restoreDocument`, `permanentlyDeleteDocument`) trigger:
+  1. Server path revalidations via `revalidatePath` across `/admin/areas`, `/dean/areas`, `/faculty/my-areas`, `/admin/dashboard`, `/dean/dashboard`, and repositories.
+  2. TanStack Query cache invalidations across `submissionKeys`, `archiveKeys`, `areaKeys.all`, `dashboardKeys.all`, and `repository`.
+
+### Audit Log Clearing & Retention Architecture
+- The Admin and Dean audit logs pages include a protected "Clear All Logs" action.
+- Executed via `clearAuditLogs()`, requiring `requireAdminOrDeanOrThrow()`.
+- Deletes historical entries via `prisma.auditLog.deleteMany({})` and inserts a single tracking record with action `CLEAR_AUDIT_LOGS`, detailing who cleared the logs, their role, and the exact timestamp.
+
+

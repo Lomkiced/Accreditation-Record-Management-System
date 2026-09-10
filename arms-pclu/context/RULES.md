@@ -199,5 +199,39 @@ Any new compliance-related feature must reference `dashboard.actions.ts` as the 
 - **Contextual Anchoring**: Reviewer return remarks must be directly coupled to the specific document row (`Reviewer Return Remarks: [remarks]`), never detached as floating warning banners at the bottom of criteria blocks.
 - **Production Data Cleanliness**: Test remarks and debug indicators must never be persisted in production databases or surfaced in production environments.
 
+---
+
+## 14. Modal Confirmation Standard (No Native Alerts)
+
+- **Strict Prohibition of `window.confirm()` and `window.alert()`**: Native browser alerts block the thread and provide inconsistent styling. All destructive or state-altering user actions (such as document deletion, archiving, submitting for review, clearing audit logs, and removing assignments) **MUST** use accessible Radix UI `AlertDialog` components.
+- **Clear Copy**: Confirmation dialogs must clearly describe the exact scope of the action, the consequences, and provide explicit confirmation button labels (e.g., "Yes, Clear All Logs", "Archive Document").
+
+---
+
+## 15. Institutional Approved Evidence Retention
+
+- **Approved Evidence Preservation**: Approved documents are institutional assets required for accreditation compliance evaluation.
+- **Soft-Archive on Faculty Deletion**: If a faculty member deletes an approved document from their personal submissions list, the backend must soft-archive the document (`isArchived: true`) rather than executing a hard database delete. The document is cleanly removed from the faculty member's personal list and moved to `/faculty/archives`, while the approved mapping remains active and preserved in the Dean and Admin repositories.
+
+---
+
+## 16. Indicator Confidentiality & Access Gating Rules
+
+- **Confidential Indicator Support**: Indicators can be toggled as `isConfidential: true` (e.g., Strategic Plans, financial records).
+- **Peer Faculty Access Control**:
+  - Dean and Admin have full access to view, download, and audit all evidence files.
+  - The uploading faculty owner has full access to view and manage their own files.
+  - Peer faculty members can view metadata (title, area, criterion, indicator, date) to track institutional coverage, but the file viewing link and download actions **MUST** be locked and disabled, accompanied by a clear `🔒 Confidential` badge.
+
+---
+
+## 17. Area Metric Coherence & Cache Synchronization
+
+- **Archived Document Filtering**: All area compliance, criterion mapping queries, and drill-down components must explicitly filter `{ where: { document: { isArchived: false } } }`. Empty or deleted areas must strictly display 0% completion.
+- **Cache Invalidation Pipeline**: Any document lifecycle event (delete, archive, restore, permanent delete, approval) must coordinate both:
+  1. Next.js App Router server path revalidation (`revalidatePath`).
+  2. TanStack React Query cache invalidation (`areaKeys.all`, `dashboardKeys.all`, `submissionKeys`, `archiveKeys`, and `repository`).
+
+
 
 

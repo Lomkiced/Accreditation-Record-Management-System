@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Search, Loader2, FileText, User, Mail, ExternalLink, BookOpen } from "lucide-react"
+import { Search, Loader2, FileText, User, Mail, ExternalLink, BookOpen, Lock } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import {
   Dialog,
@@ -20,6 +20,9 @@ import { AvatarInitials } from "@/components/shared/AvatarInitials"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/store/authStore"
+import { cn } from "@/lib/utils"
+
+import { FacultyEvidenceModal } from "./FacultyEvidenceModal"
 
 interface GlobalSearchDialogProps {
   open: boolean
@@ -30,6 +33,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
   const [query, setQuery] = React.useState("")
   const [areaId, setAreaId] = React.useState("all")
   const [activeTab, setActiveTab] = React.useState<"ALL" | "DOCUMENTS" | "FACULTIES">("ALL")
+  const [selectedFaculty, setSelectedFaculty] = React.useState<any | null>(null)
   const debouncedQuery = useDebounce(query, 150)
   const router = useRouter()
   const { user } = useAuthStore()
@@ -66,21 +70,21 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
       setQuery("")
       setAreaId("all")
       setActiveTab("ALL")
+      setSelectedFaculty(null)
     }
   }, [open])
 
   const totalResults = documents.length + faculties.length
 
-  const handleFacultyClick = (facultyEmail: string) => {
+  const handleFacultyClick = (faculty: any) => {
     if (user?.role === "DEAN") {
       onOpenChange(false)
-      router.push(`/dean/assignments`)
+      router.push(`/dean/users?search=${encodeURIComponent(faculty.name)}`)
     } else if (user?.role === "ADMIN") {
       onOpenChange(false)
-      router.push(`/admin/users`)
+      router.push(`/admin/users?search=${encodeURIComponent(faculty.name)}`)
     } else {
-      navigator.clipboard.writeText(facultyEmail)
-      toast.success(`Copied ${facultyEmail} to clipboard`)
+      setSelectedFaculty(faculty)
     }
   }
 
@@ -183,7 +187,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
                     {faculties.map((f) => (
                       <div
                         key={f.id}
-                        onClick={() => handleFacultyClick(f.email)}
+                        onClick={() => handleFacultyClick(f)}
                         className="group flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-blue-200 bg-white hover:bg-blue-50/30 transition-all cursor-pointer shadow-2xs"
                       >
                         <div className="flex items-center gap-3 min-w-0">
@@ -224,42 +228,66 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
                     </span>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    {documents.map((doc) => (
-                      <button
-                        key={doc.id}
-                        onClick={() => {
-                          if (doc.fileUrl) {
-                            window.open(doc.fileUrl, "_blank")
-                          }
-                        }}
-                        className="w-full text-left flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:border-slate-200 bg-white hover:bg-slate-50/70 transition-all focus:outline-none focus:ring-2 focus:ring-blue-100 shadow-2xs"
-                      >
-                        <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
-                          <FileText className="w-4 h-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <h4 className="text-sm font-semibold text-slate-800 truncate">
-                              {doc.title}
-                            </h4>
-                            <span className="text-[10px] font-semibold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full shrink-0 border border-slate-200">
-                              {doc.status}
-                            </span>
+                    {documents.map((doc) => {
+                      const isRestricted = doc.isConfidential && user?.role === "FACULTY" && doc.facultyId !== user?.id
+
+                      return (
+                        <button
+                          key={doc.id}
+                          onClick={() => {
+                            if (isRestricted) {
+                              toast.error("This document is marked confidential and cannot be viewed by peer faculty.")
+                              return
+                            }
+                            if (doc.fileUrl) {
+                              window.open(doc.fileUrl, "_blank")
+                            } else {
+                              toast.error("Document preview is unavailable.")
+                            }
+                          }}
+                          className="w-full text-left flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:border-slate-200 bg-white hover:bg-slate-50/70 transition-all focus:outline-none focus:ring-2 focus:ring-blue-100 shadow-2xs"
+                        >
+                          <div className={cn(
+                            "w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5",
+                            doc.isConfidential ? "bg-rose-50 text-rose-600" : "bg-blue-50 text-blue-600"
+                          )}>
+                            {doc.isConfidential ? <Lock className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
                           </div>
-                          <p className="text-xs text-slate-500 truncate mt-0.5">
-                            {doc.fileName || "No file attached"}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1.5 text-[11px] text-slate-400 font-medium">
-                            <span className="text-slate-600">{doc.areaName}</span>
-                            <span>•</span>
-                            <span>{doc.facultyName}</span>
-                            <span>•</span>
-                            <span>{new Date(doc.createdAt).toLocaleDateString()}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <h4 className="text-sm font-semibold text-slate-800 truncate">
+                                {doc.title}
+                              </h4>
+                              {doc.isConfidential ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-full shrink-0">
+                                  <Lock className="w-2.5 h-2.5" />
+                                  Confidential
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-semibold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full shrink-0 border border-slate-200">
+                                  {doc.status}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-500 truncate mt-0.5">
+                              {doc.fileName || "No file attached"}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1.5 text-[11px] text-slate-400 font-medium">
+                              <span className="text-slate-600">{doc.areaName}</span>
+                              <span>•</span>
+                              <span>{doc.facultyName}</span>
+                              <span>•</span>
+                              <span>{new Date(doc.createdAt).toLocaleDateString()}</span>
+                            </div>
                           </div>
-                        </div>
-                        <ExternalLink className="w-4 h-4 text-slate-300 group-hover:text-slate-500 shrink-0 mt-1" />
-                      </button>
-                    ))}
+                          {isRestricted ? (
+                            <Lock className="w-4 h-4 text-rose-400 shrink-0 mt-1" />
+                          ) : (
+                            <ExternalLink className="w-4 h-4 text-slate-300 group-hover:text-slate-500 shrink-0 mt-1" />
+                          )}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               )}
@@ -267,6 +295,12 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
           )}
         </div>
       </DialogContent>
+
+      <FacultyEvidenceModal
+        faculty={selectedFaculty}
+        open={!!selectedFaculty}
+        onClose={() => setSelectedFaculty(null)}
+      />
     </Dialog>
   )
 }

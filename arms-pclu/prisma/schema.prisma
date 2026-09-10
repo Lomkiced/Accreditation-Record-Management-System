@@ -63,12 +63,13 @@ model Indicator {
   criterionId  String            @map("criterion_id")
   name         String
   requiredDocs String?           @map("required_docs")
-  ratingScale  Int               @default(5) @map("rating_scale")
-  order        Int               @default(0)
-  createdAt    DateTime          @default(now()) @map("created_at")
-  updatedAt    DateTime          @updatedAt @map("updated_at")
-  mappings     DocumentMapping[]
-  criterion    Criterion         @relation(fields: [criterionId], references: [id], onDelete: Cascade)
+  ratingScale    Int               @default(5) @map("rating_scale")
+  order          Int               @default(0)
+  isConfidential Boolean           @default(false) @map("is_confidential")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  mappings       DocumentMapping[]
+  criterion      Criterion         @relation(fields: [criterionId], references: [id], onDelete: Cascade)
 
   @@index([criterionId])
   @@map("indicators")

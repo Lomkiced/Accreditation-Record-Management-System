@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { getArchivedDocuments, archiveDocument, restoreDocument, permanentlyDeleteDocument } from "@/actions/submission.actions"
 import { submissionKeys } from "./useSubmissions"
+import { areaKeys } from "./useAreas"
+import { dashboardKeys } from "./useDashboard"
 
 export const archiveKeys = {
   all: ["archives", "all"] as const,
@@ -49,7 +51,11 @@ export function useArchiveDocument() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
+      queryClient.invalidateQueries({ queryKey: submissionKeys.all })
       queryClient.invalidateQueries({ queryKey: archiveKeys.all })
+      queryClient.invalidateQueries({ queryKey: areaKeys.all })
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
+      queryClient.invalidateQueries({ queryKey: ["repository"] })
     }
   })
 }
@@ -82,7 +88,11 @@ export function useRestoreDocument() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
+      queryClient.invalidateQueries({ queryKey: submissionKeys.all })
       queryClient.invalidateQueries({ queryKey: archiveKeys.all })
+      queryClient.invalidateQueries({ queryKey: areaKeys.all })
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
+      queryClient.invalidateQueries({ queryKey: ["repository"] })
     }
   })
 }
@@ -114,7 +124,12 @@ export function usePermanentlyDeleteDocument() {
       toast.error(error.message || "Failed to delete document.")
     },
     onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
+      queryClient.invalidateQueries({ queryKey: submissionKeys.all })
       queryClient.invalidateQueries({ queryKey: archiveKeys.all })
+      queryClient.invalidateQueries({ queryKey: areaKeys.all })
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
+      queryClient.invalidateQueries({ queryKey: ["repository"] })
     }
   })
 }

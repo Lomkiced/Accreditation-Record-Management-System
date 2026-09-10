@@ -10,8 +10,10 @@ export interface SearchResult {
   fileUrl: string | null
   createdAt: Date
   facultyName: string
+  facultyId: string
   status: string
   areaName: string
+  isConfidential: boolean
 }
 
 export interface FacultySearchResult {
@@ -66,6 +68,7 @@ export async function searchDocuments(
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
+      userId: true,
       title: true,
       fileName: true,
       fileUrl: true,
@@ -79,6 +82,7 @@ export async function searchDocuments(
           status: true,
           indicator: {
             select: {
+              isConfidential: true,
               criterion: {
                 select: {
                   area: { select: { name: true } },
@@ -94,11 +98,13 @@ export async function searchDocuments(
   return docs.map(doc => {
     let status = "UNMAPPED"
     let areaName = "Not Mapped"
+    let isConfidential = false
     
     if (doc.mappings && doc.mappings.length > 0) {
       const m = doc.mappings[0]
       status = m.status
       areaName = m.indicator.criterion.area.name
+      isConfidential = Boolean(m.indicator.isConfidential)
       
       if (doc.mappings.length > 1) {
          areaName = `${areaName} (+${doc.mappings.length - 1} more)`
@@ -106,18 +112,25 @@ export async function searchDocuments(
          if (!allSameStatus) {
             status = "VARIES"
          }
+         if (doc.mappings.some(map => map.indicator.isConfidential)) {
+           isConfidential = true
+         }
       }
     }
+
+    const isRestricted = isConfidential && user.role === "FACULTY" && doc.userId !== user.id
 
     return {
       id: doc.id,
       title: doc.title,
       fileName: doc.fileName,
-      fileUrl: doc.fileUrl,
+      fileUrl: isRestricted ? null : doc.fileUrl,
       createdAt: doc.createdAt,
       facultyName: doc.user.name,
+      facultyId: doc.userId,
       status: status,
       areaName: areaName,
+      isConfidential: isConfidential,
     }
   })
 }
@@ -167,5 +180,103 @@ export async function globalSearch(query: string, areaId?: string): Promise<Glob
       designation: f.designation,
       assignedAreasCount: f._count.assignments,
     })),
+  }
+}
+
+export interface FacultyEvidenceItem {
+  id: string
+  title: string
+  fileName: string | null
+  fileUrl: string | null
+  uploadedAt: Date
+  isConfidential: boolean
+  mappings: {
+    id: string
+    indicatorName: string
+    criterionName: string
+    areaName: string
+    isConfidential: boolean
+  }[]
+}
+
+export async function getFacultyApprovedEvidence(facultyId: string): Promise<{ success: true; data: FacultyEvidenceItem[] } | { error: string }> {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { error: "Authentication required." }
+
+    const mappings = await prisma.documentMapping.findMany({
+      where: {
+        userId: facultyId,
+        status: "APPROVED",
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        document: {
+          select: {
+            id: true,
+            title: true,
+            fileName: true,
+            fileUrl: true,
+            createdAt: true,
+          },
+        },
+        indicator: {
+          select: {
+            id: true,
+            name: true,
+            isConfidential: true,
+            criterion: {
+              select: {
+                name: true,
+                area: { select: { name: true } },
+              },
+            },
+          },
+        },
+      },
+    })
+
+    const docMap = new Map<string, FacultyEvidenceItem>()
+    for (const m of mappings) {
+      const doc = m.document
+      const isIndConfidential = Boolean(m.indicator.isConfidential)
+
+      if (!docMap.has(doc.id)) {
+        const isOwner = currentUser.id === facultyId
+        const canView = isOwner || currentUser.role !== "FACULTY" || !isIndConfidential
+
+        docMap.set(doc.id, {
+          id: doc.id,
+          title: doc.title,
+          fileName: doc.fileName,
+          fileUrl: canView ? doc.fileUrl : null,
+          uploadedAt: doc.createdAt,
+          isConfidential: isIndConfidential,
+          mappings: [],
+        })
+      }
+
+      const item = docMap.get(doc.id)!
+      if (isIndConfidential) {
+        item.isConfidential = true
+        if (currentUser.role === "FACULTY" && currentUser.id !== facultyId) {
+          item.fileUrl = null
+        }
+      }
+
+      item.mappings.push({
+        id: m.id,
+        indicatorName: m.indicator.name,
+        criterionName: m.indicator.criterion.name,
+        areaName: m.indicator.criterion.area.name,
+        isConfidential: isIndConfidential,
+      })
+    }
+
+    return { success: true, data: Array.from(docMap.values()) }
+  } catch (error) {
+    console.error("[getFacultyApprovedEvidence]", error)
+    return { error: "Failed to load faculty documents." }
   }
 }

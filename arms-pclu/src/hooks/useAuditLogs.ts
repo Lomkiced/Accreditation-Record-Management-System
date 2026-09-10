@@ -1,7 +1,9 @@
 import * as React from "react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { getAuditLogs } from "@/actions/audit.actions"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { getAuditLogs, clearAuditLogs } from "@/actions/audit.actions"
 import { createClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
+import { dashboardKeys } from "./useDashboard"
 
 export const auditLogKeys = {
   all: ["audit-logs", "all"] as const,
@@ -46,5 +48,24 @@ export function useAuditLogs() {
     staleTime: 1000 * 30,
     // No polling needed — the Supabase Realtime channel subscription above
     // handles real-time pushes and invalidates the cache on INSERT events.
+  })
+}
+
+export function useClearAuditLogs() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => clearAuditLogs(),
+    onSuccess: (result) => {
+      if (!result.success) throw new Error(result.error)
+      toast.success("Audit logs cleared successfully.")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to clear audit logs.")
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: auditLogKeys.all })
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
+    }
   })
 }

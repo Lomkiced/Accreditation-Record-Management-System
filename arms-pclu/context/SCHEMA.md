@@ -70,6 +70,7 @@ erDiagram
         string required_docs "Free-text or CSV list"
         int rating_scale "Default: 5"
         int order
+        boolean is_confidential "Default: false - gates viewing of peer evidence"
         datetime created_at
         datetime updated_at
     }
@@ -208,7 +209,10 @@ Prevents duplicate mappings — a document can only be linked to a given indicat
 
 ### 4. Soft-Delete via `isArchived` & `isActive`
 - **Documents**: `isArchived: true` hides records from active views. All active queries explicitly filter `{ isArchived: false }`.
+  - *Approved Evidence Retention*: When a faculty member deletes an approved document from their submissions, the system soft-archives it rather than hard deleting it. The document is removed from the faculty member's personal list, but remains preserved in the institutional repository for Dean and Admin compliance evaluation.
 - **Users**: `isActive: false` archives user accounts while retaining all historical documents, audit logs, and mappings. Fast user administration queries read directly from Prisma without blocking on external authentication APIs.
+- **Indicators**: `isConfidential: true` marks sensitive indicators (such as strategic plans, financial data). Peer faculty can see metadata with a `🔒 Confidential` badge, but file viewing and downloading are restricted to the owner, Dean, and Admin.
+- **Audit Logs**: Can be bulk cleared by Admin or Dean via `clearAuditLogs()`, which deletes all historical log entries and inserts a single `CLEAR_AUDIT_LOGS` record detailing who initiated the action and when.
 
 ### 5. Cascade Deletes
 All child relationships use `onDelete: Cascade`:

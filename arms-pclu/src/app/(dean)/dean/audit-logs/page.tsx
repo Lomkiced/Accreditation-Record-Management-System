@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Search, Filter } from "lucide-react"
+import { Search, Filter, Trash2, Loader2 } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { DataTable } from "@/components/shared/DataTable"
 import { Button } from "@/components/ui/button"
@@ -13,14 +13,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { ColumnDef } from "@tanstack/react-table"
 import { AvatarInitials } from "@/components/shared/AvatarInitials"
-import { useAuditLogs } from "@/hooks/useAuditLogs"
+import { useAuditLogs, useClearAuditLogs } from "@/hooks/useAuditLogs"
 import type { AuditLogWithUser } from "@/actions/audit.actions"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function AuditLogsPage() {
   const { data: logs = [], isLoading } = useAuditLogs()
+  const clearLogsMutation = useClearAuditLogs()
+  const [isClearModalOpen, setIsClearModalOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [selectedModule, setSelectedModule] = React.useState("all")
   const [dateRange, setDateRange] = React.useState("all")
@@ -117,7 +129,22 @@ export default function AuditLogsPage() {
       <PageHeader
         title="Audit Logs"
         subtitle="System-wide activity monitoring and tracking"
-        actions={null}
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsClearModalOpen(true)}
+            disabled={logs.length === 0 || clearLogsMutation.isPending}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 shadow-sm"
+          >
+            {clearLogsMutation.isPending ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Trash2 className="w-4 h-4 mr-2" />
+            )}
+            Clear All Logs
+          </Button>
+        }
       />
 
       <div className="space-y-4">
@@ -177,6 +204,39 @@ export default function AuditLogsPage() {
           <DataTable columns={columns} data={filteredLogs} />
         )}
       </div>
+
+      {/* Clear All Audit Logs Confirmation Modal */}
+      <AlertDialog open={isClearModalOpen} onOpenChange={setIsClearModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear All Audit Logs</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to clear all audit logs? This action will permanently remove all past historical activity entries from the system. A single audit entry will record who cleared the logs.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={clearLogsMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={clearLogsMutation.isPending}
+              onClick={async (e) => {
+                e.preventDefault()
+                await clearLogsMutation.mutateAsync()
+                setIsClearModalOpen(false)
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {clearLogsMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Clearing...
+                </>
+              ) : (
+                "Yes, Clear All Logs"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

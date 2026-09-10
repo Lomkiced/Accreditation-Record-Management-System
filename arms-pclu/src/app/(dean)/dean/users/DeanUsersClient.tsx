@@ -11,8 +11,11 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
 import { useUsers, useArchiveUser, useRestoreUser, useDeleteUser, useArchivedUsers } from "@/hooks/useUsers"
 import { type UserWithCounts } from "@/actions/user.actions"
 import { toast } from "sonner"
+import { useSearchParams } from "next/navigation"
 
 export function DeanUsersClient({ initialData }: { initialData: UserWithCounts[] }) {
+  const searchParams = useSearchParams()
+  const searchParamVal = searchParams.get("search")
   const [isModalOpen, setIsModalOpen] = React.useState(false)
   const [editingUser, setEditingUser] = React.useState<UserWithCounts | undefined>()
   const [archivingUser, setArchivingUser] = React.useState<UserWithCounts | null>(null)
@@ -20,7 +23,13 @@ export function DeanUsersClient({ initialData }: { initialData: UserWithCounts[]
   const [deletingUser, setDeletingUser] = React.useState<UserWithCounts | null>(null)
   const [activeView, setActiveView] = React.useState<"active" | "archived">("active")
   
-  const [searchQuery, setSearchQuery] = React.useState("")
+  const [searchQuery, setSearchQuery] = React.useState(searchParamVal || "")
+
+  React.useEffect(() => {
+    if (searchParamVal) {
+      setSearchQuery(searchParamVal)
+    }
+  }, [searchParamVal])
   
   const { data: users = [], isLoading } = useUsers(["FACULTY"], initialData)
   const { data: archivedUsers = [], isLoading: isLoadingArchived } = useArchivedUsers(["FACULTY"])

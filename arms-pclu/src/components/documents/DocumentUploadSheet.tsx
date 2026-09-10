@@ -299,20 +299,21 @@ export function DocumentUploadSheet({
 
   // ─── Filtered tree for search ──────────────────────────────────────────────
   const filteredTree = React.useMemo(() => {
-    if (!indicatorSearch.trim()) return areaTree
-    const q = indicatorSearch.toLowerCase()
+    const q = indicatorSearch.trim().toLowerCase()
     return areaTree
       .map((area) => ({
         ...area,
         criteria: area.criteria
           .map((crit) => ({
             ...crit,
-            indicators: crit.indicators.filter(
-              (ind) =>
-                ind.name.toLowerCase().includes(q) ||
-                crit.name.toLowerCase().includes(q) ||
-                area.name.toLowerCase().includes(q)
-            ),
+            indicators: q
+              ? crit.indicators.filter(
+                  (ind) =>
+                    ind.name.toLowerCase().includes(q) ||
+                    crit.name.toLowerCase().includes(q) ||
+                    area.name.toLowerCase().includes(q)
+                )
+              : crit.indicators,
           }))
           .filter((crit) => crit.indicators.length > 0),
       }))

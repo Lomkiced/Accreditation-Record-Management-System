@@ -12,8 +12,11 @@ import { useUsers, useArchiveUser, useRestoreUser, useDeleteUser, useArchivedUse
 import { type UserWithCounts } from "@/actions/user.actions"
 import { toast } from "sonner"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useSearchParams } from "next/navigation"
 
 export function AdminUsersClient({ initialData }: { initialData: UserWithCounts[] }) {
+  const searchParams = useSearchParams()
+  const searchParamVal = searchParams.get("search")
   const [isModalOpen, setIsModalOpen] = React.useState(false)
   const [editingUser, setEditingUser] = React.useState<UserWithCounts | undefined>()
   const [archivingUser, setArchivingUser] = React.useState<UserWithCounts | null>(null)
@@ -21,7 +24,13 @@ export function AdminUsersClient({ initialData }: { initialData: UserWithCounts[
   const [deletingUser, setDeletingUser] = React.useState<UserWithCounts | null>(null)
   const [activeView, setActiveView] = React.useState<"active" | "archived">("active")
   
-  const [searchQuery, setSearchQuery] = React.useState("")
+  const [searchQuery, setSearchQuery] = React.useState(searchParamVal || "")
+
+  React.useEffect(() => {
+    if (searchParamVal) {
+      setSearchQuery(searchParamVal)
+    }
+  }, [searchParamVal])
   const [selectedDept, setSelectedDept] = React.useState<string>("All")
   const [roleFilter, setRoleFilter] = React.useState<"ALL" | "ADMIN" | "DEAN" | "FACULTY">("ALL")
   

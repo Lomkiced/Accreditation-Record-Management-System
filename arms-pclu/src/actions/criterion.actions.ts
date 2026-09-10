@@ -39,6 +39,7 @@ export async function getCriteriaByArea(areaId: string) {
           orderBy: { order: "asc" },
           include: {
             mappings: {
+              where: { document: { isArchived: false } },
               select: { status: true },
             },
           },
