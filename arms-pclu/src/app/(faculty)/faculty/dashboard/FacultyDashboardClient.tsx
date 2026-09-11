@@ -177,7 +177,7 @@ export function FacultyDashboardClient({
                 <div className="flex items-center gap-1.5 text-blue-100">
                   <div className="w-2 h-2 rounded-full bg-emerald-400"></div> {approvedIndicators} Approved
                 </div>
-                <div className="text-blue-200/80">{totalIndicators} Total Indicators</div>
+                <div className="text-blue-200/80">{totalIndicators} Total Evidences</div>
               </div>
             </div>
           </div>

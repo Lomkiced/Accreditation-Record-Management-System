@@ -805,10 +805,12 @@ export async function getIndicatorsForSelector(): Promise<
       id: string
       name: string
       order: number
+      assignedFaculty?: string[]
       criteria: {
         id: string
         name: string
         order: number
+        assignedFaculty?: string[]
         indicators: {
           id: string
           name: string
@@ -820,32 +822,20 @@ export async function getIndicatorsForSelector(): Promise<
   >
 > {
   try {
-    const currentUser = await requireUser()
+    await requireUser()
 
-    // Base query constraints
-    let areaWhereClause: any = {}
-
-    // For FACULTY: fetch assignments ONCE and reuse to avoid duplicate DB calls
-    let facultyAssignments: { areaId: string; criterionId: string | null }[] = []
-
-    if (currentUser.role === "FACULTY") {
-      facultyAssignments = await prisma.assignment.findMany({
-        where: { userId: currentUser.id },
-        select: { areaId: true, criterionId: true },
-      })
-
-      const assignedAreaIds = Array.from(new Set(facultyAssignments.map((a) => a.areaId)))
-
-      // If no assignments, they shouldn't be able to tag anything
-      if (assignedAreaIds.length === 0) {
-        return { success: true, data: [] }
-      }
-
-      areaWhereClause = { id: { in: assignedAreaIds } }
-    }
+    // Fetch all assignments with faculty info
+    const assignments = await prisma.assignment.findMany({
+      select: {
+        areaId: true,
+        criterionId: true,
+        user: {
+          select: { id: true, name: true },
+        },
+      },
+    })
 
     const areas = await prisma.area.findMany({
-      where: areaWhereClause,
       orderBy: { order: "asc" },
       select: {
         id: true,
@@ -872,34 +862,44 @@ export async function getIndicatorsForSelector(): Promise<
     })
 
     // Filter out criteria that have no indicators, and areas with no indicators
-    let filteredAreas = areas
-      .map((area) => ({
-        ...area,
-        criteria: area.criteria.filter((crit) => crit.indicators.length > 0),
-      }))
-      .filter((area) => area.criteria.length > 0)
-
-    // If FACULTY, further filter criteria using the already-fetched assignments
-    if (currentUser.role === "FACULTY") {
-      filteredAreas = filteredAreas
-        .map((area) => {
-          const areaAssignments = facultyAssignments.filter((a) => a.areaId === area.id)
-
-          // Full area access if any assignment has criterionId === null
-          const hasFullAreaAccess = areaAssignments.some((a) => a.criterionId === null)
-          if (hasFullAreaAccess) return area
-
-          // Otherwise only assigned criteria
-          const assignedCriterionIds = new Set(
-            areaAssignments.map((a) => a.criterionId).filter(Boolean)
+    const filteredAreas = areas
+      .map((area) => {
+        const areaFaculty = Array.from(
+          new Set(
+            assignments
+              .filter((a) => a.areaId === area.id && a.user?.name)
+              .map((a) => a.user.name)
           )
-          return {
-            ...area,
-            criteria: area.criteria.filter((crit) => assignedCriterionIds.has(crit.id)),
-          }
-        })
-        .filter((area) => area.criteria.length > 0 && area.criteria.some((c) => c.indicators.length > 0))
-    }
+        )
+
+        const criteriaWithIndicators = area.criteria
+          .filter((crit) => crit.indicators.length > 0)
+          .map((crit) => {
+            const critFaculty = Array.from(
+              new Set(
+                assignments
+                  .filter(
+                    (a) =>
+                      a.areaId === area.id &&
+                      (a.criterionId === crit.id || a.criterionId === null) &&
+                      a.user?.name
+                  )
+                  .map((a) => a.user.name)
+              )
+            )
+            return {
+              ...crit,
+              assignedFaculty: critFaculty,
+            }
+          })
+
+        return {
+          ...area,
+          assignedFaculty: areaFaculty,
+          criteria: criteriaWithIndicators,
+        }
+      })
+      .filter((area) => area.criteria.length > 0)
 
     return { success: true, data: filteredAreas }
   } catch (error) {
@@ -933,10 +933,10 @@ export async function deleteDocument(documentId: string): Promise<ActionResult> 
     })
 
     if (hasApproved && currentUser.role !== "ADMIN") {
-      // Soft-archive so it leaves the faculty's personal list but remains preserved in repository
+      // Soft-archive and mark deleted for faculty so it leaves the faculty's view completely but remains in institutional repository
       await prisma.document.update({
         where: { id: documentId },
-        data: { isArchived: true },
+        data: { isArchived: true, isDeletedByFaculty: true },
       })
 
       await prisma.auditLog.create({

@@ -62,15 +62,21 @@ Manual accreditation processes suffer from:
    - Faculty sees only assigned areas in their portal.
 
 4. **Document Repository & Archives**
-   - **Central Repository (Dean & Admin)**: Centralized storage of verified accreditation documents. The Dean and Admin Portals strictly display **approved documents only** (`status: APPROVED`, non-archived).
+   - **Central Repository (Dean & Admin)**: Centralized storage of verified accreditation documents. The Dean and Admin Portals display **approved documents only** (`status: APPROVED`, non-archived).
+   - **Repository Archives & Deletion Semantics**:
+     - **Dean Repository Deletion**: When the Dean deletes an approved document from the repository, it moves to the Repository Archives (`isArchivedFromRepo: true`), disappearing from the active Dean & Admin repositories. The document remains completely intact in the uploading faculty member's personal submissions.
+     - **Dean Repository Archive Toggle**: Dean repository includes dedicated "Active Repository" and "Repository Archives" tabs with item count badges, restore capabilities, and deletion protected by accessible Radix `AlertDialog` confirmation modals.
    - **Faculty Approved Repository**: Under Faculty Submissions (`/faculty/submissions`), a dedicated "Approved Repository" tab mirrors the Dean/Admin repository view, allowing faculty to explore all verified institutional evidence grouped by accreditation area.
-   - **Approved Document Retention**: If a faculty member deletes an approved document from their personal submissions list, the document is only soft-archived and removed from their personal view; the verified evidence remains preserved in the institutional repository for Dean and Admin compliance tracking.
-   - **Faculty Archives & Confirmation Modals**: All deletion and archiving actions trigger an explicit, accessible Radix `AlertDialog` confirmation modal. Soft-deleted documents move to `/faculty/archives` where faculty can restore them at any time.
+     - **Personal Approved Repository Archives**: Faculty Approved Repository includes its own "Active Repository" and "Repository Archives" toggle.
+     - **Faculty Deletion of Approved Evidence**: When a faculty member deletes an approved document, it is removed from their personal active list and moved to archives. When permanently deleted from archives, `isDeletedByFaculty: true` ensures it is permanently removed from their personal view while remaining preserved in the institutional repository for Dean and Admin compliance evaluation.
+   - **Faculty Archives & Confirmation Modals**: All deletion and archiving actions trigger an explicit, accessible Radix `AlertDialog` confirmation modal.
    - File versioning with history and restore capabilities.
    - Tag-based organization.
 
 5. **Document Mapping & Uploads (Faculty)**
    - Map uploaded documents to specific indicators.
+   - **Locked Approved Submissions**: Once evidence is approved by the Dean, it is locked from editing ("Edit Tags / Resume" and "Upload New Version" disabled); users/viewers are limited to viewing the file via "View Document".
+   - **Cross-Faculty Tagging Selector**: In the tagging selector, areas and criteria assigned to other faculty members are fully visible and selectable, displaying assigned faculty badges on each area and criterion to enhance collaboration across accreditation teams.
    - **Indicator-Aware Selector**: The tagging selector automatically excludes areas and criteria that do not have any indicators defined, preventing invalid or orphan tagging.
    - **Multi-File Batch Upload**: Faculty can select and upload multiple evidence files at once.
    - **In-Place File Updates**: Updating a file revisions the existing document in-place (`version + 1` with `DocumentVersion` snapshot) rather than creating a duplicate document.
@@ -81,20 +87,21 @@ Manual accreditation processes suffer from:
 6. **Submission Review & Taxonomy Management (Dean & Admin)**
    - View pending submissions, approve or return with remarks and rating.
    - CRUD for Areas, Criteria, and Indicators with drag-and-drop reordering.
-   - **Confidential Indicators**: Dean and Admin can toggle an indicator as `Confidential` (e.g., Strategic Plans, financial records).
+   - **Granular Confidential Evidence Selection**: In Add/Edit Indicator, users can select specific confidential documents from the required evidence list via individual checkboxes and a "Select All as Confidential" toggle.
    - **Peer Evidence Confidentiality Gating**: When Faculty A views or searches approved documents of Faculty B, confidential items display a `🔒 Confidential` badge, with file viewing and downloading strictly locked and restricted to the document owner, Dean, and Admin.
 
 7. **Global Search Engine & Performance (All Portals)**
-   - Ultra-fast global search in the top navigation header across all portals.
+   - Ultra-fast global search in the top navigation header across all portals. Clean placeholder text with active `Ctrl+K` shortcut listener.
    - Searches both **documents** (by title and filename) and **faculty members** (by name, email, department, designation).
    - **Role-Aware Redirection**:
-     - Dean clicking a faculty user navigates directly to Faculty Management (`/dean/users?search=...`).
+     - Dean clicking a faculty user navigates directly to Area Assignments (`/dean/assignments?facultyId=...`), automatically pre-selecting that faculty member so the `AssignmentPanel` opens directly.
      - Admin clicking a user navigates to User Management (`/admin/users?search=...`).
      - Faculty clicking a peer opens a dedicated `FacultyEvidenceModal` displaying their approved evidence portfolio with confidentiality restrictions enforced.
-   - High performance: pre-mounted search dialog, 150ms debounce, 5-minute TanStack Query caching, and keyboard shortcut `Ctrl+K`.
+   - High performance: pre-mounted search dialog, 150ms debounce, 5-minute TanStack Query caching.
 
-8. **Dashboards & Area Completion Coherence**
-   - Area completion percentage accurately computed based only on non-archived approved document mappings (`where: { document: { isArchived: false } }`). Empty or deleted areas strictly report 0%.
+8. **Dashboards & Metric Semantics**
+   - **Faculty Dashboard**: In the "Overall Completion" card, the metric displays `{totalIndicators} Total Evidences` to accurately represent cumulative accreditation evidence.
+   - Area completion percentage accurately computed based only on non-archived approved document mappings (`where: { document: { isArchived: false, isArchivedFromRepo: false } }`). Empty or deleted areas strictly report 0%.
    - Invalidation of area and dashboard query caches on document deletion, archiving, restoring, and approval.
 
 9. **User Management (Dean & Admin)**

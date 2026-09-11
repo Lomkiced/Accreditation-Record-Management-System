@@ -1,7 +1,12 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { requireAdmin } from "@/lib/auth/getUser"
+import { requireAdmin, requireAdminOrDean } from "@/lib/auth/getUser"
+import { revalidatePath } from "next/cache"
+
+type ActionResult<T = undefined> =
+  | { success: true; data?: T; error?: never }
+  | { success?: never; error: string }
 
 export interface ApprovedDocument {
   id: string
@@ -36,7 +41,10 @@ export async function getApprovedDocumentsByArea(): Promise<AreaWithApprovedDocu
 
   // Fetch all APPROVED document mappings with their related data
   const approvedMappings = await prisma.documentMapping.findMany({
-    where: { status: "APPROVED" },
+    where: {
+      status: "APPROVED",
+      document: { isArchivedFromRepo: false },
+    },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
@@ -103,4 +111,79 @@ export async function getApprovedDocumentsByArea(): Promise<AreaWithApprovedDocu
   }
 
   return result
+}
+
+export async function archiveDocumentFromRepository(documentId: string): Promise<ActionResult> {
+  try {
+    const currentUser = await requireAdminOrDean()
+
+    const doc = await prisma.document.findUnique({
+      where: { id: documentId },
+    })
+    if (!doc) return { error: "Document not found." }
+
+    await prisma.document.update({
+      where: { id: documentId },
+      data: { isArchivedFromRepo: true },
+    })
+
+    await prisma.auditLog.create({
+      data: {
+        userId: currentUser.id,
+        action: "ARCHIVE_FROM_REPOSITORY",
+        module: "DOCUMENT",
+        targetId: documentId,
+        details: {
+          title: doc.title,
+          reason: "Archived from repository by Dean/Admin - preserved in faculty submissions",
+        },
+      },
+    })
+
+    revalidatePath("/dean/repository")
+    revalidatePath("/admin/repository")
+    revalidatePath("/faculty/submissions")
+
+    return { success: true }
+  } catch (error: any) {
+    console.error("[archiveDocumentFromRepository]", error)
+    return { error: "Failed to archive document from repository." }
+  }
+}
+
+export async function restoreDocumentToRepository(documentId: string): Promise<ActionResult> {
+  try {
+    const currentUser = await requireAdminOrDean()
+
+    const doc = await prisma.document.findUnique({
+      where: { id: documentId },
+    })
+    if (!doc) return { error: "Document not found." }
+
+    await prisma.document.update({
+      where: { id: documentId },
+      data: { isArchivedFromRepo: false },
+    })
+
+    await prisma.auditLog.create({
+      data: {
+        userId: currentUser.id,
+        action: "RESTORE_TO_REPOSITORY",
+        module: "DOCUMENT",
+        targetId: documentId,
+        details: {
+          title: doc.title,
+          reason: "Restored to active repository by Dean/Admin",
+        },
+      },
+    })
+
+    revalidatePath("/dean/repository")
+    revalidatePath("/admin/repository")
+
+    return { success: true }
+  } catch (error: any) {
+    console.error("[restoreDocumentToRepository]", error)
+    return { error: "Failed to restore document to repository." }
+  }
 }

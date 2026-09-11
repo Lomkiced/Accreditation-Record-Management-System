@@ -66,6 +66,7 @@ model Indicator {
   ratingScale    Int               @default(5) @map("rating_scale")
   order          Int               @default(0)
   isConfidential Boolean           @default(false) @map("is_confidential")
+  confidentialDocs String?         @map("confidential_docs")
   createdAt      DateTime          @default(now()) @map("created_at")
   updatedAt      DateTime          @updatedAt @map("updated_at")
   mappings       DocumentMapping[]
@@ -77,22 +78,24 @@ model Indicator {
 
 /// Central file record — uploaded once, mapped to many indicators.
 model Document {
-  id           String            @id @default(uuid())
-  userId       String            @map("user_id")
-  title        String
-  description  String?
-  fileUrl      String?           @map("file_url")
-  fileName     String?           @map("file_name")
-  fileSize     Int?              @map("file_size")
-  documentDate DateTime?         @map("document_date")
-  version      Int               @default(1)
-  isArchived   Boolean           @default(false) @map("is_archived")
-  createdAt    DateTime          @default(now()) @map("created_at")
-  updatedAt    DateTime          @updatedAt @map("updated_at")
-  mappings     DocumentMapping[]
-  tags         DocumentTag[]
-  versions     DocumentVersion[]
-  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String            @id @default(uuid())
+  userId             String            @map("user_id")
+  title              String
+  description        String?
+  fileUrl            String?           @map("file_url")
+  fileName           String?           @map("file_name")
+  fileSize           Int?              @map("file_size")
+  documentDate       DateTime?         @map("document_date")
+  version            Int               @default(1)
+  isArchived         Boolean           @default(false) @map("is_archived")
+  isDeletedByFaculty Boolean           @default(false) @map("is_deleted_by_faculty")
+  isArchivedFromRepo Boolean           @default(false) @map("is_archived_from_repo")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+  mappings           DocumentMapping[]
+  tags               DocumentTag[]
+  versions           DocumentVersion[]
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   // Composite index for archive/submission filters

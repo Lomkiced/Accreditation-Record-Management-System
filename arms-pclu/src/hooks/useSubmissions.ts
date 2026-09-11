@@ -133,20 +133,65 @@ export function useAllSubmissions(initialData?: AllSubmissionsData) {
   })
 }
 
+import {
+  archiveDocumentFromRepository,
+  restoreDocumentToRepository,
+} from "@/actions/repository.actions"
+
 // ─── GET APPROVED SUBMISSIONS (Dean Repository view) ─────────────────────────
 
 type ApprovedSubmissionsData = NonNullable<Extract<Awaited<ReturnType<typeof getApprovedSubmissions>>, { success: true }>["data"]>
 
-export function useApprovedSubmissions(initialData?: ApprovedSubmissionsData) {
+export function useApprovedSubmissions(initialData?: ApprovedSubmissionsData, archived: boolean = false) {
   return useQuery({
-    queryKey: submissionKeys.approved,
+    queryKey: [...submissionKeys.approved, archived] as const,
     queryFn: async () => {
-      const result = await getApprovedSubmissions()
+      const result = await getApprovedSubmissions(archived)
       if (!result.success) throw new Error(result.error)
       return result.data
     },
-    initialData,
+    initialData: archived ? undefined : initialData,
     staleTime: 1000 * 60 * 2,
+  })
+}
+
+export function useArchiveDocumentFromRepository() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (documentId: string) => {
+      const res = await archiveDocumentFromRepository(documentId)
+      if (!res.success) throw new Error(res.error)
+      return res
+    },
+    onSuccess: () => {
+      toast.success("Document archived from repository.")
+      queryClient.invalidateQueries({ queryKey: submissionKeys.approved })
+      queryClient.invalidateQueries({ queryKey: ["repository"] })
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to archive document from repository.")
+    },
+  })
+}
+
+export function useRestoreDocumentToRepository() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (documentId: string) => {
+      const res = await restoreDocumentToRepository(documentId)
+      if (!res.success) throw new Error(res.error)
+      return res
+    },
+    onSuccess: () => {
+      toast.success("Document restored to repository.")
+      queryClient.invalidateQueries({ queryKey: submissionKeys.approved })
+      queryClient.invalidateQueries({ queryKey: ["repository"] })
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to restore document to repository.")
+    },
   })
 }
 

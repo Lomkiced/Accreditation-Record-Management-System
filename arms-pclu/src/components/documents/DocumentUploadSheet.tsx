@@ -50,6 +50,7 @@ type AreaNode = {
   id: string
   name: string
   order: number
+  assignedFaculty?: string[]
   criteria: CriterionNode[]
 }
 
@@ -57,6 +58,7 @@ type CriterionNode = {
   id: string
   name: string
   order: number
+  assignedFaculty?: string[]
   indicators: IndicatorNode[]
 }
 
@@ -547,9 +549,16 @@ export function DocumentUploadSheet({
                                 {aIdx + 1}
                               </div>
                               <div>
-                                <p className="text-sm font-semibold text-slate-800">
-                                  {area.name}
-                                </p>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="text-sm font-semibold text-slate-800">
+                                    {area.name}
+                                  </p>
+                                  {area.assignedFaculty && area.assignedFaculty.length > 0 && (
+                                    <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-normal">
+                                      Assigned: {area.assignedFaculty.join(", ")}
+                                    </span>
+                                  )}
+                                </div>
                                 <p className="text-xs text-slate-400">
                                   {area.criteria.reduce(
                                     (acc, c) => acc + c.indicators.length,
@@ -572,7 +581,7 @@ export function DocumentUploadSheet({
                                 return (
                                   <div key={criterion.id} className="px-4 py-3">
                                     {/* Criterion header with select-all */}
-                                    <div className="flex items-center gap-2 mb-2">
+                                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                                       <Checkbox
                                         id={`crit-${criterion.id}`}
                                         checked={allSelected}
@@ -590,6 +599,11 @@ export function DocumentUploadSheet({
                                       >
                                         {criterion.name}
                                       </label>
+                                      {criterion.assignedFaculty && criterion.assignedFaculty.length > 0 && (
+                                        <span className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-normal">
+                                          Assigned: {criterion.assignedFaculty.join(", ")}
+                                        </span>
+                                      )}
                                     </div>
                                     {/* Indicators */}
                                     <div className="ml-6 space-y-1.5">

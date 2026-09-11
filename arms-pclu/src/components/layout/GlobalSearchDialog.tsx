@@ -79,7 +79,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
   const handleFacultyClick = (faculty: any) => {
     if (user?.role === "DEAN") {
       onOpenChange(false)
-      router.push(`/dean/users?search=${encodeURIComponent(faculty.name)}`)
+      router.push(`/dean/assignments?facultyId=${faculty.id}`)
     } else if (user?.role === "ADMIN") {
       onOpenChange(false)
       router.push(`/admin/users?search=${encodeURIComponent(faculty.name)}`)
@@ -97,7 +97,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search documents or faculty members... (Ctrl+K)"
+            placeholder="Search documents or faculty members..."
             className="flex-1 border-0 shadow-none focus-visible:ring-0 text-base"
             autoFocus
           />

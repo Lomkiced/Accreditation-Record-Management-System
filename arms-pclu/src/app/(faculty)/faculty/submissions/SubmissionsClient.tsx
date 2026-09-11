@@ -16,6 +16,7 @@ import {
   Loader2,
   Send,
   Archive,
+  Eye,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -336,16 +337,27 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
                                   <span>Upload New Version</span>
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem
-                                onSelect={() => {
-                                  setSelectedDocument(doc)
-                                  setIsUploadOpen(true)
-                                }}
-                                className="cursor-pointer"
-                              >
-                                <Tag className="mr-2 h-4 w-4" />
-                                <span>Edit Tags / Resume</span>
-                              </DropdownMenuItem>
+                              {doc.fileUrl && (
+                                <DropdownMenuItem
+                                  onSelect={() => window.open(doc.fileUrl!, "_blank")}
+                                  className="cursor-pointer font-medium text-blue-600 focus:text-blue-700 focus:bg-blue-50"
+                                >
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  <span>View Document</span>
+                                </DropdownMenuItem>
+                              )}
+                              {!doc.mappings.some(m => m.status === "APPROVED") && (
+                                <DropdownMenuItem
+                                  onSelect={() => {
+                                    setSelectedDocument(doc)
+                                    setIsUploadOpen(true)
+                                  }}
+                                  className="cursor-pointer"
+                                >
+                                  <Tag className="mr-2 h-4 w-4" />
+                                  <span>Edit Tags / Resume</span>
+                                </DropdownMenuItem>
+                              )}
                               {doc.mappings.length === 0 && (
                                 <DropdownMenuItem
                                   onSelect={() => setConfirmAction({ docId: doc.id, title: doc.title, type: "delete" })}

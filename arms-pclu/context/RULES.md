@@ -208,16 +208,19 @@ Any new compliance-related feature must reference `dashboard.actions.ts` as the 
 
 ---
 
-## 15. Institutional Approved Evidence Retention
+## 15. Institutional Approved Evidence Retention & Multi-Tier Architecture
 
 - **Approved Evidence Preservation**: Approved documents are institutional assets required for accreditation compliance evaluation.
-- **Soft-Archive on Faculty Deletion**: If a faculty member deletes an approved document from their personal submissions list, the backend must soft-archive the document (`isArchived: true`) rather than executing a hard database delete. The document is cleanly removed from the faculty member's personal list and moved to `/faculty/archives`, while the approved mapping remains active and preserved in the Dean and Admin repositories.
+- **Approved Submissions Immutability**: Once evidence is approved by the Dean, the submission is locked against further editing ("Edit Tags / Resume" and "Upload New Version" disabled); users/viewers are strictly restricted to "View Document".
+- **Faculty Deletion of Approved Evidence (`isDeletedByFaculty`)**: If a faculty member deletes an approved document from their personal submissions or personal archives, the backend flags `isDeletedByFaculty: true`. The document is permanently removed from the faculty member's submissions and personal archives, while the record and its approved mappings remain safely preserved in the institutional repository for Dean and Admin compliance evaluation.
+- **Dean Repository Deletion & Archives (`isArchivedFromRepo`)**: When the Dean deletes an approved document from `/dean/repository`, the system flags `isArchivedFromRepo: true`. It is removed from the active Dean & Admin repositories and moved to the Repository Archives tab. The document remains completely intact in the faculty owner's submissions.
+- **Repository Archive Tabs & Confirmation Modals**: Both the Faculty Approved Repository and the Dean Repository must feature dedicated "Active Repository" and "Repository Archives" toggle tabs with accessible Radix UI `AlertDialog` confirmation modals before deletion or archiving.
 
 ---
 
-## 16. Indicator Confidentiality & Access Gating Rules
+## 16. Indicator Confidentiality & Granular Evidence Selection
 
-- **Confidential Indicator Support**: Indicators can be toggled as `isConfidential: true` (e.g., Strategic Plans, financial records).
+- **Granular Confidentiality**: In addition to marking an entire indicator as confidential (`isConfidential: true`), users can select specific required evidence items as confidential (`confidentialDocs` JSON array) using individual checkboxes and a master "Select All as Confidential" toggle in the indicator modal.
 - **Peer Faculty Access Control**:
   - Dean and Admin have full access to view, download, and audit all evidence files.
   - The uploading faculty owner has full access to view and manage their own files.
@@ -227,10 +230,17 @@ Any new compliance-related feature must reference `dashboard.actions.ts` as the 
 
 ## 17. Area Metric Coherence & Cache Synchronization
 
-- **Archived Document Filtering**: All area compliance, criterion mapping queries, and drill-down components must explicitly filter `{ where: { document: { isArchived: false } } }`. Empty or deleted areas must strictly display 0% completion.
+- **Archived Document Filtering**: All area compliance, criterion mapping queries, and drill-down components must explicitly filter `{ where: { document: { isArchived: false, isArchivedFromRepo: false } } }`. Empty or deleted areas must strictly display 0% completion.
 - **Cache Invalidation Pipeline**: Any document lifecycle event (delete, archive, restore, permanent delete, approval) must coordinate both:
   1. Next.js App Router server path revalidation (`revalidatePath`).
   2. TanStack React Query cache invalidation (`areaKeys.all`, `dashboardKeys.all`, `submissionKeys`, `archiveKeys`, and `repository`).
+
+---
+
+## 18. Collaborative Cross-Faculty Tagging Architecture
+
+- **Broad Collaboration Access**: In the Document Upload Sheet (`DocumentUploadSheet`), the tagging selector must not restrict faculty to only their own assigned areas. It must display all active areas and criteria that contain indicators.
+- **Assigned Faculty Badging**: Areas and criteria must display clear badges indicating which faculty member is assigned, fostering transparent coordination across accreditation teams.
 
 
 

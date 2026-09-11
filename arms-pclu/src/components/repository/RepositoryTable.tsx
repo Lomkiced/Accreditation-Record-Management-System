@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Eye, Download, Tag, MapPin } from "lucide-react"
+import { Eye, Download, Tag, MapPin, Trash2, RotateCcw } from "lucide-react"
 import { DataTable } from "@/components/shared/DataTable"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { AvatarInitials } from "@/components/shared/AvatarInitials"
@@ -41,6 +41,9 @@ export interface RepositoryDocument {
 interface RepositoryTableProps {
   data: RepositoryDocument[]
   onRowClick: (doc: RepositoryDocument) => void
+  activeTab?: "active" | "archived"
+  onArchive?: (doc: RepositoryDocument) => void
+  onRestore?: (doc: RepositoryDocument) => void
 }
 
 // ─── Dominant status logic ────────────────────────────────────────────────────
@@ -64,7 +67,13 @@ export function getDominantStatus(mappings: { status: string }[]): string {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function RepositoryTable({ data, onRowClick }: RepositoryTableProps) {
+export function RepositoryTable({
+  data,
+  onRowClick,
+  activeTab = "active",
+  onArchive,
+  onRestore,
+}: RepositoryTableProps) {
   const columns: ColumnDef<RepositoryDocument>[] = [
     {
       id: "select",
@@ -186,9 +195,34 @@ export function RepositoryTable({ data, onRowClick }: RepositoryTableProps) {
             size="icon"
             className="h-8 w-8 text-slate-400 hover:text-blue-600"
             onClick={() => onRowClick(row.original)}
+            title="View Details"
           >
             <Eye className="w-4 h-4" />
           </Button>
+
+          {activeTab === "active" && onArchive && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
+              onClick={() => onArchive(row.original)}
+              title="Delete from Repository"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          )}
+
+          {activeTab === "archived" && onRestore && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+              onClick={() => onRestore(row.original)}
+              title="Restore to Active Repository"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       ),
     },

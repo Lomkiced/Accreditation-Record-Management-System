@@ -21,6 +21,7 @@ const IndicatorSchema = z.object({
   ratingScale: z.number().int().min(1).max(10).default(5),
   order: z.number().int().nonnegative().optional(),
   isConfidential: z.boolean().optional(),
+  confidentialDocs: z.string().nullable().optional(),
 })
 
 const UpdateIndicatorSchema = IndicatorSchema.omit({ criterionId: true })
@@ -83,6 +84,7 @@ export async function createIndicator(
       ratingScale: formData.ratingScale,
       order: formData.order,
       isConfidential: formData.isConfidential,
+      confidentialDocs: formData.confidentialDocs,
     })
 
     // Verify the parent criterion exists
@@ -107,6 +109,7 @@ export async function createIndicator(
         ratingScale: validated.ratingScale,
         order: nextOrder,
         isConfidential: validated.isConfidential ?? false,
+        confidentialDocs: validated.confidentialDocs ?? null,
       },
     })
 
@@ -157,6 +160,7 @@ export async function updateIndicator(
       ratingScale: formData.ratingScale,
       order: formData.order,
       isConfidential: formData.isConfidential,
+      confidentialDocs: formData.confidentialDocs,
     })
 
     const existing = await prisma.indicator.findUnique({
@@ -172,6 +176,7 @@ export async function updateIndicator(
         ratingScale: validated.ratingScale,
         ...(validated.order !== undefined && { order: validated.order }),
         ...(validated.isConfidential !== undefined && { isConfidential: validated.isConfidential }),
+        ...(validated.confidentialDocs !== undefined && { confidentialDocs: validated.confidentialDocs ?? null }),
       },
     })
 

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useSearchParams } from "next/navigation"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { FacultyList, type Faculty } from "@/components/assignments/FacultyList"
 import { AssignmentPanel } from "@/components/assignments/AssignmentPanel"
@@ -11,8 +12,19 @@ import type { getFacultyWithAssignmentCounts } from "@/actions/assignment.action
 type FacultyListData = NonNullable<Extract<Awaited<ReturnType<typeof getFacultyWithAssignmentCounts>>, { success: true }>["data"]>
 
 export function DeanAssignmentsClient({ initialData }: { initialData: FacultyListData }) {
+  const searchParams = useSearchParams()
+  const facultyIdParam = searchParams.get("facultyId")
   const [selectedFaculty, setSelectedFaculty] = React.useState<Faculty | null>(null)
   const { data: faculties = [], isLoading } = useFacultyList(initialData)
+
+  React.useEffect(() => {
+    if (facultyIdParam && faculties.length > 0) {
+      const match = faculties.find((f) => f.id === facultyIdParam)
+      if (match) {
+        setSelectedFaculty(match)
+      }
+    }
+  }, [facultyIdParam, faculties])
 
   return (
     <div className="space-y-6 flex flex-col h-[calc(100vh-120px)]">

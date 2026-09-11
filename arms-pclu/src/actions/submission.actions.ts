@@ -645,9 +645,29 @@ export async function permanentlyDeleteDocument(documentId: string): Promise<Act
       where: { documentId, status: "APPROVED" },
     })
     if (hasApproved && currentUser.role !== "ADMIN") {
-      return {
-        error: "This document contains approved accreditation evidence. It is preserved in the institutional repository and cannot be destroyed.",
-      }
+      await prisma.document.update({
+        where: { id: documentId },
+        data: { isDeletedByFaculty: true },
+      })
+
+      await prisma.auditLog.create({
+        data: {
+          userId: currentUser.id,
+          action: "DELETE_DOCUMENT",
+          module: "DOCUMENT",
+          targetId: documentId,
+          details: {
+            title: doc.title,
+            reason: "Permanently deleted by faculty - record preserved in institutional repository",
+          },
+        },
+      })
+
+      revalidatePath("/faculty/archives")
+      revalidatePath("/faculty/submissions")
+      revalidatePath("/faculty/dashboard")
+      revalidatePath("/faculty/my-areas")
+      return { success: true }
     }
 
     // In a full implementation, you would also delete the file from Supabase Storage here using `doc.fileUrl`
@@ -683,6 +703,7 @@ export async function getArchivedDocuments() {
       where: {
         userId: currentUser.id,
         isArchived: true,
+        isDeletedByFaculty: false,
       },
       orderBy: { updatedAt: "desc" },
       select: {
@@ -757,7 +778,7 @@ export async function getMySubmissions() {
     const mappings = await prisma.documentMapping.findMany({
       where: {
         userId: currentUser.id,
-        document: { isArchived: false },
+        document: { isArchived: false, isDeletedByFaculty: false },
       },
       orderBy: { updatedAt: "desc" },
       select: {
@@ -921,17 +942,26 @@ export type AdminSubmission = NonNullable<
   Extract<Awaited<ReturnType<typeof getAllSubmissions>>, { success: true }>["data"]
 >[number]
 
-// ─── GET APPROVED SUBMISSIONS (Institutional Repository View) ───────────────
-// Returns exclusively APPROVED DocumentMappings for institutional accreditation repositories.
-
-export async function getApprovedSubmissions() {
+export async function getApprovedSubmissions(archived: boolean = false) {
   try {
-    await requireUser()
+    const currentUser = await requireUser()
+
+    const whereClause: any = {
+      status: "APPROVED",
+      document: {
+        isArchivedFromRepo: archived,
+      },
+    }
+
+    if (currentUser.role === "FACULTY") {
+      whereClause.NOT = {
+        userId: currentUser.id,
+        document: { isDeletedByFaculty: true },
+      }
+    }
 
     const mappings = await prisma.documentMapping.findMany({
-      where: {
-        status: "APPROVED",
-      },
+      where: whereClause,
       orderBy: { updatedAt: "desc" },
       select: {
         id: true,
@@ -954,6 +984,9 @@ export async function getApprovedSubmissions() {
             fileSize: true,
             documentDate: true,
             version: true,
+            isArchived: true,
+            isArchivedFromRepo: true,
+            isDeletedByFaculty: true,
             createdAt: true,
             versions: {
               orderBy: { version: "desc" },

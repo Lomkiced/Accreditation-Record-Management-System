@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { DeanAssignmentsClient } from "./DeanAssignmentsClient"
 import { getFacultyWithAssignmentCounts } from "@/actions/assignment.actions"
 import { requireAdminOrDean } from "@/lib/auth/getUser"
@@ -14,8 +15,8 @@ export default async function DeanAssignmentsPage() {
   const initialData = (facultiesResult.success ? facultiesResult.data : undefined) ?? []
 
   return (
-    <>
+    <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading assignments...</div>}>
       <DeanAssignmentsClient initialData={initialData} />
-    </>
+    </Suspense>
   )
 }

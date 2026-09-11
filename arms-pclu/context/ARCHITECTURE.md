@@ -202,23 +202,37 @@ The Faculty Archives (`/faculty/archives`) is built for scalability and clarity:
 - Responsive pagination controls item rendering limits.
 - Dual presentation modes: Responsive Card Grid and High-Density Table.
 
-### Faculty Approved Repository & Evidence Retention
-Under `/faculty/submissions`, faculty have access to two unified views: "My Submissions" and "Approved Repository".
-- **Institutional Evidence Retention**: If a faculty member deletes an approved document, the backend intercepts the request and soft-archives the record (`isArchived: true`) instead of hard-deleting it. The document is cleanly removed from the faculty member's active submissions list, but all approved mappings remain preserved in the Dean and Admin repositories.
-- **Radix AlertDialog Confirmation**: All delete and archive actions are protected by accessible `AlertDialog` confirmation modals rather than native browser alerts.
+### Multi-Tier Repository, Archives & Evidence Retention Architecture
+Under `/faculty/submissions`, `/dean/repository`, and `/admin/repository`, multi-tier retention guarantees institutional compliance while giving users flexible personal workflow control:
+- **Faculty Personal Submissions & Archives**:
+  - Soft-deleting a submission moves it to the personal archives (`isArchived: true`).
+  - When an approved document is deleted by faculty, the record is flagged with `isDeletedByFaculty: true` (and `isArchived: true`). The document is permanently removed from the faculty member's submissions and personal archives, but remains safely preserved in the institutional repository for accreditation compliance.
+  - Faculty Approved Repository features a dedicated "Active Repository" vs "Repository Archives" toggle, allowing faculty to manage personal archive views and permanently remove approved documents with accessible Radix `AlertDialog` confirmation modals.
+- **Dean Repository Deletion & Institutional Archives**:
+  - When the Dean deletes an approved document from `/dean/repository`, it triggers `archiveDocumentFromRepository(documentId)`, setting `isArchivedFromRepo: true`.
+  - The document is removed from the active Dean & Admin repositories (`where: { document: { isArchivedFromRepo: false } }`), moving to the Dean "Repository Archives" tab.
+  - The document remains completely intact in the faculty member's personal submissions, preserving their work and historical contribution.
+- **Radix AlertDialog Confirmation**: All delete, archive, and permanent removal actions are strictly protected by accessible `AlertDialog` confirmation modals rather than native browser alerts.
 
-### Indicator Confidentiality & Access Gating Pipeline
-Indicators can be marked as `isConfidential` (e.g. institutional Strategic Plans, proprietary financial budgets).
-- **Access Gating**:
+### Indicator Confidentiality & Granular Evidence Selection
+Indicators support granular confidentiality control:
+- **Item-Level Confidentiality**: In addition to marking an entire indicator as confidential (`isConfidential: true`), users can select specific required evidence items as confidential (`confidentialDocs` JSON array) using checkboxes and a "Select All as Confidential" toggle.
+- **Access Gating Pipeline**:
   - Dean and Admin have full access to view, download, and review all documents.
   - Document owners have full access to their own uploaded files regardless of confidentiality status.
-  - Peer faculty members can view metadata (title, area, criterion, indicator, date) to track compliance, but the file link and download actions are locked (`isConfidential: true`), showing a `🔒 Confidential` badge.
+  - Peer faculty members can view metadata (title, area, criterion, indicator, date) to track compliance, but file viewing and downloading are locked with a `🔒 Confidential` badge.
 - **Search Integration**:
   - When a faculty member clicks another faculty user in Global Search, `FacultyEvidenceModal` loads their approved evidence with peer confidentiality gating applied.
+  - Dean clicking a faculty user navigates to `/dean/assignments?facultyId=...` and automatically pre-selects the faculty in the assignment panel.
+  - Admin clicking a faculty user navigates to `/admin/users?search=...` with clean search pre-fill.
+
+### Cross-Faculty Tagging Selector Architecture
+- In the Document Upload & Tagging Sheet (`DocumentUploadSheet`), the selector queries `getIndicatorsForSelector()`, which returns all active areas and criteria containing indicators regardless of assignment restrictions.
+- Assigned faculty members are aggregated and returned per area and per criterion (`assignedFaculty: string[]`), rendered as informative badges in the tagging tree. This enables faculty to collaborate and contribute evidence to areas assigned across departments.
 
 ### Area Compliance Metric Coherence & Cache Invalidation
-- **Archived Document Filtering**: `criterion.actions.ts` (`getCriteriaByArea`) and `area.actions.ts` (`AREA_LEAN_SELECT`) filter mapping queries with `{ where: { document: { isArchived: false } } }`. Indicators without active non-archived approved evidence strictly evaluate to 0%, eliminating phantom completion rates on empty or cleared areas.
-- **Coordinated Invalidation**: Document mutations (`deleteDocument`, `archiveDocument`, `restoreDocument`, `permanentlyDeleteDocument`) trigger:
+- **Archived Document Filtering**: `criterion.actions.ts` (`getCriteriaByArea`) and `area.actions.ts` (`AREA_LEAN_SELECT`) filter mapping queries with `{ where: { document: { isArchived: false, isArchivedFromRepo: false } } }`. Indicators without active non-archived approved evidence strictly evaluate to 0%, eliminating phantom completion rates on empty or cleared areas.
+- **Coordinated Invalidation**: Document mutations (`deleteDocument`, `archiveDocument`, `restoreDocument`, `permanentlyDeleteDocument`, `archiveDocumentFromRepository`, `restoreDocumentToRepository`) trigger:
   1. Server path revalidations via `revalidatePath` across `/admin/areas`, `/dean/areas`, `/faculty/my-areas`, `/admin/dashboard`, `/dean/dashboard`, and repositories.
   2. TanStack Query cache invalidations across `submissionKeys`, `archiveKeys`, `areaKeys.all`, `dashboardKeys.all`, and `repository`.
 

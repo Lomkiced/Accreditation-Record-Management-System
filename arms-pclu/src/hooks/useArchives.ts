@@ -27,7 +27,11 @@ export function useArchiveDocument() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) => archiveDocument(id),
+    mutationFn: async (id: string) => {
+      const res = await archiveDocument(id)
+      if (!res.success) throw new Error(res.error)
+      return res
+    },
     onMutate: async (id: string) => {
       await queryClient.cancelQueries({ queryKey: submissionKeys.mine })
       const previousSubmissions = queryClient.getQueryData<any[]>(submissionKeys.mine)
@@ -64,7 +68,11 @@ export function useRestoreDocument() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) => restoreDocument(id),
+    mutationFn: async (id: string) => {
+      const res = await restoreDocument(id)
+      if (!res.success) throw new Error(res.error)
+      return res
+    },
     onMutate: async (id: string) => {
       await queryClient.cancelQueries({ queryKey: archiveKeys.all })
       const previousArchives = queryClient.getQueryData<any[]>(archiveKeys.all)
@@ -101,7 +109,11 @@ export function usePermanentlyDeleteDocument() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) => permanentlyDeleteDocument(id),
+    mutationFn: async (id: string) => {
+      const res = await permanentlyDeleteDocument(id)
+      if (!res.success) throw new Error(res.error)
+      return res
+    },
     onMutate: async (id: string) => {
       await queryClient.cancelQueries({ queryKey: archiveKeys.all })
       const previousArchives = queryClient.getQueryData<any[]>(archiveKeys.all)
