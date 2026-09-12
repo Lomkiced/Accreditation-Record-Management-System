@@ -7,7 +7,13 @@ export const uploadDocumentSchema = z.object({
   documentDate: z.string().min(1, "Document date is required"),
   // fileUrl is set after the Supabase Storage upload on the client
   fileUrl: z.string().url("Invalid file URL").optional(),
-  fileName: z.string().optional(),
+  fileName: z
+    .string()
+    .refine(
+      (name) => !name || name.toLowerCase().endsWith(".pdf"),
+      "Only PDF files (.pdf) are allowed"
+    )
+    .optional(),
   fileSize: z.number().positive().optional(),
 })
 

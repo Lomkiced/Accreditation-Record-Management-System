@@ -243,6 +243,19 @@ Any new compliance-related feature must reference `dashboard.actions.ts` as the 
 - **Broad Collaboration Access**: In the Document Upload Sheet (`DocumentUploadSheet`), the tagging selector must not restrict faculty to only their own assigned areas. It must display all active areas and criteria that contain indicators.
 - **Assigned Faculty Badging**: Areas and criteria must display clear badges indicating which faculty member is assigned, fostering transparent coordination across accreditation teams.
 
+---
 
+## 19. PDF-Only Document Standard & Resilient Password Recovery Architecture
 
-
+- **PDF-Only Upload Standard**:
+  - Across all document entry points (Upload Document, Batch Upload, Tagging, and Version Re-upload), the system **strictly permits PDF files only** (`.pdf`, `application/pdf`).
+  - Office documents (`.docx`, `.xlsx`, `.pptx`) and images (`.jpg`, `.png`, `.webp`, `.gif`) are strictly prohibited and rejected at both client and server boundaries.
+  - Client drag-and-drop zones (`FileUploadZone`, `DocumentUploadSheet`, `SubmissionUploadForm`, `NewVersionUploadSheet`) reject non-PDF selections before storage upload.
+  - Server actions (`uploadDocumentSchema`, `uploadAndMapSchema`, `uploadAndMapBatchSchema`, `saveDraftSchema`, `uploadNewVersion`) strictly validate file extensions.
+- **Resilient Password Recovery Flow**:
+  - **Database Pre-verification**: `/api/auth/forgot-password` verifies user existence and account activation in Prisma DB before invoking Supabase Auth, returning descriptive 404/403 alerts rather than cryptic errors.
+  - **Multi-Tier Delivery**:
+    1. Primary: Custom Nodemailer via Gmail SMTP when credentials (`GMAIL_USER`, `GMAIL_APP_PASSWORD`) are configured.
+    2. Fallback: Supabase Auth native `resetPasswordForEmail` service.
+    3. Dev / Evaluation Support: Generates recovery action link, logs directly to server terminal, and supplies `directResetUrl` in non-production responses for instant password resets during capstone defense, demonstrations, or environments without active SMTP servers.
+  - **Auth Session Recovery**: `/update-password` detects Supabase verify redirects (`#access_token=...`), PKCE codes (`?code=...`), and error parameters (`?error_description=...`), ensuring clean error presentation and graceful token exchanges.

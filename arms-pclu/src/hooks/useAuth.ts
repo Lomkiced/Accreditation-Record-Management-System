@@ -258,14 +258,17 @@ export function useAuth() {
           body: JSON.stringify({ email: email.trim().toLowerCase() }),
         })
         
+        const data = await response.json().catch(() => ({}))
+        setLoading(false)
+
         if (!response.ok) {
-          const data = await response.json().catch(() => ({}))
-          setLoading(false)
           return { error: data.error || "Failed to send password reset email." }
         }
         
-        setLoading(false)
-        return { error: null }
+        return {
+          error: null,
+          directResetUrl: (data.directResetUrl as string | undefined) || undefined,
+        }
       } catch (error) {
         setLoading(false)
         console.error("[useAuth] requestPasswordReset error:", error)
@@ -284,6 +287,11 @@ export function useAuth() {
         })
         if (error) {
           setLoading(false)
+          if (error.message.toLowerCase().includes("session")) {
+            return {
+              error: "Your reset session has expired or is invalid. Please request a new password reset link.",
+            }
+          }
           return { error: error.message }
         }
         setLoading(false)

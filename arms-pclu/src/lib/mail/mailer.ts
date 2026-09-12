@@ -1,20 +1,26 @@
 import nodemailer from "nodemailer"
 
-if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-  console.warn(
-    "[ARMS:Mailer] Missing GMAIL_USER or GMAIL_APP_PASSWORD. Email sending will fail if attempted."
-  )
+function getTransporter() {
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    return null
+  }
+
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    },
+  })
 }
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-})
-
 export async function sendPasswordResetEmail(email: string, resetLink: string) {
+  const transporter = getTransporter()
+
+  if (!transporter || !process.env.GMAIL_USER) {
+    throw new Error("GMAIL_USER or GMAIL_APP_PASSWORD environment variables are missing.")
+  }
+
   const mailOptions = {
     from: `"ARMS Support" <${process.env.GMAIL_USER}>`,
     to: email,

@@ -47,7 +47,12 @@ Manual accreditation processes suffer from:
    - Supabase Auth (email/password)
    - Role-based routing: `/admin/*`, `/dean/*`, `/faculty/*`
    - Middleware-enforced session validation
-   - Password reset + force-change flow
+   - **Resilient Password Recovery Flow**:
+     - Database pre-verification checking user existence and active status before token generation.
+     - Dual-mode email dispatch: primary Nodemailer via Gmail SMTP when configured, automatic fallback to Supabase Auth's native `resetPasswordForEmail`.
+     - Direct dev/demo reset link returned in non-production environments to allow zero-configuration demonstration and local evaluation.
+     - Robust URL and token handling on `/update-password` with PKCE code exchange and intuitive expired-link messaging.
+   - Force-change password on first login for newly provisioned accounts.
 
 2. **Taxonomy Management (Dean)**
    - CRUD for Areas, Criteria, Indicators
@@ -74,7 +79,8 @@ Manual accreditation processes suffer from:
     - Tag-based organization.
 
 5. **Document Mapping & Uploads (Faculty)**
-    - Map uploaded documents to specific indicators.
+   - **PDF-Only Upload Standard**: Across all document upload workflows (individual upload, batch upload, and returned document version re-upload), the system strictly permits PDF files only (`.pdf`, `application/pdf`). Documents (`.docx`, `.xlsx`, `.pptx`) and images (`.jpg`, `.png`) are strictly disallowed and rejected at both client drag-and-drop and server validation layers.
+   - Map uploaded documents to specific indicators.
     - **Dean View-Only Review & Faculty Action Integrity**: When the Dean views submitted documents, the interface is strictly view-only (view file, download, approve, return with remarks). Deans cannot edit faculty documents or tags. In the Faculty Portal ("My Submissions"), "Edit Tags / Resume" is always accessible so faculty can manage tags and resume draft mappings at any time. "Archive Document" is removed from "My Submissions" as document archiving is managed within the Approved Repository.
     - **Cross-Faculty Tagging Selector**: In the tagging selector, areas and criteria assigned to other faculty members are fully visible and selectable, displaying assigned faculty badges on each area and criterion to enhance collaboration across accreditation teams.
     - **Indicator-Aware Selector**: The tagging selector automatically excludes areas and criteria that do not have any indicators defined, preventing invalid or orphan tagging.

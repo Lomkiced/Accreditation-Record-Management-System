@@ -21,7 +21,10 @@ const uploadAndMapSchema = z.object({
   description: z.string().optional(),
   documentDate: z.string().min(1, "Document date is required"),
   fileUrl: z.string().url("Invalid file URL"),
-  fileName: z.string().min(1, "File name is required"),
+  fileName: z
+    .string()
+    .min(1, "File name is required")
+    .refine((name) => name.toLowerCase().endsWith(".pdf"), "Only PDF files (.pdf) are allowed"),
   fileSize: z.number().positive("File size must be positive"),
   rating: z.number().int().min(1).max(10).optional(),
 })
@@ -34,7 +37,10 @@ const uploadAndMapBatchSchema = z.object({
       title: z.string().min(1, "Title is required").max(255),
       description: z.string().optional(),
       fileUrl: z.string().url("Invalid file URL"),
-      fileName: z.string().min(1, "File name is required"),
+      fileName: z
+        .string()
+        .min(1, "File name is required")
+        .refine((name) => name.toLowerCase().endsWith(".pdf"), "Only PDF files (.pdf) are allowed"),
       fileSize: z.number().positive("File size must be positive"),
     })
   ).min(1, "At least one file is required"),
@@ -46,7 +52,10 @@ const saveDraftSchema = z.object({
   description: z.string().optional(),
   documentDate: z.string().min(1, "Document date is required"),
   fileUrl: z.string().url().optional(),
-  fileName: z.string().optional(),
+  fileName: z
+    .string()
+    .refine((name) => !name || name.toLowerCase().endsWith(".pdf"), "Only PDF files (.pdf) are allowed")
+    .optional(),
   fileSize: z.number().positive().optional(),
   rating: z.number().int().min(1).max(10).optional(),
 })

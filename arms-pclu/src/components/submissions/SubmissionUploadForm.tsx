@@ -395,7 +395,7 @@ export function SubmissionUploadForm({
                   if (file) setSelectedFiles([file])
                   else setSelectedFiles([])
                 }}
-                accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png"
+                accept=".pdf,application/pdf"
                 maxSize={25 * 1024 * 1024}
               />
 

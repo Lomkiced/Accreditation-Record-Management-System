@@ -111,6 +111,10 @@ export async function uploadNewVersion(
       return { error: "You do not have permission to modify this document." }
     }
 
+    if (!input.fileName.toLowerCase().endsWith(".pdf")) {
+      return { error: "Only PDF files (.pdf) are allowed." }
+    }
+
     const [updatedDoc] = await prisma.$transaction(async (tx) => {
       // 1. Update the document with new file and increment version
       const doc = await tx.document.update({

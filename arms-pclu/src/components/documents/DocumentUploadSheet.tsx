@@ -366,7 +366,7 @@ export function DocumentUploadSheet({
                 </Label>
                 <FileUploadZone
                   onFileSelect={setSelectedFile}
-                  accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png"
+                  accept=".pdf,application/pdf"
                   maxSize={25 * 1024 * 1024}
                 />
                 {selectedFile && (

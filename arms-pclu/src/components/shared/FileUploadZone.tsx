@@ -17,7 +17,7 @@ export function FileUploadZone({
   onFileSelect,
   onFilesSelect,
   multiple = false,
-  accept = ".pdf,.docx,.xlsx,.jpg,.png",
+  accept = ".pdf,application/pdf",
   maxSize = 25 * 1024 * 1024,
   disabled = false,
 }: FileUploadZoneProps) {
@@ -51,8 +51,12 @@ export function FileUploadZone({
         continue
       }
       const fileExt = `.${file.name.split(".").pop()?.toLowerCase()}`
-      if (!acceptedTypes.includes(fileExt)) {
-        errors.push(`"${file.name}" is an unsupported file type. Accepted: ${accept}`)
+      if (fileExt !== ".pdf") {
+        errors.push(`"${file.name}" is not supported. Only PDF files (.pdf) are allowed. Documents and images are not permitted.`)
+        continue
+      }
+      if (!acceptedTypes.includes(fileExt) && !acceptedTypes.includes(file.type.toLowerCase())) {
+        errors.push(`"${file.name}" is not a valid PDF file.`)
         continue
       }
       validFiles.push(file)
@@ -154,7 +158,7 @@ export function FileUploadZone({
               : "Drag & drop your file here or "}
             <span className="text-blue-600 font-semibold">click to browse</span>
           </p>
-          <p className="text-xs text-slate-400 mt-1">PDF, DOCX, XLSX, JPG, PNG up to 25MB each</p>
+          <p className="text-xs text-slate-400 mt-1">PDF files only (.pdf) up to 25MB each</p>
         </>
       )}
     </div>

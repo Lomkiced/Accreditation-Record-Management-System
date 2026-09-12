@@ -26,6 +26,8 @@ export function ForgotPasswordForm() {
     }
   }, [cooldown])
 
+  const [directResetUrl, setDirectResetUrl] = React.useState<string | null>(null)
+
   const form = useForm<ForgotPasswordValues>({
     resolver: zodResolver(ForgotPasswordSchema),
     defaultValues: { email: "" },
@@ -40,6 +42,9 @@ export function ForgotPasswordForm() {
       if (result?.error) {
         setFormError(result.error)
       } else {
+        if (result?.directResetUrl) {
+          setDirectResetUrl(result.directResetUrl)
+        }
         setIsSuccess(true)
         setCooldown(60) // Start 60-second cooldown
       }
@@ -62,6 +67,30 @@ export function ForgotPasswordForm() {
         <p className="text-slate-400 lg:text-slate-500 max-w-sm mx-auto leading-relaxed">
           We&apos;ve sent a password reset link to <span className="font-semibold text-slate-300 lg:text-slate-700">{form.getValues().email}</span>.
         </p>
+
+        {directResetUrl && (
+          <div className="p-4 bg-blue-50/10 lg:bg-blue-50/80 border border-blue-500/30 lg:border-blue-200 rounded-2xl text-left space-y-2.5">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-600"></span>
+              </span>
+              <p className="text-xs font-semibold text-blue-400 lg:text-blue-900">
+                Direct Password Reset (Dev / Offline Mode)
+              </p>
+            </div>
+            <p className="text-[11px] text-slate-300 lg:text-slate-600 leading-relaxed">
+              If an external email service is not active in your environment, you can use this direct link to update your password immediately:
+            </p>
+            <Button
+              asChild
+              size="sm"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs rounded-lg shadow-sm"
+            >
+              <a href={directResetUrl}>Proceed to Set New Password &rarr;</a>
+            </Button>
+          </div>
+        )}
         
         <div className="flex flex-col items-center gap-3 mt-4">
           <Button 

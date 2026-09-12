@@ -145,6 +145,7 @@ export function NewVersionUploadSheet({
             <h3 className="font-semibold text-slate-900">Upload File</h3>
             <FileUploadZone
               onFileSelect={setSelectedFile}
+              accept=".pdf,application/pdf"
               disabled={isSubmitting}
             />
             {isSubmitting && uploadProgress > 0 && (

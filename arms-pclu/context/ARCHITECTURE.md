@@ -245,4 +245,21 @@ Indicators support granular confidentiality control:
 - Executed via `clearAuditLogs()`, requiring `requireAdminOrDeanOrThrow()`.
 - Deletes historical entries via `prisma.auditLog.deleteMany({})` and inserts a single tracking record with action `CLEAR_AUDIT_LOGS`, detailing who cleared the logs, their role, and the exact timestamp.
 
+### PDF-Only Document Standard & Storage Upload Guardrails
+ARMS strictly enforces a PDF-only evidence standard across all portals:
+- **Client Ingestion Guardrail**: `FileUploadZone` sets `accept=".pdf,application/pdf"` and intercepts file selection/drag-and-drop. Non-PDF files (images, word processors, spreadsheets) are blocked with a clear rejection message before any network transmission to Supabase Storage.
+- **Form-Level Enforcement**: `DocumentUploadSheet`, `SubmissionUploadForm`, and `NewVersionUploadSheet` enforce the PDF-only restriction.
+- **Server Action Validation**: `uploadDocumentSchema`, `uploadAndMapSchema`, `uploadAndMapBatchSchema`, `saveDraftSchema`, and `uploadNewVersion` validate that filenames end with `.pdf`.
+
+### Resilient Password Recovery & PKCE Session Architecture
+Password recovery (`/forgot-password` and `/update-password`) uses a multi-tier resilient architecture:
+- **Database Pre-flight Validation**: `/api/auth/forgot-password` first checks the local PostgreSQL `users` table via Prisma. Non-existent accounts return clear 404s, and deactivated accounts return 403s.
+- **Admin Link Generation**: Supabase Admin API (`admin.generateLink({ type: "recovery" })`) generates an action link redirecting to `/api/auth/callback?next=/update-password`.
+- **Multi-Tier Dispatch**:
+  1. Primary: Custom Nodemailer using Gmail SMTP when `GMAIL_USER` and `GMAIL_APP_PASSWORD` are configured.
+  2. Fallback: Supabase Auth's native `resetPasswordForEmail` service.
+  3. Non-Production Dev Link: In development/demo modes, the generated link is logged to the terminal and returned as `directResetUrl` for zero-configuration testing.
+- **SSR Callback & Client Mount Recovery**: `/api/auth/callback` handles PKCE code exchange on the server. In addition, `/update-password` inspects hash fragments (`#access_token=...`), query codes (`?code=...`), and Supabase error codes (`?error_description=...`), rendering clear alerts and direct links to request a new link if a token is expired.
+
+
 
