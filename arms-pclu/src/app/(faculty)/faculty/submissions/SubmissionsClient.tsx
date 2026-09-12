@@ -27,10 +27,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { DocumentUploadSheet } from "@/components/documents/DocumentUploadSheet"
 import { NewVersionUploadSheet } from "@/components/documents/NewVersionUploadSheet"
+import { useRouter } from "next/navigation"
 import type { DocumentWithMappings } from "@/types/document.types"
 import { cn } from "@/lib/utils"
 import { useSubmitAllMappings, useDeleteDocument } from "@/hooks/useSubmissions"
-import { useArchiveDocument } from "@/hooks/useArchives"
 
 import {
   AlertDialog,
@@ -79,6 +79,7 @@ interface SubmissionsClientProps {
 }
 
 export function SubmissionsClient({ documents }: SubmissionsClientProps) {
+  const router = useRouter()
   const [activeTab, setActiveTab] = React.useState<"submissions" | "repository">("submissions")
   const [isUploadOpen, setIsUploadOpen] = React.useState(false)
   const [isNewVersionOpen, setIsNewVersionOpen] = React.useState(false)
@@ -87,11 +88,10 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
   const [confirmAction, setConfirmAction] = React.useState<{
     docId: string
     title: string
-    type: "archive" | "delete" | "submit"
+    type: "delete" | "submit"
   } | null>(null)
   
   const submitAllMappings = useSubmitAllMappings()
-  const archiveDocument = useArchiveDocument()
   const deleteDocument = useDeleteDocument()
 
   const handleConfirmAction = () => {
@@ -99,16 +99,14 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
     const { docId, type } = confirmAction
 
     if (type === "submit") {
-      submitAllMappings.mutate(docId)
+      submitAllMappings.mutate(docId, {
+        onSuccess: () => router.refresh(),
+      })
     } else if (type === "delete") {
       setIsDeleting(docId)
       deleteDocument.mutate(docId, {
-        onSettled: () => setIsDeleting(null)
-      })
-    } else if (type === "archive") {
-      setIsDeleting(docId)
-      archiveDocument.mutate(docId, {
-        onSettled: () => setIsDeleting(null)
+        onSuccess: () => router.refresh(),
+        onSettled: () => setIsDeleting(null),
       })
     }
 
@@ -346,18 +344,16 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
                                   <span>View Document</span>
                                 </DropdownMenuItem>
                               )}
-                              {!doc.mappings.some(m => m.status === "APPROVED") && (
-                                <DropdownMenuItem
-                                  onSelect={() => {
-                                    setSelectedDocument(doc)
-                                    setIsUploadOpen(true)
-                                  }}
-                                  className="cursor-pointer"
-                                >
-                                  <Tag className="mr-2 h-4 w-4" />
-                                  <span>Edit Tags / Resume</span>
-                                </DropdownMenuItem>
-                              )}
+                              <DropdownMenuItem
+                                onSelect={() => {
+                                  setSelectedDocument(doc)
+                                  setIsUploadOpen(true)
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <Tag className="mr-2 h-4 w-4" />
+                                <span>Edit Tags / Resume</span>
+                              </DropdownMenuItem>
                               {doc.mappings.length === 0 && (
                                 <DropdownMenuItem
                                   onSelect={() => setConfirmAction({ docId: doc.id, title: doc.title, type: "delete" })}
@@ -367,13 +363,6 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
                                   <span>Delete Untagged</span>
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem
-                                onSelect={() => setConfirmAction({ docId: doc.id, title: doc.title, type: "archive" })}
-                                className="cursor-pointer text-amber-600 focus:text-amber-700 focus:bg-amber-50"
-                              >
-                                <Archive className="mr-2 h-4 w-4" />
-                                <span>Archive Document</span>
-                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}
@@ -396,16 +385,12 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
             <AlertDialogTitle>
               {confirmAction?.type === "submit"
                 ? "Submit for Review"
-                : confirmAction?.type === "delete"
-                ? "Delete Untagged Document"
-                : "Archive Document"}
+                : "Delete Untagged Document"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmAction?.type === "submit"
                 ? `Submit all draft and returned mappings for "${confirmAction.title}" to the Dean for evaluation?`
-                : confirmAction?.type === "delete"
-                ? `Are you sure you want to permanently delete "${confirmAction.title}"? This untagged document will be permanently removed.`
-                : `Are you sure you want to archive "${confirmAction?.title}"? It will be removed from your active submissions list and moved to your Archives page. Any approved institutional evidence will remain preserved in the repository.`}
+                : `Are you sure you want to permanently delete "${confirmAction?.title}"? This untagged document will be permanently removed.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -415,17 +400,11 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
                 "text-white",
                 confirmAction?.type === "submit"
                   ? "bg-blue-600 hover:bg-blue-700"
-                  : confirmAction?.type === "delete"
-                  ? "bg-red-600 hover:bg-red-700"
-                  : "bg-amber-600 hover:bg-amber-700"
+                  : "bg-red-600 hover:bg-red-700"
               )}
               onClick={handleConfirmAction}
             >
-              {confirmAction?.type === "submit"
-                ? "Submit"
-                : confirmAction?.type === "delete"
-                ? "Delete"
-                : "Archive Document"}
+              {confirmAction?.type === "submit" ? "Submit" : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -438,6 +417,7 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
         onClose={() => {
           setIsUploadOpen(false)
           setSelectedDocument(null)
+          router.refresh()
         }}
       />
       
@@ -447,6 +427,7 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
         onClose={() => {
           setIsNewVersionOpen(false)
           setSelectedDocument(null)
+          router.refresh()
         }}
       />
     </div>

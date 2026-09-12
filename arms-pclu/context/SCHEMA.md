@@ -214,7 +214,7 @@ Prevents duplicate mappings — a document can only be linked to a given indicat
 - **Documents (`isArchived`, `isDeletedByFaculty`, `isArchivedFromRepo`)**:
   - `isArchived: true`: Moves a document to the user's archives tab. Active queries filter `{ isArchived: false }`.
   - `isDeletedByFaculty: true`: If a faculty member deletes an approved document from their personal archive or active list, it is permanently omitted from their personal submissions and personal archives, but remains safely preserved in the institutional accreditation repository for Dean and Admin compliance evaluation.
-  - `isArchivedFromRepo: true`: When the Dean or Admin removes a document from the central accreditation repository, it moves to the Repository Archives and is omitted from the active Dean/Admin repository (`isArchivedFromRepo: false`). The document remains completely intact in the faculty owner's personal submissions.
+  - `isArchivedFromRepo: true`: When the Dean or Admin removes a document from the central accreditation repository, it moves to the Repository Archives and is omitted from the active Dean/Admin repository (`isArchivedFromRepo: false`). The document remains completely intact in the faculty owner's personal submissions and approved evidence.
 - **Users**: `isActive: false` archives user accounts while retaining all historical documents, audit logs, and mappings. Fast user administration queries read directly from Prisma without blocking on external authentication APIs.
 - **Indicators (`isConfidential`, `confidentialDocs`)**:
   - `isConfidential: true`: Restricts file viewing of sensitive evidence to the document owner, Dean, and Admin.

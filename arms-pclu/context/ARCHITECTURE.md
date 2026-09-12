@@ -204,14 +204,18 @@ The Faculty Archives (`/faculty/archives`) is built for scalability and clarity:
 
 ### Multi-Tier Repository, Archives & Evidence Retention Architecture
 Under `/faculty/submissions`, `/dean/repository`, and `/admin/repository`, multi-tier retention guarantees institutional compliance while giving users flexible personal workflow control:
-- **Faculty Personal Submissions & Archives**:
-  - Soft-deleting a submission moves it to the personal archives (`isArchived: true`).
-  - When an approved document is deleted by faculty, the record is flagged with `isDeletedByFaculty: true` (and `isArchived: true`). The document is permanently removed from the faculty member's submissions and personal archives, but remains safely preserved in the institutional repository for accreditation compliance.
-  - Faculty Approved Repository features a dedicated "Active Repository" vs "Repository Archives" toggle, allowing faculty to manage personal archive views and permanently remove approved documents with accessible Radix `AlertDialog` confirmation modals.
-- **Dean Repository Deletion & Institutional Archives**:
+- **Dean View-Only Review & Inspection Architecture**:
+  - Across all portals (`/dean/submissions`, `/dean/repository`, and `/dean/areas/[id]`), the Dean is strictly restricted to view-only mode for faculty documents.
+  - Deans can view files, download attachments, review version history, approve, and return with remarks, but have zero edit capabilities (cannot alter titles, descriptions, files, or tags).
+- **Faculty Personal Submissions & Actions**:
+  - In "My Submissions", "Edit Tags / Resume" is always accessible, allowing faculty to update indicator mappings and resume draft submissions at any time.
+  - "Archive Document" is removed from "My Submissions" because archiving and lifecycle management for approved evidence are centralized within the "Approved Repository" tab.
+- **Dean Repository Deletion Isolation (`isArchivedFromRepo`)**:
   - When the Dean deletes an approved document from `/dean/repository`, it triggers `archiveDocumentFromRepository(documentId)`, setting `isArchivedFromRepo: true`.
   - The document is removed from the active Dean & Admin repositories (`where: { document: { isArchivedFromRepo: false } }`), moving to the Dean "Repository Archives" tab.
-  - The document remains completely intact in the faculty member's personal submissions, preserving their work and historical contribution.
+  - The document submitted by the faculty member is strictly preserved in the Faculty Portal: it remains intact in "My Submissions" and continues to appear in the submitting faculty member's approved evidence portfolio.
+- **Faculty Deletion of Approved Evidence (`isDeletedByFaculty`)**:
+  - When an approved document is deleted by faculty from the Approved Repository, the record is flagged with `isDeletedByFaculty: true`. The document is permanently removed from the faculty member's view, but remains safely preserved in the institutional repository for accreditation compliance.
 - **Radix AlertDialog Confirmation**: All delete, archive, and permanent removal actions are strictly protected by accessible `AlertDialog` confirmation modals rather than native browser alerts.
 
 ### Indicator Confidentiality & Granular Evidence Selection

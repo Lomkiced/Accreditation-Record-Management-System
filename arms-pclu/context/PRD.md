@@ -64,20 +64,20 @@ Manual accreditation processes suffer from:
 4. **Document Repository & Archives**
    - **Central Repository (Dean & Admin)**: Centralized storage of verified accreditation documents. The Dean and Admin Portals display **approved documents only** (`status: APPROVED`, non-archived).
    - **Repository Archives & Deletion Semantics**:
-     - **Dean Repository Deletion**: When the Dean deletes an approved document from the repository, it moves to the Repository Archives (`isArchivedFromRepo: true`), disappearing from the active Dean & Admin repositories. The document remains completely intact in the uploading faculty member's personal submissions.
+     - **Dean Repository Deletion**: When the Dean deletes an approved document from the repository, it moves to the Repository Archives (`isArchivedFromRepo: true`), disappearing from the active Dean & Admin repositories. The document submitted by the faculty member is strictly preserved in the Faculty Portal: it is NOT deleted and remains fully accessible in both "My Submissions" and the faculty member's approved evidence.
      - **Dean Repository Archive Toggle**: Dean repository includes dedicated "Active Repository" and "Repository Archives" tabs with item count badges, restore capabilities, and deletion protected by accessible Radix `AlertDialog` confirmation modals.
-   - **Faculty Approved Repository**: Under Faculty Submissions (`/faculty/submissions`), a dedicated "Approved Repository" tab mirrors the Dean/Admin repository view, allowing faculty to explore all verified institutional evidence grouped by accreditation area.
-     - **Personal Approved Repository Archives**: Faculty Approved Repository includes its own "Active Repository" and "Repository Archives" toggle.
-     - **Faculty Deletion of Approved Evidence**: When a faculty member deletes an approved document, it is removed from their personal active list and moved to archives. When permanently deleted from archives, `isDeletedByFaculty: true` ensures it is permanently removed from their personal view while remaining preserved in the institutional repository for Dean and Admin compliance evaluation.
-   - **Faculty Archives & Confirmation Modals**: All deletion and archiving actions trigger an explicit, accessible Radix `AlertDialog` confirmation modal.
-   - File versioning with history and restore capabilities.
-   - Tag-based organization.
+    - **Faculty Approved Repository**: Under Faculty Submissions (`/faculty/submissions`), a dedicated "Approved Repository" tab mirrors the Dean/Admin repository view, allowing faculty to explore all verified institutional evidence grouped by accreditation area.
+      - **Personal Approved Repository Archives**: Faculty Approved Repository includes its own "Active Repository" and "Repository Archives" toggle.
+      - **Faculty Deletion of Approved Evidence**: When a faculty member deletes an approved document, it is removed from their personal active list and moved to archives. When permanently deleted from archives, `isDeletedByFaculty: true` ensures it is permanently removed from their personal view while remaining preserved in the institutional repository for Dean and Admin compliance evaluation.
+    - **Faculty Archives & Confirmation Modals**: All deletion and archiving actions trigger an explicit, accessible Radix `AlertDialog` confirmation modal.
+    - File versioning with history and restore capabilities.
+    - Tag-based organization.
 
 5. **Document Mapping & Uploads (Faculty)**
-   - Map uploaded documents to specific indicators.
-   - **Locked Approved Submissions**: Once evidence is approved by the Dean, it is locked from editing ("Edit Tags / Resume" and "Upload New Version" disabled); users/viewers are limited to viewing the file via "View Document".
-   - **Cross-Faculty Tagging Selector**: In the tagging selector, areas and criteria assigned to other faculty members are fully visible and selectable, displaying assigned faculty badges on each area and criterion to enhance collaboration across accreditation teams.
-   - **Indicator-Aware Selector**: The tagging selector automatically excludes areas and criteria that do not have any indicators defined, preventing invalid or orphan tagging.
+    - Map uploaded documents to specific indicators.
+    - **Dean View-Only Review & Faculty Action Integrity**: When the Dean views submitted documents, the interface is strictly view-only (view file, download, approve, return with remarks). Deans cannot edit faculty documents or tags. In the Faculty Portal ("My Submissions"), "Edit Tags / Resume" is always accessible so faculty can manage tags and resume draft mappings at any time. "Archive Document" is removed from "My Submissions" as document archiving is managed within the Approved Repository.
+    - **Cross-Faculty Tagging Selector**: In the tagging selector, areas and criteria assigned to other faculty members are fully visible and selectable, displaying assigned faculty badges on each area and criterion to enhance collaboration across accreditation teams.
+    - **Indicator-Aware Selector**: The tagging selector automatically excludes areas and criteria that do not have any indicators defined, preventing invalid or orphan tagging.
    - **Multi-File Batch Upload**: Faculty can select and upload multiple evidence files at once.
    - **In-Place File Updates**: Updating a file revisions the existing document in-place (`version + 1` with `DocumentVersion` snapshot) rather than creating a duplicate document.
    - Per-mapping status workflow: `DRAFT → SUBMITTED → UNDER_REVIEW → APPROVED / RETURNED`.

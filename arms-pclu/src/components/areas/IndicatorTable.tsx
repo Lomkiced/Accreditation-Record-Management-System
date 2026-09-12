@@ -21,7 +21,7 @@ type FullMapping = {
   status: string
   rating: number | null
   createdAt: Date
-  document: { id: string; title: string; fileName: string | null }
+  document: { id: string; title: string; fileName: string | null; fileUrl?: string | null }
 }
 
 // IndicatorRow accepts either lean (status-only) or full mapping shapes.
@@ -90,6 +90,7 @@ export function IndicatorTable({
     // "document" only exists on FullMapping — lean mappings won't have it
     const fullMapping = latest as Partial<FullMapping>
     const docTitle = fullMapping.document?.title ?? null
+    const docFileUrl = fullMapping.document?.fileUrl ?? null
 
     if (!docTitle) {
       // Lean shape: just show status indicator
@@ -100,6 +101,22 @@ export function IndicatorTable({
           <span className="text-xs font-medium text-slate-700">
             {isFullyApproved ? "Completely Provided" : `${neededCount} needs to be submit`}
           </span>
+        </div>
+      )
+    }
+
+    if (docFileUrl) {
+      return (
+        <div className="flex items-center gap-2 max-w-[200px]">
+          <Icon className={`w-3.5 h-3.5 shrink-0 ${colorClass}`} />
+          <button
+            type="button"
+            onClick={() => window.open(docFileUrl, "_blank")}
+            className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline truncate text-left cursor-pointer"
+            title={`${docTitle} (Click to view read-only)`}
+          >
+            {docTitle}
+          </button>
         </div>
       )
     }

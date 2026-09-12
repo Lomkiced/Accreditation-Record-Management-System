@@ -45,7 +45,7 @@ export async function getIndicatorsByCriterion(criterionId: string) {
             rating: true,
             createdAt: true,
             document: {
-              select: { id: true, title: true, fileName: true },
+              select: { id: true, title: true, fileName: true, fileUrl: true },
             },
           },
           orderBy: { createdAt: "desc" },

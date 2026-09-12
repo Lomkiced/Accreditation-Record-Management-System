@@ -948,15 +948,26 @@ export async function getApprovedSubmissions(archived: boolean = false) {
 
     const whereClause: any = {
       status: "APPROVED",
-      document: {
-        isArchivedFromRepo: archived,
-      },
     }
 
     if (currentUser.role === "FACULTY") {
-      whereClause.NOT = {
-        userId: currentUser.id,
-        document: { isDeletedByFaculty: true },
+      if (!archived) {
+        // Faculty sees:
+        // 1. Institutional active approved evidence (isArchivedFromRepo: false, not deleted by faculty)
+        // 2. Their OWN approved evidence (even if Dean archived it from repo, it is preserved for the faculty)
+        whereClause.OR = [
+          { document: { isArchivedFromRepo: false, isDeletedByFaculty: false } },
+          { userId: currentUser.id, document: { isDeletedByFaculty: false } },
+        ]
+      } else {
+        // Faculty's personal repository archive: documents deleted by the faculty
+        whereClause.userId = currentUser.id
+        whereClause.document = { isDeletedByFaculty: true }
+      }
+    } else {
+      // Dean and Admin view based on repository archive state
+      whereClause.document = {
+        isArchivedFromRepo: archived,
       }
     }
 
