@@ -31,6 +31,7 @@ import { useRouter } from "next/navigation"
 import type { DocumentWithMappings } from "@/types/document.types"
 import { cn } from "@/lib/utils"
 import { useSubmitAllMappings, useDeleteDocument } from "@/hooks/useSubmissions"
+import { useArchiveDocument } from "@/hooks/useArchives"
 
 import {
   AlertDialog,
@@ -88,11 +89,11 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
   const [confirmAction, setConfirmAction] = React.useState<{
     docId: string
     title: string
-    type: "delete" | "submit"
+    type: "archive" | "delete" | "submit"
   } | null>(null)
   
   const submitAllMappings = useSubmitAllMappings()
-  const deleteDocument = useDeleteDocument()
+  const archiveMutation = useArchiveDocument()
 
   const handleConfirmAction = () => {
     if (!confirmAction) return
@@ -102,9 +103,9 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
       submitAllMappings.mutate(docId, {
         onSuccess: () => router.refresh(),
       })
-    } else if (type === "delete") {
+    } else if (type === "archive" || type === "delete") {
       setIsDeleting(docId)
-      deleteDocument.mutate(docId, {
+      archiveMutation.mutate(docId, {
         onSuccess: () => router.refresh(),
         onSettled: () => setIsDeleting(null),
       })
@@ -309,7 +310,28 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
                                 <MoreVertical className="h-4 w-4 text-slate-500" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent side="bottom" align="end">
+                            <DropdownMenuContent side="bottom" align="end" className="w-52">
+                              {doc.fileUrl && (
+                                <DropdownMenuItem
+                                  onSelect={() => window.open(doc.fileUrl!, "_blank")}
+                                  className="cursor-pointer font-medium text-slate-700 focus:text-blue-700 focus:bg-blue-50"
+                                >
+                                  <Eye className="mr-2 h-4 w-4 text-slate-500" />
+                                  <span>View Document</span>
+                                </DropdownMenuItem>
+                              )}
+                              {doc.mappings.some(m => m.status === "RETURNED") && (
+                                <DropdownMenuItem
+                                  onSelect={() => {
+                                    setSelectedDocument(doc)
+                                    setIsNewVersionOpen(true)
+                                  }}
+                                  className="cursor-pointer font-medium text-amber-600 focus:text-amber-700 focus:bg-amber-50"
+                                >
+                                  <UploadCloud className="mr-2 h-4 w-4" />
+                                  <span>Revise Document</span>
+                                </DropdownMenuItem>
+                              )}
                               {doc.mappings.some(m => m.status === "DRAFT" || m.status === "RETURNED") && (
                                 <DropdownMenuItem
                                   onSelect={() => setConfirmAction({ docId: doc.id, title: doc.title, type: "submit" })}
@@ -323,46 +345,23 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
                                   <span>Submit for Review</span>
                                 </DropdownMenuItem>
                               )}
-                              {doc.mappings.some(m => m.status === "RETURNED") && (
-                                <DropdownMenuItem
-                                  onSelect={() => {
-                                    setSelectedDocument(doc)
-                                    setIsNewVersionOpen(true)
-                                  }}
-                                  className="cursor-pointer font-medium text-amber-600 focus:text-amber-700 focus:bg-amber-50"
-                                >
-                                  <UploadCloud className="mr-2 h-4 w-4" />
-                                  <span>Upload New Version</span>
-                                </DropdownMenuItem>
-                              )}
-                              {doc.fileUrl && (
-                                <DropdownMenuItem
-                                  onSelect={() => window.open(doc.fileUrl!, "_blank")}
-                                  className="cursor-pointer font-medium text-blue-600 focus:text-blue-700 focus:bg-blue-50"
-                                >
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  <span>View Document</span>
-                                </DropdownMenuItem>
-                              )}
                               <DropdownMenuItem
                                 onSelect={() => {
                                   setSelectedDocument(doc)
                                   setIsUploadOpen(true)
                                 }}
-                                className="cursor-pointer"
+                                className="cursor-pointer text-slate-700 focus:text-slate-900"
                               >
-                                <Tag className="mr-2 h-4 w-4" />
-                                <span>Edit Tags / Resume</span>
+                                <Tag className="mr-2 h-4 w-4 text-slate-500" />
+                                <span>{doc.mappings.length === 0 ? "Tag Indicators" : "Edit Tags / Resume"}</span>
                               </DropdownMenuItem>
-                              {doc.mappings.length === 0 && (
-                                <DropdownMenuItem
-                                  onSelect={() => setConfirmAction({ docId: doc.id, title: doc.title, type: "delete" })}
-                                  className="cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50"
-                                >
-                                  <Trash className="mr-2 h-4 w-4" />
-                                  <span>Delete Untagged</span>
-                                </DropdownMenuItem>
-                              )}
+                              <DropdownMenuItem
+                                onSelect={() => setConfirmAction({ docId: doc.id, title: doc.title, type: "archive" })}
+                                className="cursor-pointer font-medium text-amber-600 focus:text-amber-700 focus:bg-amber-50"
+                              >
+                                <Archive className="mr-2 h-4 w-4" />
+                                <span>Archive Document</span>
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}
@@ -385,12 +384,12 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
             <AlertDialogTitle>
               {confirmAction?.type === "submit"
                 ? "Submit for Review"
-                : "Delete Untagged Document"}
+                : "Archive Document"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmAction?.type === "submit"
                 ? `Submit all draft and returned mappings for "${confirmAction.title}" to the Dean for evaluation?`
-                : `Are you sure you want to permanently delete "${confirmAction?.title}"? This untagged document will be permanently removed.`}
+                : `Are you sure you want to archive "${confirmAction?.title}"? It will be moved to the Archive Documents page in the sidebar where you can restore it anytime.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -400,11 +399,11 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
                 "text-white",
                 confirmAction?.type === "submit"
                   ? "bg-blue-600 hover:bg-blue-700"
-                  : "bg-red-600 hover:bg-red-700"
+                  : "bg-amber-600 hover:bg-amber-700"
               )}
               onClick={handleConfirmAction}
             >
-              {confirmAction?.type === "submit" ? "Submit" : "Delete"}
+              {confirmAction?.type === "submit" ? "Submit" : "Archive Document"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

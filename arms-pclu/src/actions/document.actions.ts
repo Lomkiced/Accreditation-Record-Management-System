@@ -646,7 +646,7 @@ export async function getDocumentsForRepository(opts?: {
     // Faculty can only see their own documents
     const whereClause =
       currentUser.role === "FACULTY"
-        ? { userId: currentUser.id, isArchived: false }
+        ? { userId: currentUser.id, isArchived: false, isDeletedByFaculty: false }
         : opts?.userId
           ? { userId: opts.userId, isArchived: false }
           : { isArchived: false }
@@ -950,6 +950,22 @@ export async function deleteDocument(documentId: string): Promise<ActionResult> 
           module: "DOCUMENT",
           targetId: documentId,
           details: { title: document.title, reason: "Faculty deleted approved document - preserved in repository" },
+        },
+      })
+    } else if (currentUser.role === "FACULTY") {
+      // Soft-archive for faculty so it always moves to the Archive Documents page in the sidebar
+      await prisma.document.update({
+        where: { id: documentId },
+        data: { isArchived: true },
+      })
+
+      await prisma.auditLog.create({
+        data: {
+          userId: currentUser.id,
+          action: "ARCHIVE_DOCUMENT",
+          module: "DOCUMENT",
+          targetId: documentId,
+          details: { title: document.title, reason: "Faculty moved document to Archive Documents" },
         },
       })
     } else {

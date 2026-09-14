@@ -207,9 +207,9 @@ Under `/faculty/submissions`, `/dean/repository`, and `/admin/repository`, multi
 - **Dean View-Only Review & Inspection Architecture**:
   - Across all portals (`/dean/submissions`, `/dean/repository`, and `/dean/areas/[id]`), the Dean is strictly restricted to view-only mode for faculty documents.
   - Deans can view files, download attachments, review version history, approve, and return with remarks, but have zero edit capabilities (cannot alter titles, descriptions, files, or tags).
-- **Faculty Personal Submissions & Actions**:
-  - In "My Submissions", "Edit Tags / Resume" is always accessible, allowing faculty to update indicator mappings and resume draft submissions at any time.
-  - "Archive Document" is removed from "My Submissions" because archiving and lifecycle management for approved evidence are centralized within the "Approved Repository" tab.
+- **Faculty Personal Submissions & Sidebar Archive Routing**:
+  - In "My Submissions", every document across all states (**Submitted**, **Returned**, **Untagged**, **Drafts**, and **Approved**) features a complete 3-dots action suite: **View Document**, **Revise Document** (for returned items), **Submit for Review** (for draft/returned items), **Edit Tags / Resume** (or **Tag Indicators** for untagged items), and **Archive Document**.
+  - Any delete or archive action executed from "My Submissions" soft-archives the document (`isArchived: true`), directly routing it to the **Archive Documents** page (`/faculty/archives`) in the main Sidebar. Documents can be restored back to active submissions at any time from `/faculty/archives`.
 - **Dean Repository Deletion Isolation (`isArchivedFromRepo`)**:
   - When the Dean deletes an approved document from `/dean/repository`, it triggers `archiveDocumentFromRepository(documentId)`, setting `isArchivedFromRepo: true`.
   - The document is removed from the active Dean & Admin repositories (`where: { document: { isArchivedFromRepo: false } }`), moving to the Dean "Repository Archives" tab.

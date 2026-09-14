@@ -301,8 +301,7 @@ export function useToggleTag() {
   })
 }
 
-// ─── DELETE DOCUMENT ─────────────────────────────────────────────────────────
-
+// ─── DELETE / ARCHIVE DOCUMENT ──────────────────────────────────────────────────
 export function useDeleteDocument() {
   const queryClient = useQueryClient()
 
@@ -322,13 +321,13 @@ export function useDeleteDocument() {
     },
     onSuccess: (result) => {
       if (!result.success) throw new Error(result.error)
-      toast.success("Document deleted successfully.")
+      toast.success("Document moved to archive.")
     },
     onError: (error: Error, id, context) => {
       if (context?.previousSubmissions) {
         queryClient.setQueryData(submissionKeys.mine, context.previousSubmissions)
       }
-      toast.error(error.message || "Failed to delete document.")
+      toast.error(error.message || "Failed to archive document.")
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: submissionKeys.mine })

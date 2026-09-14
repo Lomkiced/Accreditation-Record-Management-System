@@ -436,7 +436,7 @@ export function ArchivesClient() {
                 )}
 
                 {/* Associated Mappings / Indicators */}
-                {doc.mappings && doc.mappings.length > 0 && (
+                {doc.mappings && doc.mappings.length > 0 ? (
                   <div className="space-y-1 pt-1">
                     <p className="text-[11px] font-medium text-slate-600 flex items-center gap-1">
                       <Layers className="w-3 h-3 text-slate-400" />
@@ -453,6 +453,13 @@ export function ArchivesClient() {
                         </span>
                       ))}
                     </div>
+                  </div>
+                ) : (
+                  <div className="pt-1">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                      <AlertCircle className="w-3 h-3" />
+                      Untagged Document
+                    </span>
                   </div>
                 )}
               </div>
@@ -529,22 +536,29 @@ export function ArchivesClient() {
                       </span>
                     </td>
                     <td className="py-3 px-4 max-w-[240px]">
-                      <div className="flex flex-wrap gap-1">
-                        {doc.mappings?.slice(0, 2).map((m) => (
-                          <span 
-                            key={m.id}
-                            className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] border border-slate-200 truncate max-w-[140px]"
-                            title={m.indicator.name}
-                          >
-                            {m.indicator.name}
-                          </span>
-                        ))}
-                        {doc.mappings && doc.mappings.length > 2 && (
-                          <span className="text-[10px] font-semibold text-slate-400 self-center">
-                            +{doc.mappings.length - 2} more
-                          </span>
-                        )}
-                      </div>
+                      {doc.mappings && doc.mappings.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {doc.mappings?.slice(0, 2).map((m) => (
+                            <span 
+                              key={m.id}
+                              className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] border border-slate-200 truncate max-w-[140px]"
+                              title={m.indicator.name}
+                            >
+                              {m.indicator.name}
+                            </span>
+                          ))}
+                          {doc.mappings.length > 2 && (
+                            <span className="text-[10px] font-semibold text-slate-400 self-center">
+                              +{doc.mappings.length - 2} more
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 text-[10px] font-medium border border-amber-200">
+                          <AlertCircle className="w-3 h-3" />
+                          Untagged
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-4 font-medium text-slate-600">
                       {formatBytes(doc.fileSize)}
