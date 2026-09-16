@@ -828,8 +828,11 @@ export async function getIndicatorsForSelector(): Promise<
   try {
     await requireUser()
 
-    // Fetch all assignments with faculty info
+    // Fetch all active assignments with faculty info
     const assignments = await prisma.assignment.findMany({
+      where: {
+        user: { isActive: true },
+      },
       select: {
         areaId: true,
         criterionId: true,
@@ -865,26 +868,39 @@ export async function getIndicatorsForSelector(): Promise<
       },
     })
 
-    // Filter out criteria that have no indicators, and areas with no indicators
+    // Filter out unassigned areas and criteria without active faculty or indicators
     const filteredAreas = areas
       .map((area) => {
+        const areaAssignments = assignments.filter(
+          (a) => a.areaId === area.id && a.user?.name
+        )
         const areaFaculty = Array.from(
-          new Set(
-            assignments
-              .filter((a) => a.areaId === area.id && a.user?.name)
-              .map((a) => a.user.name)
-          )
+          new Set(areaAssignments.map((a) => a.user.name))
+        )
+
+        // Exclude unassigned areas completely (e.g. Area II whose faculty was deleted)
+        if (areaFaculty.length === 0) {
+          return null
+        }
+
+        const hasWholeAreaAssignment = areaAssignments.some((a) => a.criterionId === null)
+        const assignedCritIds = new Set(
+          areaAssignments
+            .filter((a) => a.criterionId !== null)
+            .map((a) => a.criterionId)
         )
 
         const criteriaWithIndicators = area.criteria
-          .filter((crit) => crit.indicators.length > 0)
+          .filter((crit) => {
+            const isCriterionAssigned = hasWholeAreaAssignment || assignedCritIds.has(crit.id)
+            return isCriterionAssigned && crit.indicators.length > 0
+          })
           .map((crit) => {
             const critFaculty = Array.from(
               new Set(
-                assignments
+                areaAssignments
                   .filter(
                     (a) =>
-                      a.areaId === area.id &&
                       (a.criterionId === crit.id || a.criterionId === null) &&
                       a.user?.name
                   )
@@ -903,7 +919,10 @@ export async function getIndicatorsForSelector(): Promise<
           criteria: criteriaWithIndicators,
         }
       })
-      .filter((area) => area.criteria.length > 0)
+      .filter(
+        (area): area is NonNullable<typeof area> =>
+          area !== null && area.criteria.length > 0
+      )
 
     return { success: true, data: filteredAreas }
   } catch (error) {

@@ -122,8 +122,13 @@ export async function archiveUserAccount(userId: string): Promise<{ success: boo
       where: { id: userId },
       data: { isActive: false },
     })
+
+    // 3. Clear assignments held by this archived user so the area/criteria are freed up
+    await prisma.assignment.deleteMany({
+      where: { userId },
+    })
     
-    // 3. Audit log
+    // 4. Audit log
     await prisma.auditLog.create({
       data: {
         userId: admin.id,
@@ -140,6 +145,13 @@ export async function archiveUserAccount(userId: string): Promise<{ success: boo
     
     revalidatePath("/admin/users")
     revalidatePath("/dean/users")
+    revalidatePath("/admin/assignments")
+    revalidatePath("/dean/assignments")
+    revalidatePath("/faculty/my-areas")
+    revalidatePath("/faculty/submissions")
+    revalidatePath("/faculty/dashboard")
+    revalidatePath("/dean/dashboard")
+    revalidatePath("/admin/dashboard")
     revalidateTag("dashboard")
     return { success: true }
   } catch (err: any) {
@@ -285,6 +297,13 @@ export async function deleteUserAccount(userId: string): Promise<{ success: bool
     
     revalidatePath("/admin/users")
     revalidatePath("/dean/users")
+    revalidatePath("/admin/assignments")
+    revalidatePath("/dean/assignments")
+    revalidatePath("/faculty/my-areas")
+    revalidatePath("/faculty/submissions")
+    revalidatePath("/faculty/dashboard")
+    revalidatePath("/dean/dashboard")
+    revalidatePath("/admin/dashboard")
     revalidateTag("dashboard")
     return { success: true }
   } catch (err: any) {

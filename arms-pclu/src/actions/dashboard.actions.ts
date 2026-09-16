@@ -24,6 +24,10 @@ export interface AreaComplianceWithCounts {
   totalRequiredDocs: number
   /** Number of approved documents (capped per indicator by requiredDocs). */
   approvedDocs: number
+  /** Whether this area has at least one active assigned faculty member. */
+  isAssigned?: boolean
+  /** List of faculty member names actively assigned to this area. */
+  assignedFaculty?: string[]
 }
 
 export interface DashboardStats {
@@ -132,8 +136,31 @@ const _fetchDashboardStats = unstable_cache(
       prisma.user.count({
         where: { role: "FACULTY", isActive: true },
       }),
-      // Fetch all indicators with their requiredDocs and approved mapping counts (non-archived)
+      // Fetch indicators belonging ONLY to areas or criteria with active assigned faculty
       prisma.indicator.findMany({
+        where: {
+          criterion: {
+            OR: [
+              {
+                assignments: {
+                  some: {
+                    user: { isActive: true },
+                  },
+                },
+              },
+              {
+                area: {
+                  assignments: {
+                    some: {
+                      criterionId: null,
+                      user: { isActive: true },
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
         select: {
           id: true,
           requiredDocs: true,
@@ -165,7 +192,7 @@ const _fetchDashboardStats = unstable_cache(
       }
     })
 
-    // Accreditation Compliance formula: (approved documents capped by requiredDocs × 100) / (total required documents)
+    // Accreditation Compliance formula: (approved documents capped by requiredDocs × 100) / (total required documents in assigned scope)
     const compliancePercent =
       totalRequiredDocs > 0
         ? Math.round((approvedDocCount * 100) / totalRequiredDocs)
@@ -378,6 +405,12 @@ const _fetchComplianceDataWithCounts = unstable_cache(
       orderBy: { order: "asc" },
       select: {
         name: true,
+        assignments: {
+          where: { user: { isActive: true } },
+          select: {
+            user: { select: { name: true } },
+          },
+        },
         criteria: {
           select: {
             indicators: {
@@ -446,6 +479,15 @@ const _fetchComplianceDataWithCounts = unstable_cache(
           ? Math.round((approvedDocCount * 100) / totalRequiredDocs)
           : 0
 
+      const activeFaculty = Array.from(
+        new Set(
+          area.assignments
+            .filter((a) => a.user?.name)
+            .map((a) => a.user.name)
+        )
+      )
+      const isAssigned = activeFaculty.length > 0
+
       return {
         name: area.name,
         value,
@@ -453,6 +495,8 @@ const _fetchComplianceDataWithCounts = unstable_cache(
         totalIndicators,
         totalRequiredDocs,
         approvedDocs: approvedDocCount,
+        isAssigned,
+        assignedFaculty: activeFaculty,
       }
     })
   },

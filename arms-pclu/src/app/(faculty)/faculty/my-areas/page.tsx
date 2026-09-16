@@ -4,6 +4,8 @@ import { getAreas } from "@/actions/area.actions"
 import { getMySubmissions } from "@/actions/submission.actions"
 import { requireFaculty } from "@/lib/auth/getUser"
 
+export const dynamic = "force-dynamic"
+
 export const metadata = {
   title: "My Assigned Areas | Faculty Portal",
   description: "Manage and upload evidence for your assigned PACUCOA areas",
@@ -11,7 +13,6 @@ export const metadata = {
 
 export default async function FacultyMyAreasPage() {
   const user = await requireFaculty()
-  
   
   const userId = user?.id ?? ""
   
@@ -29,7 +30,7 @@ export default async function FacultyMyAreasPage() {
 
   return (
     <>
-      <FacultyMyAreasClient initialData={initialData} />
+      <FacultyMyAreasClient initialData={initialData} userId={userId} />
     </>
   )
 }

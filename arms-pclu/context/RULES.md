@@ -266,3 +266,20 @@ Any new compliance-related feature must reference `dashboard.actions.ts` as the 
     2. Fallback: Supabase Auth native `resetPasswordForEmail` service.
     3. Dev / Evaluation Support: Generates recovery action link, logs directly to server terminal, and supplies `directResetUrl` in non-production responses for instant password resets during capstone defense, demonstrations, or environments without active SMTP servers.
   - **Auth Session Recovery**: `/update-password` detects Supabase verify redirects (`#access_token=...`), PKCE codes (`?code=...`), and error parameters (`?error_description=...`), ensuring clean error presentation and graceful token exchanges.
+
+---
+
+## 20. Active Assignment Scoping, Dashboard Compliance Metrics & User Lifecycle Integrity
+
+- **Assigned Area Denominator Rule**:
+  - In Admin and Dean dashboard compliance computations (`getDashboardStats`), the required documents denominator strictly counts only areas/criteria with active assigned faculty (`user.isActive === true`).
+  - Unassigned areas (e.g., Area II whose assigned faculty was deleted) and areas without active faculty must NOT be counted in the required documents denominator.
+  - Formula: `compliancePercent = (approvedDocCount * 100) / totalRequiredDocsInAssignedScope`.
+- **Dean Dashboard Overall Completion Card**:
+  - Hero section in `/dean/dashboard` includes the "Overall Completion" card, displaying `{stats.compliancePercent}%` with an animated progress bar, `{stats.approvedDocCount} Approved`, and `{stats.totalRequiredDocs} Total Evidences`.
+- **Tagging Selector Accuracy**:
+  - `getIndicatorsForSelector` and faculty area pickers strictly filter out unassigned areas and criteria. Unassigned areas (such as Area II) must never appear in tagging choices.
+  - Newly assigned areas to active faculty immediately become selectable across tagging and evidence upload sheets.
+- **User Archival Assignment Cleanup & Cache Invalidation**:
+  - When a user account is archived (`archiveUserAccount`) or deleted (`deleteUserAccount`), all assignments associated with that user are immediately deleted from `prisma.assignment`.
+  - Mutations must revalidate `/admin/assignments`, `/dean/assignments`, `/faculty/my-areas`, `/faculty/submissions`, `/faculty/dashboard`, `/dean/dashboard`, `/admin/dashboard`, and `revalidateTag("dashboard")`.

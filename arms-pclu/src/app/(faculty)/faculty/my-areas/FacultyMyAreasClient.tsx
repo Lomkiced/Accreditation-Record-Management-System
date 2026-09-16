@@ -31,9 +31,15 @@ type InitialData = {
   submissions: Extract<Awaited<ReturnType<typeof getMySubmissions>>, { success: true }>["data"]
 }
 
-export function FacultyMyAreasClient({ initialData }: { initialData: InitialData }) {
+type FacultyMyAreasClientProps = {
+  initialData: InitialData
+  userId?: string
+}
+
+export function FacultyMyAreasClient({ initialData, userId }: FacultyMyAreasClientProps) {
   const { user } = useAuthStore()
-  const { data: assignments = [], isLoading: loadingAssignments } = useAssignments(user?.id ?? "", initialData.assignments)
+  const effectiveUserId = userId || user?.id || ""
+  const { data: assignments = [], isLoading: loadingAssignments } = useAssignments(effectiveUserId, initialData.assignments)
   const { data: areas = [], isLoading: loadingAreas } = useAreas(initialData.areas)
   const { data: submissions = [] } = useMySubmissions(initialData.submissions)
   const [searchQuery, setSearchQuery] = React.useState("")

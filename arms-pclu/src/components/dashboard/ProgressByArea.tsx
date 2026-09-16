@@ -10,13 +10,22 @@ import type { AreaComplianceWithCounts } from "@/actions/dashboard.actions"
 // Roman numeral converter for area numbering
 const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"]
 
-function getStatusConfig(value: number): {
+function getStatusConfig(value: number, isAssigned: boolean = true): {
   label: string
   dotColor: string
   textColor: string
   bgColor: string
   barColor: string
 } {
+  if (!isAssigned) {
+    return {
+      label: "Unassigned",
+      dotColor: "bg-slate-400",
+      textColor: "text-slate-600",
+      bgColor: "bg-slate-100",
+      barColor: "bg-slate-300",
+    }
+  }
   if (value >= 100) {
     return {
       label: "Complete",
@@ -45,7 +54,7 @@ function getStatusConfig(value: number): {
 }
 
 function AreaRow({ area, index }: { area: AreaComplianceWithCounts; index: number }) {
-  const status = getStatusConfig(area.value)
+  const status = getStatusConfig(area.value, area.isAssigned !== false)
   const roman = ROMAN_NUMERALS[index] ?? `${index + 1}`
 
   return (

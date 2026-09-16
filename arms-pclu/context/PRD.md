@@ -82,7 +82,7 @@ Manual accreditation processes suffer from:
    - **PDF-Only Upload Standard**: Across all document upload workflows (individual upload, batch upload, and returned document version re-upload), the system strictly permits PDF files only (`.pdf`, `application/pdf`). Documents (`.docx`, `.xlsx`, `.pptx`) and images (`.jpg`, `.png`) are strictly disallowed and rejected at both client drag-and-drop and server validation layers.
     - **Dean View-Only Review & Faculty Action Integrity**: When the Dean views submitted documents, the interface is strictly view-only (view file, download, approve, return with remarks). Deans cannot edit faculty documents or tags.
     - **Faculty 3-Dots Action Suite & Sidebar Archive Routing**: In the Faculty Portal under "My Submissions", every document across all states (**Submitted**, **Returned**, **Untagged**, **Drafts**, and **Approved**) features complete 3-dots actions: **View Document**, **Revise Document** (for returned items), **Submit for Review** (for draft/returned items), **Edit Tags / Resume** (or **Tag Indicators** for untagged items), and **Archive Document**. Deleting or archiving any document safely soft-archives it (`isArchived: true`), routing it to the **Archive Documents** page (`/faculty/archives`) in the main Sidebar where faculty can restore it back to active submissions at any time or permanently delete it.
-    - **Cross-Faculty Tagging Selector**: In the tagging selector, areas and criteria assigned to other faculty members are fully visible and selectable, displaying assigned faculty badges on each area and criterion to enhance collaboration across accreditation teams.
+    - **Cross-Faculty Tagging Selector & Active Scoping**: In the tagging selector, areas and criteria assigned to active faculty members are fully visible and selectable, displaying assigned faculty badges on each area and criterion. Areas that have no active faculty assignment (e.g., Area II whose assigned user was deleted, or unassigned areas) are strictly excluded from the choices. Newly assigned areas immediately appear without stale cache delays.
     - **Indicator-Aware Selector**: The tagging selector automatically excludes areas and criteria that do not have any indicators defined, preventing invalid or orphan tagging.
    - **Multi-File Batch Upload**: Faculty can select and upload multiple evidence files at once.
    - **In-Place File Updates**: Updating a file revisions the existing document in-place (`version + 1` with `DocumentVersion` snapshot) rather than creating a duplicate document.
@@ -106,9 +106,13 @@ Manual accreditation processes suffer from:
    - High performance: pre-mounted search dialog, 150ms debounce, 5-minute TanStack Query caching.
 
 8. **Dashboards & Metric Semantics**
-   - **Faculty Dashboard**: In the "Overall Completion" card, the metric displays `{totalIndicators} Total Evidences` to accurately represent cumulative accreditation evidence.
-   - Area completion percentage accurately computed based only on non-archived approved document mappings (`where: { document: { isArchived: false, isArchivedFromRepo: false } }`). Empty or deleted areas strictly report 0%.
-   - Invalidation of area and dashboard query caches on document deletion, archiving, restoring, and approval.
+    - **Faculty Dashboard**: In the "Overall Completion" card, the metric displays `{totalIndicators} Total Evidences` to accurately represent cumulative accreditation evidence.
+    - **Dean Dashboard Overall Completion Card**: Re-enabled in the hero section displaying `{stats.compliancePercent}%` with animated progress bar, `{stats.approvedDocCount} Approved`, and `{stats.totalRequiredDocs} Total Evidences`.
+    - **Admin Compliance Rate Card**: Accurately reports `{stats.approvedDocCount} of {stats.totalRequiredDocs} required documents approved`.
+    - **Assigned Area Denominator Rule**: Across both Admin and Dean dashboards, the required documents denominator strictly counts only areas with active assigned faculty (`user.isActive === true`). Unassigned areas (e.g., Area II whose faculty was deleted) are strictly excluded from the required documents denominator.
+    - **User Archival Assignment Cleanup**: Archiving or deleting a user immediately clears their records from `prisma.assignment`, ensuring formerly assigned areas revert to unassigned status and are removed from compliance denominators and tagging choices.
+    - Area completion percentage accurately computed based only on non-archived approved document mappings (`where: { document: { isArchived: false, isArchivedFromRepo: false } }`). Empty or deleted areas strictly report 0%.
+    - Invalidation of area and dashboard query caches on document deletion, archiving, restoring, assignment mutations, and approval.
 
 9. **User Management (Dean & Admin)**
    - **Dean's Portal**: Tailored exclusively for faculty account administration (`/dean/users`). Pre-fills and filters on `?search=` query parameter from global search.

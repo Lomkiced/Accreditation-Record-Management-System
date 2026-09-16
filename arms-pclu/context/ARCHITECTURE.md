@@ -261,5 +261,12 @@ Password recovery (`/forgot-password` and `/update-password`) uses a multi-tier 
   3. Non-Production Dev Link: In development/demo modes, the generated link is logged to the terminal and returned as `directResetUrl` for zero-configuration testing.
 - **SSR Callback & Client Mount Recovery**: `/api/auth/callback` handles PKCE code exchange on the server. In addition, `/update-password` inspects hash fragments (`#access_token=...`), query codes (`?code=...`), and Supabase error codes (`?error_description=...`), rendering clear alerts and direct links to request a new link if a token is expired.
 
+### Active Assignment Scoping & Compliance Calculation Architecture
+Accreditation completion and compliance metrics are strictly scoped to actively managed institutional areas:
+- **Active Area Scoping**: Indicators are filtered so only those belonging to areas or criteria with active assigned faculty (`user: { isActive: true }`) contribute to `totalRequiredDocs` and `compliancePercent`. Unassigned areas (e.g. Area II whose assigned user was deleted) are omitted from the compliance denominator.
+- **Dean Hero Metric Synchronization**: `/dean/dashboard` renders the "Overall Completion" card within the Hero section, displaying `{stats.compliancePercent}%`, `{stats.approvedDocCount} Approved`, and `{stats.totalRequiredDocs} Total Evidences`.
+- **Selector Active Filtering**: `getIndicatorsForSelector` excludes unassigned areas and criteria from `DocumentUploadSheet` and area picker dialogs, ensuring faculty only tag indicators within actively assigned areas.
+- **Assignment Mutation & Account Archival Invalidation**: Adding, deleting, or archiving user assignments triggers comprehensive revalidation across `/admin/assignments`, `/dean/assignments`, `/faculty/my-areas`, `/faculty/submissions`, `/faculty/dashboard`, `/dean/dashboard`, `/admin/dashboard`, and the `dashboard` cache tag.
+
 
 

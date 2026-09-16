@@ -32,7 +32,7 @@ export function useAssignments(userId: string, initialData?: Extract<Awaited<Ret
       return result.data
     },
     enabled: !!userId,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 30, // 30 seconds
   })
 }
 
@@ -47,7 +47,7 @@ export function useAssignedScope(userId?: string) {
       return result.data
     },
     enabled: !!userId,
-    staleTime: 1000 * 60 * 10, // 10 minutes
+    staleTime: 1000 * 30, // 30 seconds
   })
 }
 

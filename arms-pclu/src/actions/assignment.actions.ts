@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { requireAdmin, requireUser, requireAdminOrDean } from "@/lib/auth/getUser"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 import { z } from "zod"
 import { sanitizeString } from "@/lib/sanitize"
 
@@ -306,6 +306,12 @@ export async function createAssignment(
 
     revalidatePath("/admin/assignments")
     revalidatePath("/dean/assignments")
+    revalidatePath("/faculty/my-areas")
+    revalidatePath("/faculty/submissions")
+    revalidatePath("/faculty/dashboard")
+    revalidatePath("/dean/dashboard")
+    revalidatePath("/admin/dashboard")
+    revalidateTag("dashboard")
     return { success: true, data: { id: assignment.id } }
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -360,6 +366,12 @@ export async function deleteAssignment(
 
     revalidatePath("/admin/assignments")
     revalidatePath("/dean/assignments")
+    revalidatePath("/faculty/my-areas")
+    revalidatePath("/faculty/submissions")
+    revalidatePath("/faculty/dashboard")
+    revalidatePath("/dean/dashboard")
+    revalidatePath("/admin/dashboard")
+    revalidateTag("dashboard")
     return { success: true }
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("Forbidden")) {

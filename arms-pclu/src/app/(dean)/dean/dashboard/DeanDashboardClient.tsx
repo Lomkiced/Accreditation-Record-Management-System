@@ -95,13 +95,13 @@ export function DeanDashboardClient({
         animate="show"
         className="max-w-[1600px] mx-auto space-y-6"
       >
-        {/* HERO SECTION — No compliance card */}
+        {/* HERO SECTION */}
         <motion.div variants={itemVariants} className="relative overflow-hidden rounded-[2rem] bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-700 text-white shadow-xl shadow-indigo-900/10">
           <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay"></div>
           <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
           <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
           
-          <div className="relative p-8 md:p-10">
+          <div className="relative p-8 md:p-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
             <div className="space-y-2">
               <p className="text-blue-100 font-medium tracking-wide text-sm uppercase">{currentDate}</p>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight text-white">
@@ -110,6 +110,27 @@ export function DeanDashboardClient({
               <p className="text-blue-100/90 max-w-xl text-base md:text-lg leading-relaxed mt-2 font-light">
                 You have <strong className="text-white font-semibold">{stats.pendingReviews} pending reviews</strong> requiring your evaluation today.
               </p>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 min-w-[280px] lg:min-w-[320px] shadow-2xl">
+              <div className="flex justify-between items-end mb-3">
+                <span className="text-sm font-semibold text-blue-100">Overall Completion</span>
+                <span className="text-3xl font-black text-white tracking-tighter">{stats.compliancePercent}%</span>
+              </div>
+              <div className="h-2.5 w-full bg-blue-950/40 rounded-full overflow-hidden shadow-inner">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${stats.compliancePercent}%` }}
+                  transition={{ duration: 1.5, ease: "easeOut" }}
+                  className="h-full bg-white rounded-full" 
+                />
+              </div>
+              <div className="mt-4 flex items-center justify-between text-xs font-medium">
+                <div className="flex items-center gap-1.5 text-blue-100">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400"></div> {stats.approvedDocCount} Approved
+                </div>
+                <div className="text-blue-200/80">{stats.totalRequiredDocs} Total Evidences</div>
+              </div>
             </div>
           </div>
         </motion.div>
