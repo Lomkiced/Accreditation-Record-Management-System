@@ -136,6 +136,7 @@ export function useAllSubmissions(initialData?: AllSubmissionsData) {
 import {
   archiveDocumentFromRepository,
   restoreDocumentToRepository,
+  permanentlyDeleteDocumentFromRepository,
 } from "@/actions/repository.actions"
 
 // ─── GET APPROVED SUBMISSIONS (Dean Repository view) ─────────────────────────
@@ -191,6 +192,28 @@ export function useRestoreDocumentToRepository() {
     },
     onError: (err: any) => {
       toast.error(err.message || "Failed to restore document to repository.")
+    },
+  })
+}
+
+export function usePermanentlyDeleteDocumentFromRepository() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (documentId: string) => {
+      const res = await permanentlyDeleteDocumentFromRepository(documentId)
+      if (!res.success) throw new Error(res.error)
+      return res
+    },
+    onSuccess: () => {
+      toast.success("Document permanently deleted from database.")
+      queryClient.invalidateQueries({ queryKey: submissionKeys.all })
+      queryClient.invalidateQueries({ queryKey: submissionKeys.approved })
+      queryClient.invalidateQueries({ queryKey: ["repository"] })
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
+      queryClient.invalidateQueries({ queryKey: ["archives"] })
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to permanently delete document.")
     },
   })
 }

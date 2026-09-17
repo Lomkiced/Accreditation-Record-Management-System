@@ -44,6 +44,7 @@ interface RepositoryTableProps {
   activeTab?: "active" | "archived"
   onArchive?: (doc: RepositoryDocument) => void
   onRestore?: (doc: RepositoryDocument) => void
+  onPermanentDelete?: (doc: RepositoryDocument) => void
 }
 
 // ─── Dominant status logic ────────────────────────────────────────────────────
@@ -73,6 +74,7 @@ export function RepositoryTable({
   activeTab = "active",
   onArchive,
   onRestore,
+  onPermanentDelete,
 }: RepositoryTableProps) {
   const columns: ColumnDef<RepositoryDocument>[] = [
     {
@@ -212,16 +214,31 @@ export function RepositoryTable({
             </Button>
           )}
 
-          {activeTab === "archived" && onRestore && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-              onClick={() => onRestore(row.original)}
-              title="Restore to Active Repository"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </Button>
+          {activeTab === "archived" && (
+            <>
+              {onRestore && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                  onClick={() => onRestore(row.original)}
+                  title="Restore to Active Repository"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </Button>
+              )}
+              {onPermanentDelete && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                  onClick={() => onPermanentDelete(row.original)}
+                  title="Permanently Delete Document"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              )}
+            </>
           )}
         </div>
       ),

@@ -69,14 +69,19 @@ Manual accreditation processes suffer from:
 4. **Document Repository & Archives**
    - **Central Repository (Dean & Admin)**: Centralized storage of verified accreditation documents. The Dean and Admin Portals display **approved documents only** (`status: APPROVED`, non-archived).
    - **Repository Archives & Deletion Semantics**:
-     - **Dean Repository Deletion**: When the Dean deletes an approved document from the repository, it moves to the Repository Archives (`isArchivedFromRepo: true`), disappearing from the active Dean & Admin repositories. The document submitted by the faculty member is strictly preserved in the Faculty Portal: it is NOT deleted and remains fully accessible in both "My Submissions" and the faculty member's approved evidence.
+     - **Dean Repository Deletion (Soft-Archive)**: When the Dean deletes an approved document from the repository, it moves to the Repository Archives (`isArchivedFromRepo: true`), disappearing from the active Dean & Admin repositories. The document submitted by the faculty member is strictly preserved in the Faculty Portal: it is NOT deleted and remains fully accessible in both "My Submissions" and the faculty member's approved evidence.
      - **Dean Repository Archive Toggle**: Dean repository includes dedicated "Active Repository" and "Repository Archives" tabs with item count badges, restore capabilities, and deletion protected by accessible Radix `AlertDialog` confirmation modals.
-    - **Faculty Approved Repository**: Under Faculty Submissions (`/faculty/submissions`), a dedicated "Approved Repository" tab mirrors the Dean/Admin repository view, allowing faculty to explore all verified institutional evidence grouped by accreditation area.
-      - **Personal Approved Repository Archives**: Faculty Approved Repository includes its own "Active Repository" and "Repository Archives" toggle.
-      - **Faculty Deletion of Approved Evidence**: When a faculty member deletes an approved document, it is removed from their personal active list and moved to archives. When permanently deleted from archives, `isDeletedByFaculty: true` ensures it is permanently removed from their personal view while remaining preserved in the institutional repository for Dean and Admin compliance evaluation.
-    - **Faculty Archives & Confirmation Modals**: All deletion and archiving actions trigger an explicit, accessible Radix `AlertDialog` confirmation modal.
-    - File versioning with history and restore capabilities.
-    - Tag-based organization.
+     - **Permanent Deletion from Repository Archives (Dean)**: In the "Repository Archives" tab, Deans can permanently delete an archived repository document. This action:
+       1. Prompts an explicit Radix UI `AlertDialog` confirmation modal with destructive warning styling.
+       2. Completely deletes the document record from the Supabase Database (`prisma.document.delete`), cascading to all associated `DocumentMapping`, `DocumentVersion`, and `DocumentTag` records.
+       3. Completely purges all associated physical file assets from Supabase Storage (`documents` bucket) via the service role client, including both the active `fileUrl` and historical version snapshots in `DocumentVersion`.
+       4. Revalidates all relevant Next.js server paths and invalidates TanStack Query caches across submissions, repositories, and dashboards.
+   - **Faculty Approved Repository**: Under Faculty Submissions (`/faculty/submissions`), a dedicated "Approved Repository" tab mirrors the Dean/Admin repository view, allowing faculty to explore all verified institutional evidence grouped by accreditation area.
+     - **Personal Approved Repository Archives**: Faculty Approved Repository includes its own "Active Repository" and "Repository Archives" toggle.
+     - **Faculty Deletion of Approved Evidence**: When a faculty member deletes an approved document, it is removed from their personal active list and moved to archives. When permanently deleted from archives, `isDeletedByFaculty: true` ensures it is permanently removed from their personal view while remaining preserved in the institutional repository for Dean and Admin compliance evaluation.
+   - **Faculty Archives & Confirmation Modals**: All deletion and archiving actions trigger an explicit, accessible Radix `AlertDialog` confirmation modal.
+   - File versioning with history and restore capabilities.
+   - Tag-based organization.
 
 5. **Document Mapping & Uploads (Faculty)**
    - **PDF-Only Upload Standard**: Across all document upload workflows (individual upload, batch upload, and returned document version re-upload), the system strictly permits PDF files only (`.pdf`, `application/pdf`). Documents (`.docx`, `.xlsx`, `.pptx`) and images (`.jpg`, `.png`) are strictly disallowed and rejected at both client drag-and-drop and server validation layers.

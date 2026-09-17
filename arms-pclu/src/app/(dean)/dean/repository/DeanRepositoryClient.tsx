@@ -14,6 +14,7 @@ import {
   useApprovedSubmissions,
   useArchiveDocumentFromRepository,
   useRestoreDocumentToRepository,
+  usePermanentlyDeleteDocumentFromRepository,
 } from "@/hooks/useSubmissions"
 import {
   AlertDialog,
@@ -26,7 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import { Archive, CheckCircle2 } from "lucide-react"
+import { Archive, CheckCircle2, Trash2 } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { getApprovedSubmissions } from "@/actions/submission.actions"
 
@@ -43,6 +44,7 @@ export function DeanRepositoryClient({
   const [activeTab, setActiveTab] = React.useState<"active" | "archived">("active")
   const [selectedDocument, setSelectedDocument] = React.useState<RepositoryDocument | null>(null)
   const [documentToArchive, setDocumentToArchive] = React.useState<RepositoryDocument | null>(null)
+  const [documentToDelete, setDocumentToDelete] = React.useState<RepositoryDocument | null>(null)
 
   const [searchQuery, setSearchQuery] = React.useState("")
   const [selectedAreas, setSelectedAreas] = React.useState<string[]>([])
@@ -58,6 +60,7 @@ export function DeanRepositoryClient({
 
   const archiveMutation = useArchiveDocumentFromRepository()
   const restoreMutation = useRestoreDocumentToRepository()
+  const permanentDeleteMutation = usePermanentlyDeleteDocumentFromRepository()
 
   const submissions = activeTab === "active" ? activeSubmissions : archivedSubmissions
   const isLoading = activeTab === "active" ? isLoadingActive : isLoadingArchived
@@ -308,6 +311,7 @@ export function DeanRepositoryClient({
             activeTab={activeTab}
             onArchive={(doc) => setDocumentToArchive(doc)}
             onRestore={(doc) => restoreMutation.mutate(doc.id)}
+            onPermanentDelete={(doc) => setDocumentToDelete(doc)}
           />
         )}
       </div>
@@ -344,6 +348,58 @@ export function DeanRepositoryClient({
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               Delete from Repository
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Permanent Delete from Repository Confirmation Modal */}
+      <AlertDialog
+        open={!!documentToDelete}
+        onOpenChange={(open) => {
+          if (!open && !permanentDeleteMutation.isPending) {
+            setDocumentToDelete(null)
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="w-5 h-5 text-red-600" />
+              Permanently Delete Document?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2 text-slate-600">
+              <span>
+                Are you sure you want to permanently delete &quot;
+                <strong className="text-slate-900 font-semibold">
+                  {documentToDelete?.title}
+                </strong>
+                &quot;?
+              </span>
+              <span className="block text-xs bg-red-50 border border-red-200 text-red-700 p-2.5 rounded-lg mt-2 leading-relaxed">
+                <strong>Warning:</strong> This action cannot be undone. This document will be completely deleted from the database, all indicator mappings and versions will be removed, and physical files will be permanently erased from Supabase Storage.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={permanentDeleteMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={permanentDeleteMutation.isPending}
+              onClick={(e) => {
+                e.preventDefault()
+                if (documentToDelete) {
+                  permanentDeleteMutation.mutate(documentToDelete.id, {
+                    onSuccess: () => {
+                      setDocumentToDelete(null)
+                    },
+                  })
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5"
+            >
+              {permanentDeleteMutation.isPending ? "Permanently Deleting..." : "Permanently Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -2,7 +2,8 @@
 
 import { prisma } from "@/lib/prisma"
 import { requireAdmin, requireAdminOrDean } from "@/lib/auth/getUser"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 type ActionResult<T = undefined> =
   | { success: true; data?: T; error?: never }
@@ -187,3 +188,133 @@ export async function restoreDocumentToRepository(documentId: string): Promise<A
     return { error: "Failed to restore document to repository." }
   }
 }
+
+function extractStoragePath(fileUrl: string, bucket = "documents"): string | null {
+  try {
+    const url = new URL(fileUrl)
+    const marker = `/storage/v1/object/public/${bucket}/`
+    const idx = url.pathname.indexOf(marker)
+    if (idx !== -1) {
+      return decodeURIComponent(url.pathname.substring(idx + marker.length))
+    }
+    const altMarker = `/${bucket}/`
+    const altIdx = url.pathname.indexOf(altMarker)
+    if (altIdx !== -1) {
+      return decodeURIComponent(url.pathname.substring(altIdx + altMarker.length))
+    }
+    return null
+  } catch {
+    const clean = fileUrl.split("?")[0]
+    const marker = `/${bucket}/`
+    const idx = clean.indexOf(marker)
+    if (idx !== -1) {
+      return decodeURIComponent(clean.substring(idx + marker.length))
+    }
+    const bucketPrefix = `${bucket}/`
+    if (clean.startsWith(bucketPrefix)) {
+      return decodeURIComponent(clean.substring(bucketPrefix.length))
+    }
+    return clean || null
+  }
+}
+
+export async function permanentlyDeleteDocumentFromRepository(
+  documentId: string
+): Promise<ActionResult> {
+  try {
+    const currentUser = await requireAdminOrDean()
+
+    const doc = await prisma.document.findUnique({
+      where: { id: documentId },
+      include: {
+        versions: {
+          select: { fileUrl: true },
+        },
+      },
+    })
+    if (!doc) return { error: "Document not found." }
+
+    // 1. Clean up physical files from Supabase Storage
+    try {
+      const bucket = process.env.NEXT_PUBLIC_SUPABASE_BUCKET ?? "documents"
+      const adminSupabase = createAdminClient()
+
+      const fileUrlsToDelete: string[] = []
+      if (doc.fileUrl) fileUrlsToDelete.push(doc.fileUrl)
+      doc.versions.forEach((v) => {
+        if (v.fileUrl && !fileUrlsToDelete.includes(v.fileUrl)) {
+          fileUrlsToDelete.push(v.fileUrl)
+        }
+      })
+
+      const storagePaths: string[] = []
+      for (const url of fileUrlsToDelete) {
+        const path = extractStoragePath(url, bucket)
+        if (path && !storagePaths.includes(path)) {
+          storagePaths.push(path)
+        }
+      }
+
+      if (storagePaths.length > 0) {
+        const { error: storageError } = await adminSupabase.storage
+          .from(bucket)
+          .remove(storagePaths)
+        if (storageError) {
+          console.warn(
+            "[permanentlyDeleteDocumentFromRepository] Storage removal warning:",
+            storageError.message
+          )
+        }
+      }
+    } catch (storageErr) {
+      console.error(
+        "[permanentlyDeleteDocumentFromRepository] Storage cleanup error (proceeding with DB deletion):",
+        storageErr
+      )
+    }
+
+    // 2. Cascade delete from Prisma (cascades to mappings, versions, tags)
+    await prisma.document.delete({
+      where: { id: documentId },
+    })
+
+    // 3. Log audit event
+    await prisma.auditLog.create({
+      data: {
+        userId: currentUser.id,
+        action: "PERMANENT_DELETE_DOCUMENT",
+        module: "REPOSITORY",
+        targetId: documentId,
+        details: {
+          title: doc.title,
+          fileName: doc.fileName,
+          facultyId: doc.userId,
+          reason: "Permanently deleted from repository archives by Dean/Admin",
+        },
+      },
+    })
+
+    // 4. Revalidate all related portal paths and tags
+    revalidatePath("/dean/repository")
+    revalidatePath("/admin/repository")
+    revalidatePath("/faculty/submissions")
+    revalidatePath("/faculty/archives")
+    revalidatePath("/faculty/my-areas")
+    revalidatePath("/dean/dashboard")
+    revalidatePath("/admin/dashboard")
+    revalidatePath("/faculty/dashboard")
+    revalidatePath("/dean/areas")
+    revalidatePath("/admin/areas")
+    revalidateTag("dashboard")
+
+    return { success: true }
+  } catch (error: any) {
+    console.error("[permanentlyDeleteDocumentFromRepository]", error)
+    return {
+      error:
+        error.message ||
+        "Failed to permanently delete document from repository.",
+    }
+  }
+}
+

@@ -268,5 +268,19 @@ Accreditation completion and compliance metrics are strictly scoped to actively 
 - **Selector Active Filtering**: `getIndicatorsForSelector` excludes unassigned areas and criteria from `DocumentUploadSheet` and area picker dialogs, ensuring faculty only tag indicators within actively assigned areas.
 - **Assignment Mutation & Account Archival Invalidation**: Adding, deleting, or archiving user assignments triggers comprehensive revalidation across `/admin/assignments`, `/dean/assignments`, `/faculty/my-areas`, `/faculty/submissions`, `/faculty/dashboard`, `/dean/dashboard`, `/admin/dashboard`, and the `dashboard` cache tag.
 
-
-
+### Dean Repository Archives Permanent Deletion & Supabase Storage Purging Architecture
+When a Dean permanently deletes a document from the Repository Archives (`/dean/repository` -> "Repository Archives" tab):
+- **Authorization & Security**: Protected by `requireAdminOrDean()`. Only Deans and Admins can trigger permanent institutional document removal.
+- **Client Confirmation Modal**: Rendered via Radix UI `AlertDialog`. Displays a red trash icon, explicit document name, and destructive action warning banner stating the consequences (permanent deletion from database, mappings, versions, and storage).
+- **Physical Storage Purging (`extractStoragePath` + `createAdminClient`)**:
+  - The server action `permanentlyDeleteDocumentFromRepository` fetches the document along with its version history (`versions: { select: { fileUrl: true } }`).
+  - Resolves bucket name (defaults to `documents`).
+  - Helper `extractStoragePath` extracts relative storage paths from Supabase URLs, supporting public URL schemas, signed URLs, and relative paths (e.g. `/storage/v1/object/public/documents/subpath...` -> `subpath...`).
+  - Uses `createAdminClient()` with the Supabase service role key (`SUPABASE_SERVICE_ROLE_KEY`) to remove the files via `storage.from(bucket).remove(pathsToDelete)`, permanently erasing physical assets from Supabase Storage.
+- **Database Cascade**:
+  - Executes `prisma.document.delete({ where: { id: documentId } })`.
+  - In PostgreSQL, foreign keys on `DocumentMapping`, `DocumentVersion`, and `DocumentTag` have `onDelete: Cascade`. This completely removes all mappings, versions, and tags in a single atomic transaction without leaving orphaned rows.
+- **Audit Logging & Synchronized Revalidation**:
+  - Inserts an audit log entry (`action: "PERMANENT_DELETE_DOCUMENT"`, `module: "REPOSITORY"`).
+  - Triggers Next.js server path revalidation for `/dean/repository`, `/admin/repository`, `/faculty/submissions`, `/faculty/archives`, `/faculty/my-areas`, `/dean/dashboard`, `/admin/dashboard`, `/faculty/dashboard`, `/dean/areas`, `/admin/areas`, and `revalidateTag("dashboard")`.
+  - In the client, TanStack Query invalidates `submissionKeys.all`, `submissionKeys.approved`, `["repository"]`, `dashboardKeys.all`, and `["archives"]`, instantly synchronizing UI state without manual page refresh.
