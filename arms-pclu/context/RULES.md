@@ -138,11 +138,17 @@ All development on ARMS must strictly follow these principles. Violations should
 >
 > 1. **Area Progress (Dean & Faculty)**:
 >    `area_progress% = (approved docs × 100) / total required docs`
->    Where "approved docs" = sum of APPROVED mappings per indicator (capped at `requiredDocs` per indicator, non-archived), and "total required docs" = sum of `requiredDocs` across all indicators in the area.
+>    Where "approved docs" = sum of APPROVED mappings per indicator (capped at `requiredDocs` per indicator, filtering `{ document: { isArchived: false, isArchivedFromRepo: false } }`), and "total required docs" = sum of `requiredDocs` across all indicators in the area.
 >
 > 2. **Admin Dashboard Overall Compliance Rate**:
->    `compliance_rate% = (approved docs capped per indicator × 100) / total required docs across all indicators`
+>    `compliance_rate% = (approved docs capped per indicator × 100) / total required docs across all indicators in assigned scope`
 >    Subtitle must explicitly state `X of Y required documents approved` (never dividing by uploaded documents, ensuring draft submissions do not lower compliance rate).
+>
+> 3. **Compliance Chart Per-Area (Admin/Dean)**:
+>    Uses the same canonical document-level formula as above, scoped to areas/criteria with active assigned faculty. Must NOT use indicator-level formula (% of fully-satisfied indicators).
+>
+> 4. **Dual Archive Filter Mandatory**:
+>    All compliance queries must filter `{ document: { isArchived: false, isArchivedFromRepo: false } }`. This ensures both user-archived and Dean/Admin repository-archived documents are excluded from metrics.
 
 Any new compliance-related feature must reference `dashboard.actions.ts` as the canonical source of truth.
 
@@ -244,7 +250,7 @@ Any new compliance-related feature must reference `dashboard.actions.ts` as the 
 
 ## 17. Area Metric Coherence & Cache Synchronization
 
-- **Archived Document Filtering**: All area compliance, criterion mapping queries, and drill-down components must explicitly filter `{ where: { document: { isArchived: false, isArchivedFromRepo: false } } }`. Empty or deleted areas must strictly display 0% completion.
+- **Archived Document Filtering**: All area compliance, criterion mapping queries, and drill-down components must explicitly filter `{ where: { document: { isArchived: false, isArchivedFromRepo: false } } }`. This dual-filter is mandatory in `_fetchDashboardStats`, `_fetchComplianceData`, and `_fetchComplianceDataWithCounts`. Empty or deleted areas must strictly display 0% completion.
 - **Cache Invalidation Pipeline**: Any document lifecycle event (delete, archive, restore, permanent delete, approval) must coordinate both:
   1. Next.js App Router server path revalidation (`revalidatePath`).
   2. TanStack React Query cache invalidation (`areaKeys.all`, `dashboardKeys.all`, `submissionKeys`, `archiveKeys`, and `repository`).

@@ -169,7 +169,7 @@ const _fetchDashboardStats = unstable_cache(
               mappings: {
                 where: {
                   status: "APPROVED",
-                  document: { isArchived: false },
+                  document: { isArchived: false, isArchivedFromRepo: false },
                 },
               },
             },
@@ -323,13 +323,21 @@ export async function getRecentAuditLogs(): Promise<RecentAuditLog[]> {
  */
 const _fetchComplianceData = unstable_cache(
   async (): Promise<AreaCompliance[]> => {
-    // Fetch areas with their indicators including requiredDocs
+    // Fetch areas scoped to those with active assigned faculty (matching _fetchDashboardStats)
     const areas = await prisma.area.findMany({
       orderBy: { order: "asc" },
       select: {
         name: true,
+        assignments: {
+          where: { criterionId: null, user: { isActive: true } },
+          select: { id: true },
+        },
         criteria: {
           select: {
+            assignments: {
+              where: { user: { isActive: true } },
+              select: { id: true },
+            },
             indicators: {
               select: {
                 id: true,
@@ -341,33 +349,41 @@ const _fetchComplianceData = unstable_cache(
       },
     })
 
-    // Aggregate all approved mappings per indicator in ONE query
+    // Aggregate all approved mappings per indicator in ONE query (with both archive filters)
     const approvedGroups = await prisma.documentMapping.groupBy({
       by: ["indicatorId"],
-      where: { status: "APPROVED" },
+      where: {
+        status: "APPROVED",
+        document: { isArchived: false, isArchivedFromRepo: false },
+      },
       _count: { _all: true },
     })
 
     const approvedCountMap = new Map(approvedGroups.map((g) => [g.indicatorId, g._count._all]))
 
     return areas.map((area) => {
-      let fullyApprovedIndicators = 0
-      let totalIndicators = 0
+      const hasAreaLevelAssignment = area.assignments.length > 0
+
+      let totalRequiredDocs = 0
+      let approvedDocCount = 0
 
       area.criteria.forEach((c) => {
+        // Include criterion's indicators only if area-level or criterion-level assignment exists
+        const hasCriterionAssignment = c.assignments.length > 0
+        if (!hasAreaLevelAssignment && !hasCriterionAssignment) return
+
         c.indicators.forEach((ind) => {
-          totalIndicators += 1
           const reqCount = parseRequiredDocsCount(ind.requiredDocs)
+          totalRequiredDocs += reqCount
           const approvedMappings = approvedCountMap.get(ind.id) ?? 0
-          if (approvedMappings >= reqCount) {
-            fullyApprovedIndicators += 1
-          }
+          approvedDocCount += Math.min(approvedMappings, reqCount)
         })
       })
 
+      // Canonical document-level formula: (approved docs capped per indicator × 100) / total required docs
       const value =
-        totalIndicators > 0
-          ? Math.round((fullyApprovedIndicators * 100) / totalIndicators)
+        totalRequiredDocs > 0
+          ? Math.round((approvedDocCount * 100) / totalRequiredDocs)
           : 0
 
       return { name: area.name, value }
@@ -429,7 +445,7 @@ const _fetchComplianceDataWithCounts = unstable_cache(
       by: ["indicatorId"],
       where: {
         status: "APPROVED",
-        document: { isArchived: false },
+        document: { isArchived: false, isArchivedFromRepo: false },
       },
       _count: { _all: true },
     })
@@ -439,7 +455,7 @@ const _fetchComplianceDataWithCounts = unstable_cache(
       by: ["indicatorId"],
       where: {
         status: { in: ["APPROVED", "SUBMITTED", "UNDER_REVIEW"] },
-        document: { isArchived: false },
+        document: { isArchived: false, isArchivedFromRepo: false },
       },
       _count: { _all: true },
     })

@@ -149,8 +149,9 @@ src/
 - **Inline Submission Return Remarks**: When a document is returned during evaluation, reviewer remarks are directly coupled to the corresponding submission item (`Reviewer Return Remarks: [remarks]`), eliminating ambiguous, detached bottom banners.
 
 ### Canonical Compliance Metric & Dashboard Stats
-- **Admin Dashboard Compliance Rate**: Standard institutional accreditation formula: `(approved documents capped per indicator × 100) / total required documents across all indicators`. The StatCard subtitle indicates `{approvedDocCount} of {totalRequiredDocs} required documents approved`, ensuring draft uploads do not distort compliance.
-- **Dean Dashboard Progress by Area**: Calculated as `(approved docs × 100) / total required docs` (capped per indicator by requiredDocs, filtering `isArchived: false`). Matches the document counter badge (`approved / totalRequired`) and Faculty Portal area completion.
+- **Admin Dashboard Compliance Rate**: Standard institutional accreditation formula: `(approved documents capped per indicator × 100) / total required documents across all indicators in assigned scope`. The StatCard subtitle indicates `{approvedDocCount} of {totalRequiredDocs} required documents approved`, ensuring draft uploads do not distort compliance. All approved mapping queries filter `{ document: { isArchived: false, isArchivedFromRepo: false } }` to exclude both user-archived and repository-archived documents.
+- **Dean Dashboard Progress by Area**: Calculated as `(approved docs × 100) / total required docs` (capped per indicator by requiredDocs, filtering `{ isArchived: false, isArchivedFromRepo: false }`). Matches the document counter badge (`approved / totalRequired`) and Faculty Portal area completion.
+- **Compliance Chart (Admin/Dean)**: Per-area compliance uses the same canonical document-level formula `(approvedDocCount * 100) / totalRequiredDocs`, scoped to areas/criteria with active assigned faculty. Unassigned areas compute 0% rather than being excluded.
 
 ### Task Assignment Collision Prevention & Modal Architecture
 - Assignment queries verify active assignments across all faculty.
@@ -235,7 +236,7 @@ Indicators support granular confidentiality control:
 - Assigned faculty members are aggregated and returned per area and per criterion (`assignedFaculty: string[]`), rendered as informative badges in the tagging tree. This enables faculty to collaborate and contribute evidence to areas assigned across departments.
 
 ### Area Compliance Metric Coherence & Cache Invalidation
-- **Archived Document Filtering**: `criterion.actions.ts` (`getCriteriaByArea`) and `area.actions.ts` (`AREA_LEAN_SELECT`) filter mapping queries with `{ where: { document: { isArchived: false, isArchivedFromRepo: false } } }`. Indicators without active non-archived approved evidence strictly evaluate to 0%, eliminating phantom completion rates on empty or cleared areas.
+- **Archived Document Filtering**: `criterion.actions.ts` (`getCriteriaByArea`) and `area.actions.ts` (`AREA_LEAN_SELECT`) filter mapping queries with `{ where: { document: { isArchived: false, isArchivedFromRepo: false } } }`. Dashboard compliance functions (`_fetchDashboardStats`, `_fetchComplianceData`, `_fetchComplianceDataWithCounts`) enforce the same dual-filter on all approved mapping counts. Indicators without active non-archived approved evidence strictly evaluate to 0%, eliminating phantom completion rates on empty or cleared areas.
 - **Coordinated Invalidation**: Document mutations (`deleteDocument`, `archiveDocument`, `restoreDocument`, `permanentlyDeleteDocument`, `archiveDocumentFromRepository`, `restoreDocumentToRepository`) trigger:
   1. Server path revalidations via `revalidatePath` across `/admin/areas`, `/dean/areas`, `/faculty/my-areas`, `/admin/dashboard`, `/dean/dashboard`, and repositories.
   2. TanStack Query cache invalidations across `submissionKeys`, `archiveKeys`, `areaKeys.all`, `dashboardKeys.all`, and `repository`.
