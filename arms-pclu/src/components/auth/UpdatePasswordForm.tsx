@@ -54,7 +54,36 @@ export function UpdatePasswordForm() {
             return
           }
 
-          // 2. If a PKCE code is directly present in the URL, exchange it for session
+          // 2. If an Implicit flow hash is present, set the session manually
+          const accessToken = hashParams.get("access_token")
+          const refreshToken = hashParams.get("refresh_token")
+          if (accessToken && refreshToken) {
+            const { error: sessionError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            })
+            if (sessionError) {
+              console.error("[UpdatePasswordForm] Session set error:", sessionError)
+              if (isMounted) {
+                setFormError("The reset link has expired or is invalid. Please request a new one.")
+                setSessionValid(false)
+                setIsVerifyingSession(false)
+              }
+              return
+            } else {
+              // Successfully set session from hash
+              if (isMounted) {
+                setSessionValid(true)
+                setFormError(null)
+                setIsVerifyingSession(false)
+              }
+              // Clear the hash from the URL so it's not sitting there in the address bar
+              window.history.replaceState(null, "", window.location.pathname + window.location.search)
+              return
+            }
+          }
+
+          // 3. If a PKCE code is directly present in the URL, exchange it for session
           const code = searchParams.get("code")
           if (code) {
             const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
