@@ -32,7 +32,8 @@ export async function POST(request: Request) {
 
     const adminClient = createAdminClient()
     const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin
-    const redirectTo = `${origin}/api/auth/callback?next=/update-password`
+    // Redirect directly to the client page so the browser can parse the #access_token hash fragment.
+    const redirectTo = `${origin}/update-password`
 
     // 2. Generate the recovery link via Supabase Auth Admin API
     const { data, error } = await adminClient.auth.admin.generateLink({
