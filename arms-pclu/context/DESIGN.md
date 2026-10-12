@@ -234,6 +234,67 @@ When assigning accreditation responsibilities to faculty:
 
 ## Streamlined Users Table Standards
 
-- **Core Academic Columns**: Displays Name (with avatar initials and email), Role badge, Department, Designation, and Status badge.
+- **Core Academic Columns**: Displays Name (with role avatar and email), Role badge, Department, Designation, and Status badge.
 - **Zero Technical Latency**: Omit volatile and inaccurate authentication sync timestamps (`lastLogin`) to ensure instantaneous table rendering and uncluttered, readable user administration.
+
+---
+
+## Professional Categorized Navigation Architecture
+
+The system enforces structured, hierarchical sidebar navigation across all roles (Admin, Dean, Faculty), replacing unorganized flat lists with domain-specific categorized groupings:
+
+### Navigation Taxonomy by Role
+
+1. **Admin Portal**:
+   - **Overview**: Dashboard (`/admin/dashboard`), Reports & Analytics (`/admin/reports`)
+   - **Accreditation Core**: Areas & Criteria (`/admin/areas`), Document Repository (`/admin/repository`)
+   - **System Governance**: User Accounts (`/admin/users`), Audit Trail (`/admin/audit-logs`)
+   - **Preferences**: Notifications (`/admin/notifications`), Profile Settings (`/admin/profile`)
+
+2. **Dean Suite**:
+   - **Executive Overview**: Dashboard (`/dean/dashboard`), Accreditation Reports (`/dean/reports`)
+   - **Accreditation Operations**: Areas & Criteria (`/dean/areas`), Faculty Assignments (`/dean/assignments`), Submissions Review (`/dean/submissions`), Central Repository (`/dean/repository`)
+   - **Department Governance**: Department Faculty (`/dean/users`), Audit Trail (`/dean/audit-logs`)
+   - **Preferences**: Notifications (`/dean/notifications`), Dean Profile (`/dean/profile`)
+
+3. **Faculty Portal**:
+   - **My Workspace**: Dashboard (`/faculty/dashboard`), Assigned Areas (`/faculty/my-areas`)
+   - **Evidence & Repository**: My Submissions (`/faculty/submissions`), Document Archives (`/faculty/archives`)
+   - **Account & Updates**: Notifications (`/faculty/notifications`), Faculty Profile (`/faculty/profile`)
+
+### Sidebar Visual Standards
+- **Section Headers**: Uppercase, tracking-wider 10px headers (`text-slate-400 font-bold tracking-wider`) with inline hairline divider (`bg-slate-800/60`).
+- **Active State**: Role-tailored vibrant background with soft glow and a solid white accent bar on the leading edge (`w-1 bg-white rounded-r-full`).
+- **Footer Identity Card**: High-contrast, dark glass container embedding the user's role-specific vector avatar, display name, designation/department, and sign-out button with destructive hover states.
+
+---
+
+## Unified Enterprise Role Avatar Icon System (`RoleAvatar` / `AvatarInitials`)
+
+Plain letter initials (e.g., "JD", "A") and ornate or game-like icons (RPG shields, floating flames, multi-color glowing halos, fantasy gradients) are strictly forbidden. The system utilizes a **clean, unified, recognizable enterprise vector iconography** crafted to feel harmonious as one coherent suite:
+
+- **Geometric Container Standard**: Every role avatar renders inside an identical minimalist charcoal circle (`bg-slate-900 border border-slate-700/80 shadow-inner`) to preserve clean visual hierarchy and uniform optical weight.
+- **Stroke Architecture**: Built with uniform 1.75px stroke geometry, rounded stroke-caps (`stroke-linecap="round"`), and rounded joints (`stroke-linejoin="round"`) with zero drop-shadow glow filters.
+- **Harmonious Corporate Tints**: Subtle, authoritative enterprise tints rather than fantasy colors:
+
+| Role Archetype | Minimalist Vector Motif | Institutional Meaning | Enterprise Palette |
+| -------------- | ---------------------- | --------------------- | ------------------ |
+| **Admin** | `ShieldCheck` (Enterprise Security Shield with verified checkmark) | System Governance, Access Control & Integrity | Dark Slate (`bg-slate-900`), Corporate Blue (`text-blue-400`) |
+| **Dean** | `GraduationCap` (Executive Academic Mortarboard) | Institutional Leadership & Academic Supervision | Dark Slate (`bg-slate-900`), Executive Sky (`text-sky-400`) |
+| **Faculty** | `BookOpen` (Academic Tome & Repository Codex) | Faculty Instruction, Curriculum & Evidence Documentation | Dark Slate (`bg-slate-900`), Scholar Emerald (`text-emerald-400`) |
+| **Default User** | `User` (Executive Architectural Silhouette) | System User Fallback | Dark Slate (`bg-slate-900`), Neutral Slate (`text-slate-300`) |
+
+### Sizing and Rendering
+- Vector SVGs render crisply from `xs` (24px, 12px icon) to `2xl` (96px, 48px icon) with zero distortion or hydration ID mismatch.
+- Standardized stroke weight (1.75px) ensures identical optical presence across tables, user profile headers, and navigation sidebars.
+
+---
+
+## Unified Institutional Color Theme (Anti-Violet Standard)
+
+The ARMS interface strictly prohibits non-corporate novelty hues such as violet or purple. 
+- **Institutional Primary**: Corporate Deep Navy (`#0F172A`) and Precision Blue (`#2563EB` / `#3B82F6`).
+- **Role Cohesion**: All administrative roles (Admin, Dean, Faculty) share the core institutional navy and slate layout foundations, avoiding fragmented color schemes.
+- **Semantic Badging**: Statuses use standard enterprise semaphores (Amber for Under Review/Pending, Emerald for Approved, Red for Returned/Action Required, Blue for Submitted/In Progress, Slate for Draft).
+
 

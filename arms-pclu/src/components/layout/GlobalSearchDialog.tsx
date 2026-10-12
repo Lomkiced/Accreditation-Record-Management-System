@@ -191,7 +191,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
                         className="group flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-blue-200 bg-white hover:bg-blue-50/30 transition-all cursor-pointer shadow-2xs"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <AvatarInitials name={f.name} size="md" />
+                          <AvatarInitials name={f.name} role="FACULTY" size="md" />
                           <div className="min-w-0">
                             <h4 className="text-sm font-semibold text-slate-800 group-hover:text-blue-600 transition-colors truncate">
                               {f.name}

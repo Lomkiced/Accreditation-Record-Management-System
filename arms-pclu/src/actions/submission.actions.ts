@@ -5,6 +5,10 @@ import { requireUser, requireAdmin, requireAdminOrDean } from "@/lib/auth/getUse
 import { revalidatePath, revalidateTag } from "next/cache"
 import { z } from "zod"
 import { sanitizeString } from "@/lib/sanitize"
+import {
+  checkIndicatorDuplicateTitle,
+  verifyStorageQuotaPreflight,
+} from "@/actions/storage.actions"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -108,6 +112,27 @@ export async function uploadAndMapDocument(
       if (!existingDoc) return { error: "Document to update not found." }
       if (existingDoc.userId !== currentUser.id) {
         return { error: "You do not have permission to update this document." }
+      }
+
+      // Indicator-scoped duplicate check (excluding current document)
+      const isDup = await checkIndicatorDuplicateTitle(
+        validated.indicatorId,
+        validated.title,
+        existingDoc.id
+      )
+      if (isDup) {
+        return { error: "Duplicate file detected. This document already exists." }
+      }
+
+      // Storage quota guardrail check for updated file
+      if (validated.fileSize) {
+        const quotaCheck = await verifyStorageQuotaPreflight(
+          currentUser.id,
+          validated.fileSize
+        )
+        if (!quotaCheck.allowed) {
+          return { error: quotaCheck.error! }
+        }
       }
 
       const [updatedDoc, mapping] = await prisma.$transaction(async (tx) => {
@@ -232,6 +257,27 @@ export async function uploadAndMapDocument(
     let mappingId: string
 
     if (returnedMapping) {
+      // Indicator-scoped duplicate check (excluding returning document)
+      const isDup = await checkIndicatorDuplicateTitle(
+        validated.indicatorId,
+        validated.title,
+        returnedMapping.documentId
+      )
+      if (isDup) {
+        return { error: "Duplicate file detected. This document already exists." }
+      }
+
+      // Storage quota guardrail check
+      if (validated.fileSize) {
+        const quotaCheck = await verifyStorageQuotaPreflight(
+          currentUser.id,
+          validated.fileSize
+        )
+        if (!quotaCheck.allowed) {
+          return { error: quotaCheck.error! }
+        }
+      }
+
       // It IS returned or draft, so we update the document (creates V2)
       const [doc, map] = await prisma.$transaction(async (tx) => {
         // Snapshot previous version if fileUrl existed
@@ -275,6 +321,24 @@ export async function uploadAndMapDocument(
       documentId = doc.id
       mappingId = map.id
     } else {
+      // Indicator-scoped duplicate check for new submission
+      const isDup = await checkIndicatorDuplicateTitle(
+        validated.indicatorId,
+        validated.title
+      )
+      if (isDup) {
+        return { error: "Duplicate file detected. This document already exists." }
+      }
+
+      // Storage quota preflight guardrail check
+      const quotaCheck = await verifyStorageQuotaPreflight(
+        currentUser.id,
+        validated.fileSize
+      )
+      if (!quotaCheck.allowed) {
+        return { error: quotaCheck.error! }
+      }
+
       // Atomic transaction: Document + DocumentMapping together (V1)
       const [doc, map] = await prisma.$transaction(async (tx) => {
         const d = await tx.document.create({
@@ -385,6 +449,38 @@ export async function uploadAndMapBatchDocuments(
       select: { id: true, name: true },
     })
     if (!indicator) return { error: "Indicator not found." }
+
+    // 1. Intra-batch duplicate check
+    const normalizedBatchTitles = validated.files.map((f) =>
+      f.title.trim().toLowerCase()
+    )
+    if (new Set(normalizedBatchTitles).size !== normalizedBatchTitles.length) {
+      return { error: "Duplicate file detected. This document already exists." }
+    }
+
+    // 2. Indicator-scoped collision check against existing active evidence
+    for (const item of validated.files) {
+      const isDup = await checkIndicatorDuplicateTitle(
+        validated.indicatorId,
+        item.title
+      )
+      if (isDup) {
+        return { error: "Duplicate file detected. This document already exists." }
+      }
+    }
+
+    // 3. Storage quota preflight guardrail for total batch size
+    const totalBatchBytes = validated.files.reduce(
+      (acc, f) => acc + (f.fileSize || 0),
+      0
+    )
+    const quotaCheck = await verifyStorageQuotaPreflight(
+      currentUser.id,
+      totalBatchBytes
+    )
+    if (!quotaCheck.allowed) {
+      return { error: quotaCheck.error! }
+    }
 
     const createdDocs = await prisma.$transaction(async (tx) => {
       const results: string[] = []
@@ -497,6 +593,26 @@ export async function saveDocumentAsDraft(
       select: { id: true, name: true },
     })
     if (!indicator) return { error: "Indicator not found." }
+
+    // Indicator-scoped duplicate check
+    const isDup = await checkIndicatorDuplicateTitle(
+      validated.indicatorId,
+      validated.title
+    )
+    if (isDup) {
+      return { error: "Duplicate file detected. This document already exists." }
+    }
+
+    // Storage quota preflight guardrail if file attached
+    if (validated.fileSize) {
+      const quotaCheck = await verifyStorageQuotaPreflight(
+        currentUser.id,
+        validated.fileSize
+      )
+      if (!quotaCheck.allowed) {
+        return { error: quotaCheck.error! }
+      }
+    }
 
     const [document, mapping] = await prisma.$transaction(async (tx) => {
       const doc = await tx.document.create({

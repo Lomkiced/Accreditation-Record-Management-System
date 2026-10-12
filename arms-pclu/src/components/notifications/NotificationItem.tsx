@@ -64,9 +64,9 @@ const typeConfig: Record<NotificationType, {
   },
   assignment: {
     icon: UserCheck,
-    iconBg: "bg-violet-100",
-    iconColor: "text-violet-600",
-    borderColor: "border-l-violet-500",
+    iconBg: "bg-blue-100",
+    iconColor: "text-blue-600",
+    borderColor: "border-l-blue-500",
   },
   general: {
     icon: Bell,

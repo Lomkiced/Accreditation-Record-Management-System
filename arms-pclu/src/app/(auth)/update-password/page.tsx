@@ -7,7 +7,7 @@ export default function UpdatePasswordPage() {
       {/* Decorative background blur blobs */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600 rounded-full mix-blend-screen filter blur-[120px] opacity-30 animate-pulse duration-10000" />
       <div className="absolute top-[20%] right-[-10%] w-[35%] h-[35%] bg-indigo-600 rounded-full mix-blend-screen filter blur-[120px] opacity-20" />
-      <div className="absolute bottom-[-10%] left-[20%] w-[45%] h-[45%] bg-violet-600 rounded-full mix-blend-screen filter blur-[140px] opacity-20" />
+      <div className="absolute bottom-[-10%] left-[20%] w-[45%] h-[45%] bg-blue-700 rounded-full mix-blend-screen filter blur-[140px] opacity-20" />
       
       {/* Left panel — Hero text */}
       <div className="hidden lg:flex w-[55%] flex-col p-12 relative z-10 justify-between">
@@ -19,7 +19,7 @@ export default function UpdatePasswordPage() {
           <h1 className="text-5xl lg:text-[3.5rem] font-extrabold text-white leading-[1.1] tracking-tight">
             Accreditation Record
             <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-violet-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-sky-300">
               Management System
             </span>
           </h1>

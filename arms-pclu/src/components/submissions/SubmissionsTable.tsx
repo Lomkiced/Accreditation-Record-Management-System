@@ -60,7 +60,7 @@ export function SubmissionsTable({ data, onRowClick }: SubmissionsTableProps) {
       header: "Faculty",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <AvatarInitials name={row.original.user.name} size="sm" />
+          <AvatarInitials name={row.original.user.name} role="FACULTY" size="sm" />
           <span className="text-sm">{row.original.user.name}</span>
         </div>
       ),

@@ -25,7 +25,7 @@ export function StatusBadge({ status, size = "md", className }: StatusBadgeProps
     },
     UNDER_REVIEW: {
       label: "Under Review",
-      className: "bg-purple-50 text-purple-700 border-purple-200",
+      className: "bg-amber-50 text-amber-700 border-amber-200",
     },
     APPROVED: {
       label: "Approved",

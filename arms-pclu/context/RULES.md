@@ -57,6 +57,8 @@ All development on ARMS must strictly follow these principles. Violations should
 - `IndicatorTable` — used across area detail views.
 - `UserFormPanel` — shared user create/edit form with `allowedRoles` restriction.
 - `UsersTable` — shared user list table.
+- `RoleAvatar` / `AvatarInitials` — shared minimalist enterprise vector role avatar system (`ShieldCheck` for Admin, `GraduationCap` for Dean, `BookOpen` for Faculty, `User` for Default User) within unified dark charcoal circle containers. Game-like/RPG icons, glowing fantasy halos, and letter-based avatars are strictly forbidden.
+- Categorized Sidebar Layouts (`NewAdminSidebar`, `DeanSidebar`, `FacultySidebar`) — standardized domain-scoped navigation groups across portals.
 
 ---
 
@@ -295,3 +297,50 @@ Any new compliance-related feature must reference `dashboard.actions.ts` as the 
 - **User Archival Assignment Cleanup & Cache Invalidation**:
   - When a user account is archived (`archiveUserAccount`) or deleted (`deleteUserAccount`), all assignments associated with that user are immediately deleted from `prisma.assignment`.
   - Mutations must revalidate `/admin/assignments`, `/dean/assignments`, `/faculty/my-areas`, `/faculty/submissions`, `/faculty/dashboard`, `/dean/dashboard`, `/admin/dashboard`, and `revalidateTag("dashboard")`.
+
+---
+
+## 21. Indicator-Scoped Evidence Duplication Prevention Standards
+
+- **Strict Error Wording Invariant**:
+  When a duplicate document title is detected under an indicator, the system MUST return the exact error message:
+  `"Duplicate file detected. This document already exists."`
+- **Indicator Scope Isolation**:
+  The duplication check is strictly scoped to the specific target indicator. A document titled "Course Syllabus" in Indicator 1.1 must NOT block uploading a "Course Syllabus" in Indicator 2.1 or in any other indicator.
+- **Normalization Standard**:
+  Comparison must be normalized: `title.trim()` with case-insensitivity (`mode: "insensitive"` in Prisma).
+- **Active Document Scope**:
+  Archived documents (`isArchived: true` or `isDeletedByFaculty: true`) do not block new uploads with the same title.
+- **Multi-Entry Enforcement**:
+  Enforced across all upload and mapping paths: `uploadAndMapDocument`, `uploadAndMapBatchDocuments`, `saveDocumentAsDraft`, and `createEvidenceMappings`.
+
+---
+
+## 22. Multi-Tier Storage Quotas & Repository Isolation Standards
+
+- **Independent Repository Accounting**:
+  - Faculty Repository and Dean/Admin Repository storage usage MUST be calculated independently without data bleed.
+  - Dean and Admin share the central accreditation repository storage space.
+  - Faculty members have individual personal storage quotas (e.g., 100 MB per faculty).
+  - Dean/Admin institutional repository has a shared central quota (e.g., 1 GB).
+- **Pre-Upload Quota Guardrail**:
+  - Server actions MUST calculate projected storage consumption before committing file uploads.
+  - If `currentUsedBytes + incomingFileBytes > quotaBytes`, reject the operation immediately with a clear error: `"Storage limit exceeded. Available: X MB / Limit: Y MB."`
+- **Visual Meter UI Standards**:
+  - Both Faculty Submissions and Dean/Admin Repository views MUST render dynamic storage progress meters displaying used MB, total quota MB, and percentage.
+  - Standard color thresholds: Normal (<70%) = Blue/Emerald; Warning (70%–89%) = Amber; Critical (≥90%) = Destructive Red.
+
+---
+
+## 23. Single-Deduction Exhibit Storage Engine & Cross-Faculty Sharing Invariants
+
+- **Zero-Multiplication Invariant**:
+  - Tagging a single document to multiple indicators across assigned areas MUST consume storage only once.
+  - Storage calculation strictly aggregates `SUM(DISTINCT Document.fileSize)` per owner, NEVER multiplying by `DocumentMapping` counts.
+- **Cross-Faculty Attribution Invariant**:
+  - When Faculty A links/tags an exhibit to indicators assigned to Faculty B, the file size is deducted ONLY from Faculty A's storage quota.
+  - Faculty B's quota consumption MUST remain exactly 0 MB for evidence owned by other faculty members.
+- **Lifecycle & Deduplication Integrity**:
+  - Deleting a mapping from an indicator does not alter storage consumption as long as the document remains mapped elsewhere.
+  - Storage is decremented only upon complete document archival or permanent deletion by the owner.
+

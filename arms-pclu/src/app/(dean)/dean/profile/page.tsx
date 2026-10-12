@@ -22,6 +22,7 @@ export default async function AdminProfilePage() {
           designation: user.designation,
           phone: user.phone,
           isActive: user.isActive,
+          role: user.role,
         }}
       />
     </>

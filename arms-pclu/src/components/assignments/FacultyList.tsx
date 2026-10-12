@@ -63,7 +63,7 @@ export function FacultyList({ faculties, selectedId, onSelect, isLoading }: Facu
                   : "hover:bg-slate-50 border-b-slate-100"
               )}
             >
-              <AvatarInitials name={faculty.name} size="md" />
+              <AvatarInitials name={faculty.name} role="FACULTY" size="md" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-900 truncate">{faculty.name}</p>
                 <p className="text-xs text-slate-500 truncate">{faculty.department}</p>

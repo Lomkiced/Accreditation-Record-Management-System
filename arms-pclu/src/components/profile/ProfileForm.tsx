@@ -36,6 +36,7 @@ interface ProfileFormProps {
     designation: string
     phone?: string | null
     isActive?: boolean
+    role?: string
   }
 }
 
@@ -99,8 +100,10 @@ export function ProfileForm({ user }: ProfileFormProps) {
         <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex flex-col items-center text-center">
           <AvatarInitials
             name={user.name}
-            size="lg"
-            className="w-24 h-24 text-2xl mb-4"
+            role={user.role}
+            size="2xl"
+            showGlow
+            className="w-24 h-24 mb-4"
           />
           <h2 className="text-xl font-bold text-slate-900">{user.name}</h2>
           <p className="text-sm text-slate-500 font-medium mt-1">

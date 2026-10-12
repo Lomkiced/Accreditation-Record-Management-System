@@ -53,6 +53,7 @@ export function ActivityFeed() {
               >
                 <AvatarInitials
                   name={log.user.name}
+                  role={log.user.role}
                   size="sm"
                   className="flex-shrink-0 mt-0.5"
                 />

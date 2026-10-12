@@ -38,7 +38,7 @@ export function UsersTable({
         header: "User",
         cell: ({ row }) => (
           <div className="flex items-center gap-3">
-            <AvatarInitials name={row.original.name} size="md" />
+            <AvatarInitials name={row.original.name} role={row.original.role} size="md" />
             <div className="flex flex-col">
               <span className="font-bold text-slate-900 leading-tight">{row.original.name}</span>
               <span className="text-xs text-slate-500">{row.original.email}</span>
@@ -51,9 +51,14 @@ export function UsersTable({
         header: "Role",
         cell: ({ row }) => {
           const role = row.original.role
-          const color = role === "ADMIN" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
+          const color =
+            role === "ADMIN"
+              ? "bg-slate-100 text-slate-800 border border-slate-200"
+              : role === "DEAN"
+              ? "bg-blue-100 text-blue-800 border border-blue-200"
+              : "bg-emerald-50 text-emerald-800 border border-emerald-200"
           return (
-            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${color}`}>
+            <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${color}`}>
               {role}
             </span>
           )

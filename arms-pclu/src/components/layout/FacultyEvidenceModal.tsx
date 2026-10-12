@@ -54,7 +54,7 @@ export function FacultyEvidenceModal({
         {/* Header */}
         <div className="bg-slate-50 border-b border-slate-200 p-5">
           <div className="flex items-center gap-3">
-            <AvatarInitials name={faculty.name} size="lg" />
+            <AvatarInitials name={faculty.name} role="FACULTY" size="lg" />
             <div className="min-w-0 flex-1">
               <DialogTitle className="text-lg font-bold text-slate-900 truncate">
                 {faculty.name}

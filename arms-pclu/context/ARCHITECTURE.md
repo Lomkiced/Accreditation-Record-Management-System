@@ -94,8 +94,8 @@ src/
 â”‚   â”œâ”€â”€ report.actions.ts
 â”‚   â”œâ”€â”€ repository.actions.ts
 â”‚   â”œâ”€â”€ search.actions.ts
+â”‚   â”œâ”€â”€ storage.actions.ts
 â”‚   â”œâ”€â”€ submission.actions.ts
-â”‚   â”œâ”€â”€ tag.actions.ts
 â”‚   â””â”€â”€ user.actions.ts
 â”œâ”€â”€ app/
 â”‚   â”œâ”€â”€ (admin)/       # Admin portal routes
@@ -118,7 +118,6 @@ src/
 â”‚   â”œâ”€â”€ repository/    # Document repository panels
 â”‚   â”œâ”€â”€ shared/        # PageHeader, ConfirmDialog, PageSkeleton, etc.
 â”‚   â”œâ”€â”€ submissions/   # Submission upload/review forms
-â”‚   â”œâ”€â”€ tags/          # Tag management
 â”‚   â”œâ”€â”€ ui/            # shadcn/ui primitives (Button, Input, Dialog, etc.)
 â”‚   â”œâ”€â”€ users/         # UserFormPanel, UsersTable
 â”‚   â””â”€â”€ Providers.tsx  # React Query + Sonner providers
@@ -285,3 +284,82 @@ When a Dean permanently deletes a document from the Repository Archives (`/dean/
   - Inserts an audit log entry (`action: "PERMANENT_DELETE_DOCUMENT"`, `module: "REPOSITORY"`).
   - Triggers Next.js server path revalidation for `/dean/repository`, `/admin/repository`, `/faculty/submissions`, `/faculty/archives`, `/faculty/my-areas`, `/dean/dashboard`, `/admin/dashboard`, `/faculty/dashboard`, `/dean/areas`, `/admin/areas`, and `revalidateTag("dashboard")`.
   - In the client, TanStack Query invalidates `submissionKeys.all`, `submissionKeys.approved`, `["repository"]`, `dashboardKeys.all`, and `["archives"]`, instantly synchronizing UI state without manual page refresh.
+
+### Indicator-Scoped Evidence Duplication Prevention Architecture
+To guarantee evidence uniqueness and prevent repetitive uploads within accreditation criteria:
+- **Scope Restriction**: Duplication verification is strictly scoped to the target `indicatorId`. Documents with identical titles uploaded to differing indicators or tagged across areas remain permissible.
+- **Normalization & Matching Pipeline**:
+  - Document titles are sanitized, trimmed, and normalized to lowercase (`title.trim().toLowerCase()`).
+  - Validation occurs before physical storage commit or database transaction:
+    ```typescript
+    const duplicate = await prisma.documentMapping.findFirst({
+      where: {
+        indicatorId: targetIndicatorId,
+        document: {
+          isArchived: false,
+          title: { equals: normalizedTitle, mode: "insensitive" },
+        },
+      },
+    })
+    ```
+  - If a collision occurs, server actions immediately return:
+    `{ error: "Duplicate file detected. This document already exists." }`
+- **Execution Touchpoints**:
+  - `uploadAndMapDocument`: Pre-flight check before document creation or mapping.
+  - `uploadAndMapBatchDocuments`: Pre-checks all batch items against existing indicator evidence and ensures no intra-batch duplicate titles.
+  - `saveDocumentAsDraft`: Blocks duplicate draft titles under the same indicator.
+  - `createEvidenceMappings`: When tagging an existing document to new indicators, checks if any selected indicator already contains a document with that title.
+
+### Multi-Tier Storage Quotas & Independent Repository Tracking Architecture
+ARMS segregates storage governance between personal faculty working spaces and the institutional accreditation repository:
+- **Independent Storage Realms**:
+  - **Faculty Repository Realm**: Tracks personal document storage on a per-faculty basis. Default quota: 100 MB per faculty user (configurable in system settings).
+  - **Dean/Admin Repository Realm**: Tracks central institutional accreditation evidence. The Dean and Admin share this unified repository space. Default quota: 1 GB (configurable in system settings).
+- **Independent Usage Accounting**:
+  - Faculty Storage Usage: Computed by aggregating the distinct physical file sizes (`fileSize`) of active documents created by that user (`userId`) plus any historical version snapshots (`DocumentVersion.fileSize`). Mappings across multiple indicators do NOT count towards storage.
+  - Dean/Admin Repository Usage: Computed by aggregating the distinct file sizes of approved accreditation evidence actively retained in the institutional repository (`isArchivedFromRepo: false` and at least one `APPROVED` mapping) plus any central administrative documents.
+- **Pre-Upload Quota Guardrail**:
+  - Before initiating upload to Supabase Storage, server actions and client pre-flight checks verify `currentUsedBytes + incomingFileBytes <= quotaBytes`.
+  - If exceeded, upload is halted with: `"Storage limit exceeded. Available: X MB / Limit: Y MB."`
+- **Visual Storage Meter Widgets**:
+  - Integrated into `/faculty/submissions` and `/dean/repository` / `/admin/repository` headers.
+  - Displays dynamic progress bar (`Progress` primitive), exact metrics (e.g. `42.5 MB / 100 MB (42.5%)`), and semantic status colors:
+    - Normal (<70%): Blue / Emerald
+    - Warning (70%–89%): Amber
+    - Critical (≥90%): Red
+
+### Single-Deduction Exhibit Storage Engine (Multi-Tagging & Cross-Faculty Deduplication)
+Accreditation evidence frequently satisfies multiple requirements across areas and team members. ARMS enforces single-deduction storage mechanics:
+- **1:N Mapping Zero-Multiplication Invariant**:
+  - A physical file is uploaded once, generating a single `Document` record in Supabase Storage and PostgreSQL.
+  - Linking or tagging that document to 1, 5, or 10 indicators produces `DocumentMapping` records referencing the same `documentId`.
+  - The storage formula strictly aggregates `SUM(DISTINCT Document.fileSize)` per document owner, guaranteeing that a 15 MB syllabus mapped to 5 indicators consumes exactly 15 MB, never 75 MB.
+- **Cross-Faculty Tagging Attribution Invariant**:
+  - When Faculty A creates and uploads a 15 MB document and tags it to an indicator assigned to Faculty B (or vice versa), the storage deduction is attributed solely to Faculty A (`Document.userId`).
+  - Faculty B experiences 0 MB deducted from their quota, encouraging cross-departmental evidence collaboration without quota friction.
+- **Lifecycle & Retention Integrity**:
+  - Un-mapping a document from one indicator leaves the underlying `Document` and other indicator mappings intact; storage remains 15 MB.
+  - Storage is only decremented when the document owner permanently deletes the document or when an admin purges an archived file from physical storage.
+
+### Categorized Navigation & Role Avatar System Architecture
+The application layout infrastructure uses structured, role-specific layouts and components (`src/components/layout/`):
+- **Layout Inner Pattern**:
+  - Admin: `(admin)/layout.tsx` -> `NewAdminLayoutInner` -> `NewAdminSidebar` + `TopHeader` (role: `admin`).
+  - Dean: `(dean)/layout.tsx` -> `DeanLayoutInner` -> `DeanSidebar` + `TopHeader` (role: `dean`).
+  - Faculty: `(faculty)/layout.tsx` -> `FacultyLayoutInner` -> `FacultySidebar` + `TopHeader` (role: `faculty`).
+- **Sidebar Architecture**:
+  - Encapsulates domain-scoped navigation categories (Overview, Operations, Governance, Preferences) with clear visual hierarchy, prefetching on hover, and active route highlights.
+  - Aligns navigation strictly with the core PACUCOA accreditation framework, eliminating redundant legacy tag routes and non-existent paths.
+- **Role Avatar System (`AvatarInitials` / `RoleAvatar`)**:
+  - Eliminates generic letter initials and ornate/game-like fantasy graphics across the entire system.
+  - Implements a unified, recognizable enterprise vector iconography with uniform 1.75px stroke geometry inside a cohesive dark charcoal circular container (`bg-slate-900 border border-slate-700/80`):
+    - `ADMIN`: `ShieldCheck` — Enterprise Security Shield with subtle verification mark (`text-blue-400`).
+    - `DEAN`: `GraduationCap` — Executive Academic Mortarboard (`text-sky-400`).
+    - `FACULTY`: `BookOpen` — Academic Scholar Tome & Repository Codex (`text-emerald-400`).
+    - `USER`: `User` — Minimalist Executive Architectural Silhouette (`text-slate-300`).
+- **Institutional Color Standard**:
+  - Strict prohibition of non-corporate colors (such as violet/purple).
+  - Cohesive institutional palette centered around Corporate Deep Navy (`#0F172A`) and Precision Blue (`#2563EB`).
+  - Dean and Admin portals share identical clean, authoritative enterprise styling.
+
+

@@ -35,7 +35,7 @@ Manual accreditation processes suffer from:
 | ----------- | ------------------------------------------------------------------------------------------------------------------- |
 | **Faculty** | Upload documents, map them to assigned indicators, track approval status, manage assigned areas.                      |
 | **Dean**    | Review faculty submissions, approve/return documents, monitor area-level compliance, manage taxonomy, assign faculty. |
-| **Admin**   | Manage system-wide settings, user accounts (Admin/Dean), view global compliance, manage tags, audit logs.             |
+| **Admin**   | Manage system-wide settings, user accounts (Admin/Dean), view global compliance, institutional repository, audit logs. |
 
 ---
 
@@ -81,7 +81,7 @@ Manual accreditation processes suffer from:
      - **Faculty Deletion of Approved Evidence**: When a faculty member deletes an approved document, it is removed from their personal active list and moved to archives. When permanently deleted from archives, `isDeletedByFaculty: true` ensures it is permanently removed from their personal view while remaining preserved in the institutional repository for Dean and Admin compliance evaluation.
    - **Faculty Archives & Confirmation Modals**: All deletion and archiving actions trigger an explicit, accessible Radix `AlertDialog` confirmation modal.
    - File versioning with history and restore capabilities.
-   - Tag-based organization.
+   - Indicator-based compliance mapping.
 
 5. **Document Mapping & Uploads (Faculty)**
    - **PDF-Only Upload Standard**: Across all document upload workflows (individual upload, batch upload, and returned document version re-upload), the system strictly permits PDF files only (`.pdf`, `application/pdf`). Documents (`.docx`, `.xlsx`, `.pptx`) and images (`.jpg`, `.png`) are strictly disallowed and rejected at both client drag-and-drop and server validation layers.
@@ -91,6 +91,19 @@ Manual accreditation processes suffer from:
     - **Indicator-Aware Selector**: The tagging selector automatically excludes areas and criteria that do not have any indicators defined, preventing invalid or orphan tagging.
    - **Multi-File Batch Upload**: Faculty can select and upload multiple evidence files at once.
    - **In-Place File Updates**: Updating a file revisions the existing document in-place (`version + 1` with `DocumentVersion` snapshot) rather than creating a duplicate document.
+   - **Indicator-Scoped Evidence Duplication Prevention**:
+     - Automatically blocks duplicate evidence uploads and mappings within a single indicator.
+     - If a document with the same title already exists under the target indicator, the upload/mapping is blocked with an explicit error: `"Duplicate file detected. This document already exists."`
+     - Duplication checks are strictly restricted to that specific indicator: documents with identical titles across different indicators remain permissible.
+   - **Multi-Tier Independent Storage Quotas & Repository Tracking**:
+     - The Faculty Repository and Dean/Admin Repository operate with independent storage allocations and independent usage tracking (Dean and Admin share the central institutional repository).
+     - Default limits: Faculty Repository allocated 100 MB per faculty member; Dean/Admin Repository allocated 1 GB institutional storage (system-configurable).
+     - Pre-upload quota guardrails: Upload attempts exceeding available storage are blocked before physical asset transfer.
+     - Visual storage meters (progress bars, used MB / total MB, and warning indicators at >= 85% capacity) embedded in both Faculty and Dean/Admin repository views.
+   - **Single-Deduction Exhibit Storage Engine (Multi-Tagging & Cross-Faculty Deduplication)**:
+     - Exhibits tagged across multiple indicators consume storage ONLY ONCE (e.g., a 15 MB syllabus tagged to 5 indicators consumes only 15 MB of the uploader's quota, not 75 MB).
+     - Cross-Faculty Tagging Storage Attribution: When Faculty A links/tags their document to indicators assigned to Faculty B, the storage is strictly deducted from Faculty A (the owner), never from Faculty B.
+     - Physical storage deduplication ensures zero multiplication of storage consumption across indicators or faculty boundaries.
    - Per-mapping status workflow: `DRAFT → SUBMITTED → UNDER_REVIEW → APPROVED / RETURNED`.
    - Evidence upload via cascading picker (Area → Criterion → Indicator) and direct indicator upload.
    - **Contextual Return Remarks**: When a submission is returned, reviewer remarks are directly coupled beneath the respective document entry (`Reviewer Return Remarks: [remarks]`) rather than floating as ambiguous system banners.
@@ -143,7 +156,9 @@ Manual accreditation processes suffer from:
     - **Dean**: Manage Faculty accounts (CRUD).
     - **Admin**: Manage Admin and Dean accounts; view Faculty (read-only).
     - Accurate **Last Login** tracking synchronized from Supabase Auth (`last_sign_in_at`) and audit activity.
-    - Password reset capability for managed users.
+12. **Institutional Enterprise UI/UX Identity**
+    - **Unified Role Vector Iconography**: Simple, unified, and recognizable SVG vector icons (`ShieldCheck` for Admin, `GraduationCap` for Dean, `BookOpen` for Faculty, `User` for Default User) enclosed in identical dark charcoal circular frames (`bg-slate-900 border-slate-700/80`). Strict prohibition of gaming/RPG visual elements (flames, glowing drop-shadows, fantasy gradients).
+    - **Corporate Navy/Blue Institutional Theming**: Zero tolerance for novelty tints (such as violet/purple for Dean). The entire suite adheres to Corporate Deep Navy (`#0F172A`) and Precision Blue (`#2563EB`).
 
 ---
 

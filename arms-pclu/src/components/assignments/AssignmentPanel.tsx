@@ -54,7 +54,7 @@ export function AssignmentPanel({ selectedFaculty }: AssignmentPanelProps) {
       {/* Header */}
       <div className="p-6 border-b border-slate-100 flex items-start justify-between bg-slate-50/50 rounded-t-xl">
         <div className="flex items-center gap-4">
-          <AvatarInitials name={selectedFaculty.name} size="lg" />
+          <AvatarInitials name={selectedFaculty.name} role="FACULTY" size="lg" />
           <div>
             <h2 className="text-xl font-bold text-slate-900">
               {selectedFaculty.name}

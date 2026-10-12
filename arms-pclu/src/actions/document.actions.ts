@@ -15,6 +15,10 @@ import type {
   AreaWithHierarchy,
   AreaComplianceSummary,
 } from "@/types/document.types"
+import {
+  checkIndicatorDuplicateTitle,
+  verifyStorageQuotaPreflight,
+} from "@/actions/storage.actions"
 
 // ─── Shared result type ───────────────────────────────────────────────────────
 type ActionResult<T = undefined> =
@@ -38,6 +42,17 @@ export async function uploadDocument(
         ? sanitizeString(formData.description)
         : undefined,
     })
+
+    // Storage quota preflight guardrail
+    if (validated.fileSize) {
+      const quotaCheck = await verifyStorageQuotaPreflight(
+        currentUser.id,
+        validated.fileSize
+      )
+      if (!quotaCheck.allowed) {
+        return { error: quotaCheck.error! }
+      }
+    }
 
     const document = await prisma.document.create({
       data: {
@@ -248,6 +263,18 @@ export async function createEvidenceMappings(
       return {
         success: true,
         data: { createdCount: 0, skippedCount: validated.indicatorIds.length },
+      }
+    }
+
+    // Indicator-scoped duplicate check across all target indicators
+    for (const indicatorId of newIndicatorIds) {
+      const isDup = await checkIndicatorDuplicateTitle(
+        indicatorId,
+        document.title,
+        document.id
+      )
+      if (isDup) {
+        return { error: "Duplicate file detected. This document already exists." }
       }
     }
 
@@ -1020,58 +1047,4 @@ export async function deleteDocument(documentId: string): Promise<ActionResult> 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TAGS — Get all system tags and toggle tags on documents
-// ─────────────────────────────────────────────────────────────────────────────
-export async function getAllTags(): Promise<ActionResult<{ id: string; name: string; color: string }[]>> {
-  try {
-    const tags = await prisma.tag.findMany({
-      select: { id: true, name: true, color: true },
-      orderBy: { name: "asc" }
-    })
-    
-    // Auto-seed if empty for the first time
-    if (tags.length === 0) {
-      const defaultTags = [
-        { name: "Priority",  color: "#EF4444" },
-        { name: "For Review",color: "#F59E0B" },
-        { name: "Finalized", color: "#10B981" },
-        { name: "Archived",  color: "#64748B" },
-      ]
-      await prisma.tag.createMany({ data: defaultTags })
-      const newTags = await prisma.tag.findMany({ select: { id: true, name: true, color: true }, orderBy: { name: "asc" } })
-      return { success: true, data: newTags }
-    }
-    
-    return { success: true, data: tags }
-  } catch (error) {
-    console.error("[getAllTags]", error)
-    return { error: "Failed to load tags." }
-  }
-}
 
-export async function toggleDocumentTag(documentId: string, tagId: string, add: boolean): Promise<ActionResult> {
-  try {
-    await requireUser()
-    
-    if (add) {
-      // Use create instead of upsert to avoid complexity, handle unique constraint if already exists
-      try {
-        await prisma.documentTag.create({
-          data: { documentId, tagId },
-        })
-      } catch (e: any) {
-        if (e.code !== 'P2002') throw e // ignore unique constraint violation
-      }
-    } else {
-      await prisma.documentTag.deleteMany({
-        where: { documentId, tagId },
-      })
-    }
-    
-    revalidatePath("/admin/repository")
-    return { success: true }
-  } catch (error) {
-    console.error("[toggleDocumentTag]", error)
-    return { error: "Failed to toggle tag." }
-  }
-}

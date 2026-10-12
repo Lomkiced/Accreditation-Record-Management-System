@@ -96,7 +96,7 @@ export function DeanDashboardClient({
         className="max-w-[1600px] mx-auto space-y-6"
       >
         {/* HERO SECTION */}
-        <motion.div variants={itemVariants} className="relative overflow-hidden rounded-[2rem] bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-700 text-white shadow-xl shadow-indigo-900/10">
+        <motion.div variants={itemVariants} className="relative overflow-hidden rounded-[2rem] bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-950 text-white shadow-xl shadow-slate-900/10">
           <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay"></div>
           <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
           <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
@@ -164,13 +164,13 @@ export function DeanDashboardClient({
             <p className="text-xs text-slate-500 mt-5 font-medium relative z-10">Awaiting your evaluation</p>
           </div>
 
-          <div className="bg-white rounded-[1.5rem] p-6 border border-slate-200/60 shadow-sm flex flex-col justify-between group hover:border-violet-300 transition-all hover:shadow-md">
+          <div className="bg-white rounded-[1.5rem] p-6 border border-slate-200/60 shadow-sm flex flex-col justify-between group hover:border-blue-300 transition-all hover:shadow-md">
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-semibold text-slate-500 mb-1">Active Faculty</p>
                 <h3 className="text-4xl font-black text-slate-800 tracking-tight">{stats.activeFaculty}</h3>
               </div>
-              <div className="p-3.5 bg-violet-50 text-violet-600 rounded-2xl group-hover:bg-violet-600 group-hover:text-white transition-all shadow-sm">
+              <div className="p-3.5 bg-blue-50 text-blue-600 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm">
                 <Users size={24} />
               </div>
             </div>

@@ -158,7 +158,11 @@ export function TopHeader({ role, user: serverUser }: TopHeaderProps) {
               type="button"
               className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
             >
-              <AvatarInitials name={displayName} size="sm" />
+              <AvatarInitials
+                name={displayName}
+                role={displayUser?.role ?? role.toUpperCase()}
+                size="sm"
+              />
               <div className="text-left hidden sm:block">
                 <p className="text-sm font-medium text-slate-700 leading-tight">
                   {displayName}

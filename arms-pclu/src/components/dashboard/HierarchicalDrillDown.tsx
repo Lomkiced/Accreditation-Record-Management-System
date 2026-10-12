@@ -275,7 +275,7 @@ function IndicatorRow({
 
 const AREA_ACCENT_COLORS = [
   { bg: "bg-blue-500",   light: "bg-blue-50",   border: "border-blue-200",   text: "text-blue-700"   },
-  { bg: "bg-violet-500", light: "bg-violet-50",  border: "border-violet-200", text: "text-violet-700" },
+  { bg: "bg-indigo-500", light: "bg-indigo-50",  border: "border-indigo-200", text: "text-indigo-700" },
   { bg: "bg-emerald-500",light: "bg-emerald-50", border: "border-emerald-200",text: "text-emerald-700"},
   { bg: "bg-amber-500",  light: "bg-amber-50",   border: "border-amber-200",  text: "text-amber-700"  },
   { bg: "bg-rose-500",   light: "bg-rose-50",    border: "border-rose-200",   text: "text-rose-700"   },

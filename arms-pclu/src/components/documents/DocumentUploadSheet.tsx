@@ -43,6 +43,8 @@ import { getIndicatorsForSelector } from "@/actions/document.actions"
 import type { DocumentWithMappings } from "@/types/document.types"
 import { useAuth } from "@/hooks/useAuth"
 import { uploadFileToStorage } from "@/lib/supabase/storage"
+import { StorageMeter } from "@/components/shared/StorageMeter"
+import { useMyStorageQuota } from "@/hooks/useStorageQuota"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -157,6 +159,7 @@ export function DocumentUploadSheet({
   const [indicatorSearch, setIndicatorSearch] = React.useState("")
   const [uploadProgress, setUploadProgress] = React.useState<number>(0)
   const [isUploading, setIsUploading] = React.useState(false)
+  const { data: storageQuota, isLoading: isLoadingQuota } = useMyStorageQuota()
 
   const { user } = useAuth()
 
@@ -213,6 +216,14 @@ export function DocumentUploadSheet({
     }
     if (!user?.id) {
       toast.error("Authentication error. Please refresh and try again.")
+      return
+    }
+
+    // Pre-check storage quota guardrail
+    if (storageQuota && selectedFile && storageQuota.usedBytes + selectedFile.size > storageQuota.quotaBytes) {
+      toast.error(
+        `Storage limit exceeded. Available: ${storageQuota.availableMB} MB / Limit: ${storageQuota.quotaMB} MB.`
+      )
       return
     }
 
@@ -359,6 +370,13 @@ export function DocumentUploadSheet({
           {/* ── Step 1: File upload & metadata ── */}
           {step === 1 && (
             <div className="px-6 py-5 space-y-5">
+              {/* Storage Quota Meter */}
+              <StorageMeter
+                quota={storageQuota}
+                isLoading={isLoadingQuota}
+                compact
+              />
+
               {/* File Upload */}
               <div>
                 <Label className="text-sm font-medium text-slate-700 mb-2 block">
@@ -526,7 +544,7 @@ export function DocumentUploadSheet({
                   <Accordion type="multiple" className="space-y-2">
                     {filteredTree.map((area, aIdx) => {
                       const areaColors = [
-                        "bg-blue-500", "bg-violet-500", "bg-emerald-500",
+                        "bg-blue-500", "bg-indigo-500", "bg-emerald-500",
                         "bg-amber-500", "bg-rose-500", "bg-cyan-500",
                         "bg-orange-500", "bg-teal-500",
                       ]

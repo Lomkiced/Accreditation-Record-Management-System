@@ -16,7 +16,6 @@ import { getAllSubmissions, getMySubmissions } from "@/actions/submission.action
 import { getAuditLogs } from "@/actions/audit.actions"
 import { getUsers } from "@/actions/user.actions"
 import { getNotifications } from "@/actions/notification.actions"
-import { getTagsWithUsage } from "@/actions/tag.actions"
 import { getDocumentsForRepository } from "@/actions/document.actions"
 import {
   getFacultyWithAssignmentCounts,
@@ -29,7 +28,6 @@ import { submissionKeys } from "./useSubmissions"
 import { auditLogKeys } from "./useAuditLogs"
 import { userKeys } from "./useUsers"
 import { notificationKeys } from "./useNotifications"
-import { tagKeys } from "./useTagManagement"
 import { assignmentKeys } from "./useAssignments"
 
 // ── Prefetch configuration per route ──
@@ -108,11 +106,7 @@ function getPrefetchConfigs(route: string): PrefetchConfig[] {
       { queryKey: auditLogKeys.all, queryFn: async () => { const r = await getAuditLogs(); if (!r.success) throw new Error(r.error); return r.data }, staleTime: 30 * 1000 },
     ]
   }
-  if (route === "/dean/tags") {
-    return [
-      { queryKey: tagKeys.all, queryFn: async () => { const r = await getTagsWithUsage(); if (!r.success) throw new Error(r.error); return r.data }, staleTime: 5 * 60 * 1000 },
-    ]
-  }
+
   if (route === "/dean/reports") {
     return [
       { queryKey: submissionKeys.all, queryFn: async () => { const r = await getAllSubmissions(); if (!r.success) throw new Error(r.error); return r.data }, staleTime: 2 * 60 * 1000 },

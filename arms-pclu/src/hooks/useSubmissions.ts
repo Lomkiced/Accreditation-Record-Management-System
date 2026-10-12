@@ -15,6 +15,7 @@ import {
 import { submitAllMappings, deleteDocument } from "@/actions/document.actions"
 import { areaKeys } from "./useAreas"
 import { dashboardKeys } from "./useDashboard"
+import { storageQuotaKeys } from "./useStorageQuota"
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
 
@@ -52,6 +53,7 @@ export function useSubmitDocument() {
         return
       }
       queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
+      queryClient.invalidateQueries({ queryKey: storageQuotaKeys.all })
       toast.success("Document submitted for review.")
     },
     onError: (error: Error) => {
@@ -73,6 +75,7 @@ export function useSubmitBatchDocuments() {
         return
       }
       queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
+      queryClient.invalidateQueries({ queryKey: storageQuotaKeys.all })
       toast.success(`${res.data?.count ?? "Files"} documents submitted for review.`)
     },
     onError: (error: Error) => {
@@ -88,8 +91,13 @@ export function useSaveDraft() {
 
   return useMutation({
     mutationFn: (data: Parameters<typeof saveDocumentAsDraft>[0]) => saveDocumentAsDraft({ ...data }),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      if (!res.success) {
+        toast.error(res.error)
+        return
+      }
       queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
+      queryClient.invalidateQueries({ queryKey: storageQuotaKeys.all })
       toast.success("Draft saved successfully.")
     },
     onError: (error: Error) => {
@@ -291,38 +299,7 @@ export function useReviewSubmission() {
   })
 }
 
-// ─── TAGS ────────────────────────────────────────────────────────────────────
 
-import { getAllTags, toggleDocumentTag } from "@/actions/document.actions"
-
-export function useTags() {
-  return useQuery({
-    queryKey: ["tags"],
-    queryFn: async () => {
-      const result = await getAllTags()
-      if (!result.success) throw new Error(result.error)
-      return result.data
-    },
-    staleTime: 1000 * 60 * 60, // 1 hour
-  })
-}
-
-export function useToggleTag() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: (data: { documentId: string; tagId: string; add: boolean }) => 
-      toggleDocumentTag(data.documentId, data.tagId, data.add),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: submissionKeys.all })
-      queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
-      toast.success("Tags updated successfully.")
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to update tags.")
-    },
-  })
-}
 
 // ─── DELETE / ARCHIVE DOCUMENT ──────────────────────────────────────────────────
 export function useDeleteDocument() {
@@ -359,6 +336,7 @@ export function useDeleteDocument() {
       queryClient.invalidateQueries({ queryKey: areaKeys.all })
       queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
       queryClient.invalidateQueries({ queryKey: ["repository"] })
+      queryClient.invalidateQueries({ queryKey: storageQuotaKeys.all })
     }
   })
 }

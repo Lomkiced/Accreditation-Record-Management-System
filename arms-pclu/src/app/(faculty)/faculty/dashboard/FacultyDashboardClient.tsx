@@ -144,7 +144,7 @@ export function FacultyDashboardClient({
         className="max-w-[1600px] mx-auto space-y-6"
       >
         {/* HERO SECTION */}
-        <motion.div variants={itemVariants} className="relative overflow-hidden rounded-[2rem] bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-700 text-white shadow-xl shadow-indigo-900/10">
+        <motion.div variants={itemVariants} className="relative overflow-hidden rounded-[2rem] bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-950 text-white shadow-xl shadow-slate-900/10">
           <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay"></div>
           <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
           <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
@@ -215,7 +215,7 @@ export function FacultyDashboardClient({
             </p>
           </div>
 
-          <div className="bg-white rounded-[1.5rem] p-6 border border-slate-200/60 shadow-sm flex flex-col justify-between group hover:border-violet-300 transition-all hover:shadow-md">
+          <div className="bg-white rounded-[1.5rem] p-6 border border-slate-200/60 shadow-sm flex flex-col justify-between group hover:border-blue-300 transition-all hover:shadow-md">
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-semibold text-slate-500 mb-1">Submitted</p>
@@ -230,14 +230,14 @@ export function FacultyDashboardClient({
             </p>
           </div>
 
-          <div className="bg-white rounded-[1.5rem] p-6 border border-slate-200/60 shadow-sm flex flex-col justify-between group hover:border-violet-300 transition-all hover:shadow-md relative overflow-hidden">
-            {underReviewCount > 0 && <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/10 rounded-bl-full -z-0"></div>}
+          <div className="bg-white rounded-[1.5rem] p-6 border border-slate-200/60 shadow-sm flex flex-col justify-between group hover:border-amber-300 transition-all hover:shadow-md relative overflow-hidden">
+            {underReviewCount > 0 && <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-bl-full -z-0"></div>}
             <div className="flex justify-between items-start relative z-10">
               <div>
                 <p className="text-sm font-semibold text-slate-500 mb-1">Under Review</p>
                 <h3 className="text-4xl font-black text-slate-800 tracking-tight">{underReviewCount}</h3>
               </div>
-              <div className={`p-3.5 rounded-2xl transition-all shadow-sm ${underReviewCount > 0 ? 'bg-violet-100 text-violet-600 group-hover:bg-violet-600 group-hover:text-white' : 'bg-slate-50 text-slate-400 group-hover:bg-slate-200'}`}>
+              <div className={`p-3.5 rounded-2xl transition-all shadow-sm ${underReviewCount > 0 ? 'bg-amber-100 text-amber-700 group-hover:bg-amber-600 group-hover:text-white' : 'bg-slate-50 text-slate-400 group-hover:bg-slate-200'}`}>
                 <Clock size={24} />
               </div>
             </div>
@@ -392,7 +392,7 @@ export function FacultyDashboardClient({
             <div className="p-8 pb-4 border-b border-slate-100 flex justify-between items-center">
               <div>
                 <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                  <Clock size={22} className="text-violet-600" />
+                  <Clock size={22} className="text-blue-600" />
                   Recent Activity
                 </h3>
                 <p className="text-sm text-slate-500 mt-1 font-medium">Logbooks & submissions.</p>

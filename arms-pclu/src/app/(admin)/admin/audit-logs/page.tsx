@@ -98,7 +98,7 @@ export default function AuditLogsPage() {
         let colorClass = "bg-slate-100 text-slate-700"
         if (action.includes("APPROVED") || action.includes("CREATE")) colorClass = "bg-emerald-100 text-emerald-700"
         else if (action.includes("SUBMITTED") || action.includes("UPLOAD") || action.includes("LOGGED")) colorClass = "bg-blue-100 text-blue-700"
-        else if (action.includes("ASSIGN") || action.includes("UPDATE")) colorClass = "bg-violet-100 text-violet-700"
+        else if (action.includes("ASSIGN") || action.includes("UPDATE")) colorClass = "bg-sky-100 text-sky-800"
         else if (action.includes("DELETE") || action.includes("RETURNED")) colorClass = "bg-red-100 text-red-700"
         
         return (

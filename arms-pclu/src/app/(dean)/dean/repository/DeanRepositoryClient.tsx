@@ -16,6 +16,8 @@ import {
   useRestoreDocumentToRepository,
   usePermanentlyDeleteDocumentFromRepository,
 } from "@/hooks/useSubmissions"
+import { StorageMeter } from "@/components/shared/StorageMeter"
+import { useRepositoryStorageQuota } from "@/hooks/useStorageQuota"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,6 +63,7 @@ export function DeanRepositoryClient({
   const archiveMutation = useArchiveDocumentFromRepository()
   const restoreMutation = useRestoreDocumentToRepository()
   const permanentDeleteMutation = usePermanentlyDeleteDocumentFromRepository()
+  const { data: repositoryQuota, isLoading: isLoadingQuota } = useRepositoryStorageQuota()
 
   const submissions = activeTab === "active" ? activeSubmissions : archivedSubmissions
   const isLoading = activeTab === "active" ? isLoadingActive : isLoadingArchived
@@ -217,6 +220,15 @@ export function DeanRepositoryClient({
         title="Document Repository"
         subtitle="Centralized storage of verified and approved accreditation documents"
         actions={null}
+      />
+
+      {/* Institutional Repository Storage Meter */}
+      <StorageMeter
+        quota={repositoryQuota}
+        isLoading={isLoadingQuota}
+        title="Dean & Admin Institutional Repository Storage"
+        description="1 GB Shared Quota · Preserves all verified accreditation records across Areas"
+        className="mb-4"
       />
 
       <div className="space-y-4">

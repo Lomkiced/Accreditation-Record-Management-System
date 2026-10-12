@@ -7,7 +7,7 @@ interface StatCardProps {
   value: string | number
   subtitle: string
   icon: LucideIcon
-  color: "blue" | "amber" | "emerald" | "violet" | "rose"
+  color: "blue" | "amber" | "emerald" | "indigo" | "rose"
   trend?: {
     value: string
     isPositive: boolean
@@ -28,9 +28,9 @@ export function StatCard({ title, value, subtitle, icon: Icon, color, trend }: S
       bg: "bg-amber-50",
       icon: "text-amber-600",
     },
-    violet: {
-      bg: "bg-violet-50",
-      icon: "text-violet-600",
+    indigo: {
+      bg: "bg-indigo-50",
+      icon: "text-indigo-600",
     },
     rose: {
       bg: "bg-rose-50",

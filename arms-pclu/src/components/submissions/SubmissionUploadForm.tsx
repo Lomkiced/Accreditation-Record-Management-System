@@ -21,6 +21,9 @@ import { toast } from "sonner"
 import { uploadFileToStorage } from "@/lib/supabase/storage"
 import { useSubmitDocument, useSubmitBatchDocuments, useSaveDraft } from "@/hooks/useSubmissions"
 import { useAuth } from "@/hooks/useAuth"
+import { StorageMeter } from "@/components/shared/StorageMeter"
+import { useMyStorageQuota } from "@/hooks/useStorageQuota"
+import { checkDuplicateEvidenceAction } from "@/actions/storage.actions"
 
 const SubmissionSchema = z.object({
   title: z.string().optional(),
@@ -75,6 +78,7 @@ export function SubmissionUploadForm({
   const submitDocument = useSubmitDocument()
   const submitBatchDocuments = useSubmitBatchDocuments()
   const saveDraft = useSaveDraft()
+  const { data: storageQuota, isLoading: isLoadingQuota } = useMyStorageQuota()
 
   const isApproved = existingSubmission?.status === "APPROVED"
 
@@ -154,6 +158,17 @@ export function SubmissionUploadForm({
       return
     }
 
+    // Pre-check duplicate title before saving draft
+    const duplicateCheck = await checkDuplicateEvidenceAction({
+      indicatorId: indicator.id,
+      title: title,
+      excludeDocumentId: existingSubmission?.id,
+    })
+    if (duplicateCheck.data?.isDuplicate) {
+      toast.error("Duplicate file detected. This document already exists.")
+      return
+    }
+
     let fileMeta: { fileUrl: string; fileName: string; fileSize: number } | null = null
     if (selectedFiles[0]) {
       setIsUploading(true)
@@ -195,8 +210,30 @@ export function SubmissionUploadForm({
       return
     }
 
+    // Pre-check storage quota guardrail
+    const totalBytes = selectedFiles.reduce((acc, f) => acc + f.size, 0)
+    if (storageQuota && storageQuota.usedBytes + totalBytes > storageQuota.quotaBytes) {
+      toast.error(
+        `Storage limit exceeded. Available: ${storageQuota.availableMB} MB / Limit: ${storageQuota.quotaMB} MB.`
+      )
+      return
+    }
+
     // SCENARIO 1: Updating an existing submission (Single file update in-place)
     if (existingSubmission) {
+      const targetTitle = values.title?.trim() || existingSubmission.title
+
+      // Pre-check duplicate title
+      const dupCheck = await checkDuplicateEvidenceAction({
+        indicatorId: indicator.id,
+        title: targetTitle,
+        excludeDocumentId: existingSubmission.id,
+      })
+      if (dupCheck.data?.isDuplicate) {
+        toast.error("Duplicate file detected. This document already exists.")
+        return
+      }
+
       let fileMeta: { fileUrl: string; fileName: string; fileSize: number } | null = null
 
       if (selectedFiles[0]) {
@@ -240,6 +277,16 @@ export function SubmissionUploadForm({
       const file = selectedFiles[0]
       const title = values.title?.trim() || file.name.replace(/\.[^/.]+$/, "")
 
+      // Pre-check duplicate title
+      const dupCheck = await checkDuplicateEvidenceAction({
+        indicatorId: indicator.id,
+        title,
+      })
+      if (dupCheck.data?.isDuplicate) {
+        toast.error("Duplicate file detected. This document already exists.")
+        return
+      }
+
       setIsUploading(true)
       let fileMeta: { fileUrl: string; fileName: string; fileSize: number } | null = null
       try {
@@ -272,6 +319,28 @@ export function SubmissionUploadForm({
 
     // SCENARIO 3: Batch upload multiple files concurrently / sequentially
     if (selectedFiles.length > 1) {
+      // 1. Intra-batch duplicate check
+      const batchTitles = selectedFiles.map((f) =>
+        (f.name.replace(/\.[^/.]+$/, "")).trim().toLowerCase()
+      )
+      if (new Set(batchTitles).size !== batchTitles.length) {
+        toast.error("Duplicate file detected. This document already exists.")
+        return
+      }
+
+      // 2. Pre-check each file against indicator
+      for (const file of selectedFiles) {
+        const itemTitle = file.name.replace(/\.[^/.]+$/, "")
+        const dupCheck = await checkDuplicateEvidenceAction({
+          indicatorId: indicator.id,
+          title: itemTitle,
+        })
+        if (dupCheck.data?.isDuplicate) {
+          toast.error("Duplicate file detected. This document already exists.")
+          return
+        }
+      }
+
       setIsUploading(true)
       const uploadedMetas: Array<{
         title: string
@@ -370,6 +439,16 @@ export function SubmissionUploadForm({
                 No further action required for this indicator.
               </p>
             </div>
+          )}
+
+          {/* Storage Quota Meter */}
+          {!isApproved && (
+            <StorageMeter
+              quota={storageQuota}
+              isLoading={isLoadingQuota}
+              compact
+              className="border-slate-200"
+            />
           )}
 
           {/* File upload zone */}

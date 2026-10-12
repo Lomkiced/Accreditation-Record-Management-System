@@ -44,6 +44,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { FacultyRepositoryView } from "@/components/repository/FacultyRepositoryView"
+import { StorageMeter } from "@/components/shared/StorageMeter"
+import { useMyStorageQuota } from "@/hooks/useStorageQuota"
 
 // ─── Status Badge Configuration ────────────────────────────────────────────────
 const STATUS_CONFIG: Record<
@@ -94,6 +96,7 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
   
   const submitAllMappings = useSubmitAllMappings()
   const archiveMutation = useArchiveDocument()
+  const { data: storageQuota, isLoading: isLoadingQuota } = useMyStorageQuota()
 
   const handleConfirmAction = () => {
     if (!confirmAction) return
@@ -134,6 +137,14 @@ export function SubmissionsClient({ documents }: SubmissionsClientProps) {
           Upload Evidence
         </Button>
       </div>
+
+      {/* Storage Quota Meter */}
+      <StorageMeter
+        quota={storageQuota}
+        isLoading={isLoadingQuota}
+        title="Faculty Personal Repository Storage"
+        description="100 MB Personal Quota · Multi-tagged exhibits consume zero additional storage"
+      />
 
       {/* Tabs Navigation */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2">

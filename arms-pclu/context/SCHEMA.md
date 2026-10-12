@@ -226,6 +226,19 @@ All child relationships use `onDelete: Cascade`:
 - Deleting an Area → deletes its Criteria → deletes their Indicators → deletes their Mappings.
 - Deleting a User → deletes their Documents → deletes their Mappings.
 
+### 6. Indicator-Scoped Duplicate Prevention Design
+- To prevent duplicate evidence within a single indicator without restricting same-titled evidence across other indicators, collision checks are scoped to `(indicatorId, document.title)`.
+- Application-level transactional verification checks for active (non-archived) mappings with matching normalized titles before record insertion.
+- Performance is accelerated by composite index `documents [isArchived, userId]` and relation joins on `DocumentMapping [indicatorId]`.
+
+### 7. Storage Accounting & Single-Deduction Multi-Tagging Design
+- Storage is physically defined at the `Document` and `DocumentVersion` entity level (`fileSize` in bytes).
+- **Single Deduction Multi-Tagging Invariant**: `DocumentMapping` acts as a logical reference pointer. Tagging a 15 MB document to 5 indicators creates 5 mapping rows but consumes only 15 MB against the document owner's quota (`SUM(Document.fileSize)`).
+- **Cross-Faculty Tagging Attribution**: Storage is always attributed to `Document.userId` (the document creator/uploader). Collaborating faculty members who map or view the evidence incur 0 MB deduction.
+- **Repository Isolation**:
+  - Faculty Repository Storage = Aggregated file sizes of non-deleted documents and version snapshots owned by that specific faculty user (default quota: 100 MB).
+  - Dean/Admin Repository Storage = Aggregated file sizes of verified accreditation documents actively present in the central repository (`isArchivedFromRepo: false` and at least one `APPROVED` mapping) (default quota: 1 GB).
+
 ---
 
 ## Database Indexes
