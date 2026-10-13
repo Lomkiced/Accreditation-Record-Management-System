@@ -1,7 +1,7 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { requireUser } from "@/lib/auth/getUser"
+import { requireUser, requireAdminOrDean } from "@/lib/auth/getUser"
 import {
   FACULTY_STORAGE_QUOTA_BYTES,
   DEAN_ADMIN_STORAGE_QUOTA_BYTES,
@@ -203,7 +203,7 @@ export async function getRepositoryStorageQuota(): Promise<
   ActionResult<StorageQuotaInfo>
 > {
   try {
-    await requireUser()
+    await requireAdminOrDean()
     const quota = await calculateDeanAdminRepositoryStorageUsage()
     return { success: true, data: quota }
   } catch (error: any) {

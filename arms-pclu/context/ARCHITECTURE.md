@@ -321,8 +321,10 @@ ARMS segregates storage governance between personal faculty working spaces and t
 - **Pre-Upload Quota Guardrail**:
   - Before initiating upload to Supabase Storage, server actions and client pre-flight checks verify `currentUsedBytes + incomingFileBytes <= quotaBytes`.
   - If exceeded, upload is halted with: `"Storage limit exceeded. Available: X MB / Limit: Y MB."`
-- **Visual Storage Meter Widgets**:
-  - Integrated into `/faculty/submissions` and `/dean/repository` / `/admin/repository` headers.
+- **Visual Storage Meter Widgets & RBAC Isolation**:
+  - Integrated into `/faculty/submissions` (personal faculty quota: 100 MB) and `/dean/repository` / `/admin/repository` headers (institutional repository quota: 1 GB).
+  - The Institutional Repository Storage meter is strictly hidden from Faculty users in the Approved Repository view.
+  - Server action `getRepositoryStorageQuota` enforces strict `requireAdminOrDean` RBAC.
   - Displays dynamic progress bar (`Progress` primitive), exact metrics (e.g. `42.5 MB / 100 MB (42.5%)`), and semantic status colors:
     - Normal (<70%): Blue / Emerald
     - Warning (70%–89%): Amber
@@ -340,6 +342,13 @@ Accreditation evidence frequently satisfies multiple requirements across areas a
 - **Lifecycle & Retention Integrity**:
   - Un-mapping a document from one indicator leaves the underlying `Document` and other indicator mappings intact; storage remains 15 MB.
   - Storage is only decremented when the document owner permanently deletes the document or when an admin purges an archived file from physical storage.
+
+### Document Tagging Routing Architecture
+- **Direct Folder Routing on Tagging Completion**:
+  - In `DocumentUploadSheet`, upon successful execution of `createEvidenceMappings`, the client identifies all target area IDs associated with the selected indicators.
+  - If indicators belong to a single area, the client immediately routes the user to `/faculty/my-areas/[areaId]`. If indicators span multiple areas, it navigates to `/faculty/my-areas`.
+  - The client invalidates `submissionKeys.mine`, `areaKeys.all`, `storageQuotaKeys.all`, and `dashboardKeys.all`, ensuring immediate rendering of newly mapped evidence in the assigned area hierarchy with zero stale UI blockers.
+  - Server actions trigger path revalidations for `/faculty/my-areas`, `/faculty/submissions`, `/faculty/dashboard`, `/dean/dashboard`, `/admin/dashboard`, as well as cache tags `areas-hierarchy` and `dashboard`.
 
 ### Categorized Navigation & Role Avatar System Architecture
 The application layout infrastructure uses structured, role-specific layouts and components (`src/components/layout/`):

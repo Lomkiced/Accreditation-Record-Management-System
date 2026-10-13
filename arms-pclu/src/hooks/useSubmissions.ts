@@ -116,6 +116,9 @@ export function useSubmitAllMappings() {
     onSuccess: (result) => {
       if (!result.success) throw new Error(result.error)
       queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
+      queryClient.invalidateQueries({ queryKey: areaKeys.all })
+      queryClient.invalidateQueries({ queryKey: storageQuotaKeys.all })
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
       toast.success(`Successfully submitted ${result.data?.submittedCount} mappings for review.`)
     },
     onError: (error: Error) => {
@@ -177,6 +180,7 @@ export function useArchiveDocumentFromRepository() {
       queryClient.invalidateQueries({ queryKey: submissionKeys.approved })
       queryClient.invalidateQueries({ queryKey: ["repository"] })
       queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
+      queryClient.invalidateQueries({ queryKey: storageQuotaKeys.all })
     },
     onError: (err: any) => {
       toast.error(err.message || "Failed to archive document from repository.")
@@ -197,6 +201,7 @@ export function useRestoreDocumentToRepository() {
       queryClient.invalidateQueries({ queryKey: submissionKeys.approved })
       queryClient.invalidateQueries({ queryKey: ["repository"] })
       queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
+      queryClient.invalidateQueries({ queryKey: storageQuotaKeys.all })
     },
     onError: (err: any) => {
       toast.error(err.message || "Failed to restore document to repository.")
@@ -219,6 +224,7 @@ export function usePermanentlyDeleteDocumentFromRepository() {
       queryClient.invalidateQueries({ queryKey: ["repository"] })
       queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
       queryClient.invalidateQueries({ queryKey: ["archives"] })
+      queryClient.invalidateQueries({ queryKey: storageQuotaKeys.all })
     },
     onError: (err: any) => {
       toast.error(err.message || "Failed to permanently delete document.")
@@ -295,6 +301,10 @@ export function useReviewSubmission() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: submissionKeys.all })
       queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
+      queryClient.invalidateQueries({ queryKey: submissionKeys.approved })
+      queryClient.invalidateQueries({ queryKey: areaKeys.all })
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
+      queryClient.invalidateQueries({ queryKey: storageQuotaKeys.all })
     }
   })
 }

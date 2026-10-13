@@ -44,7 +44,12 @@ import type { DocumentWithMappings } from "@/types/document.types"
 import { useAuth } from "@/hooks/useAuth"
 import { uploadFileToStorage } from "@/lib/supabase/storage"
 import { StorageMeter } from "@/components/shared/StorageMeter"
-import { useMyStorageQuota } from "@/hooks/useStorageQuota"
+import { useMyStorageQuota, storageQuotaKeys } from "@/hooks/useStorageQuota"
+import { useRouter } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
+import { submissionKeys } from "@/hooks/useSubmissions"
+import { areaKeys } from "@/hooks/useAreas"
+import { dashboardKeys } from "@/hooks/useDashboard"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -160,6 +165,8 @@ export function DocumentUploadSheet({
   const [uploadProgress, setUploadProgress] = React.useState<number>(0)
   const [isUploading, setIsUploading] = React.useState(false)
   const { data: storageQuota, isLoading: isLoadingQuota } = useMyStorageQuota()
+  const router = useRouter()
+  const queryClient = useQueryClient()
 
   const { user } = useAuth()
 
@@ -251,6 +258,9 @@ export function DocumentUploadSheet({
         return
       }
 
+      queryClient.invalidateQueries({ queryKey: storageQuotaKeys.all })
+      queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
+
       setUploadedDocumentId(result.data!.documentId)
       setStep(2)
     } catch (error) {
@@ -300,11 +310,39 @@ export function DocumentUploadSheet({
         toast.error(result.error)
         return
       }
+
+      // Invalidate relevant queries so UI reflects tagged document and updated storage
+      queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
+      queryClient.invalidateQueries({ queryKey: areaKeys.all })
+      queryClient.invalidateQueries({ queryKey: storageQuotaKeys.all })
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
+
+      // Determine assigned Area(s) from selected indicators for direct folder routing
+      const targetAreaIds = Array.from(
+        new Set(
+          areaTree
+            .filter((area) =>
+              area.criteria.some((crit) =>
+                crit.indicators.some((ind) => selectedIndicatorIds.has(ind.id))
+              )
+            )
+            .map((area) => area.id)
+        )
+      )
+
       toast.success(
-        `Document tagged to ${result.data!.createdCount} indicator(s) and saved as Draft. Submit for review from My Submissions.`
+        `Document tagged to ${result.data!.createdCount} indicator(s) and saved as Draft. Routing to assigned Area folder...`
       )
       onSuccess?.(uploadedDocumentId)
       handleClose()
+
+      // Navigate directly into assigned Area/Indicator folders
+      if (targetAreaIds.length === 1) {
+        router.push(`/faculty/my-areas/${targetAreaIds[0]}`)
+      } else {
+        router.push("/faculty/my-areas")
+      }
+      router.refresh()
     } finally {
       setIsSubmitting(false)
     }

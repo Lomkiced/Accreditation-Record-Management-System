@@ -235,9 +235,9 @@ All child relationships use `onDelete: Cascade`:
 - Storage is physically defined at the `Document` and `DocumentVersion` entity level (`fileSize` in bytes).
 - **Single Deduction Multi-Tagging Invariant**: `DocumentMapping` acts as a logical reference pointer. Tagging a 15 MB document to 5 indicators creates 5 mapping rows but consumes only 15 MB against the document owner's quota (`SUM(Document.fileSize)`).
 - **Cross-Faculty Tagging Attribution**: Storage is always attributed to `Document.userId` (the document creator/uploader). Collaborating faculty members who map or view the evidence incur 0 MB deduction.
-- **Repository Isolation**:
-  - Faculty Repository Storage = Aggregated file sizes of non-deleted documents and version snapshots owned by that specific faculty user (default quota: 100 MB).
-  - Dean/Admin Repository Storage = Aggregated file sizes of verified accreditation documents actively present in the central repository (`isArchivedFromRepo: false` and at least one `APPROVED` mapping) (default quota: 1 GB).
+- **Repository Isolation & RBAC Governance**:
+  - Faculty Repository Storage = Aggregated file sizes of non-deleted documents and version snapshots owned by that specific faculty user (default quota: 100 MB). Rendered in Faculty Submissions.
+  - Dean/Admin Repository Storage = Aggregated file sizes of verified accreditation documents actively present in the central repository (`isArchivedFromRepo: false` and at least one `APPROVED` mapping) (default quota: 1 GB). Rendered strictly in Dean/Admin Repository; completely hidden from Faculty users. Server action `getRepositoryStorageQuota` enforces `requireAdminOrDean` RBAC.
 
 ---
 

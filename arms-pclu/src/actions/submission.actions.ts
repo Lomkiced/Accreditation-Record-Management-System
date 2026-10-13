@@ -226,6 +226,8 @@ export async function uploadAndMapDocument(
       ]).catch(console.error)
 
       revalidatePath("/faculty/submissions")
+      revalidatePath("/faculty/my-areas")
+      revalidatePath("/faculty/dashboard")
       revalidatePath("/admin/submissions")
       revalidatePath("/dean/submissions")
       revalidatePath("/admin/dashboard")
@@ -402,6 +404,8 @@ export async function uploadAndMapDocument(
     ]).catch(console.error)
 
     revalidatePath("/faculty/submissions")
+    revalidatePath("/faculty/my-areas")
+    revalidatePath("/faculty/dashboard")
     revalidatePath("/admin/submissions")
     revalidatePath("/dean/submissions")
     revalidatePath("/admin/dashboard")
@@ -545,6 +549,8 @@ export async function uploadAndMapBatchDocuments(
     ]).catch(console.error)
 
     revalidatePath("/faculty/submissions")
+    revalidatePath("/faculty/my-areas")
+    revalidatePath("/faculty/dashboard")
     revalidatePath("/admin/submissions")
     revalidatePath("/dean/submissions")
     revalidatePath("/admin/dashboard")
@@ -656,6 +662,9 @@ export async function saveDocumentAsDraft(
     ]).catch(console.error)
 
     revalidatePath("/faculty/submissions")
+    revalidatePath("/faculty/my-areas")
+    revalidatePath("/faculty/dashboard")
+    revalidateTag("areas-hierarchy")
     revalidateTag("dashboard")
 
     return {

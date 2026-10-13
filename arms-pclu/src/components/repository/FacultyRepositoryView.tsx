@@ -42,8 +42,6 @@ import {
 } from "@/hooks/useArchives"
 import { useAuthStore } from "@/store/authStore"
 import { Skeleton } from "@/components/ui/skeleton"
-import { StorageMeter } from "@/components/shared/StorageMeter"
-import { useRepositoryStorageQuota } from "@/hooks/useStorageQuota"
 
 interface ApprovedDocItem {
   id: string
@@ -70,7 +68,6 @@ interface ApprovedDocItem {
 export function FacultyRepositoryView() {
   const { data: rawSubmissions = [], isLoading } = useApprovedSubmissions()
   const { user } = useAuthStore()
-  const { data: repositoryQuota, isLoading: isLoadingRepoQuota } = useRepositoryStorageQuota()
 
   const [activeTab, setActiveTab] = React.useState<"active" | "archived">("active")
   const [searchQuery, setSearchQuery] = React.useState("")
@@ -197,14 +194,6 @@ export function FacultyRepositoryView() {
 
   return (
     <div className="space-y-6">
-      {/* Institutional Repository Storage Meter */}
-      <StorageMeter
-        quota={repositoryQuota}
-        isLoading={isLoadingRepoQuota}
-        title="Accreditation Institutional Repository Storage"
-        description="1 GB Shared Quota · Preserves verified accreditation evidence across all Areas"
-      />
-
       {/* Tab Switcher: Active Approved vs Archived Approved */}
       <div className="flex items-center justify-between border-b border-slate-200 pb-3">
         <div className="flex items-center gap-2">

@@ -99,11 +99,15 @@ Manual accreditation processes suffer from:
      - The Faculty Repository and Dean/Admin Repository operate with independent storage allocations and independent usage tracking (Dean and Admin share the central institutional repository).
      - Default limits: Faculty Repository allocated 100 MB per faculty member; Dean/Admin Repository allocated 1 GB institutional storage (system-configurable).
      - Pre-upload quota guardrails: Upload attempts exceeding available storage are blocked before physical asset transfer.
-     - Visual storage meters (progress bars, used MB / total MB, and warning indicators at >= 85% capacity) embedded in both Faculty and Dean/Admin repository views.
+     - Visual storage meters & RBAC Isolation: Faculty Submissions renders the faculty personal repository storage meter (100 MB quota). The institutional repository storage meter (1 GB quota) is strictly restricted to Dean and Admin roles and completely hidden from Faculty users in the Approved Repository view. Server action `getRepositoryStorageQuota` enforces strict Dean/Admin RBAC (`requireAdminOrDean`).
    - **Single-Deduction Exhibit Storage Engine (Multi-Tagging & Cross-Faculty Deduplication)**:
      - Exhibits tagged across multiple indicators consume storage ONLY ONCE (e.g., a 15 MB syllabus tagged to 5 indicators consumes only 15 MB of the uploader's quota, not 75 MB).
      - Cross-Faculty Tagging Storage Attribution: When Faculty A links/tags their document to indicators assigned to Faculty B, the storage is strictly deducted from Faculty A (the owner), never from Faculty B.
      - Physical storage deduplication ensures zero multiplication of storage consumption across indicators or faculty boundaries.
+   - **Document Tagging Routing & Direct Folder Navigation**:
+     - When faculty completes tagging a document (via `DocumentUploadSheet`), the system automatically routes the user directly into the assigned Area/Indicator folder (`/faculty/my-areas/[areaId]`), or the main Areas folder overview (`/faculty/my-areas`) if multiple areas were selected, mapping evidence directly into the Area hierarchy rather than merely appending below the submissions view.
+   - **Real-Time Cache & Storage Synchronization**:
+     - Immediate TanStack Query cache invalidations (`storageQuotaKeys`, `submissionKeys`, `areaKeys`, `dashboardKeys`) and Next.js path revalidations ensure real-time UI synchronization across all storage meters, area views, and dashboards when documents are uploaded, tagged across multiple indicators, submitted, archived, or restored, enabling seamless testing of space limits per exhibit and indicator-scoped duplication avoidance.
    - Per-mapping status workflow: `DRAFT → SUBMITTED → UNDER_REVIEW → APPROVED / RETURNED`.
    - Evidence upload via cascading picker (Area → Criterion → Indicator) and direct indicator upload.
    - **Contextual Return Remarks**: When a submission is returned, reviewer remarks are directly coupled beneath the respective document entry (`Reviewer Return Remarks: [remarks]`) rather than floating as ambiguous system banners.

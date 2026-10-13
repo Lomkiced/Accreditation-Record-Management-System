@@ -6,6 +6,7 @@ import { getArchivedDocuments, archiveDocument, restoreDocument, permanentlyDele
 import { submissionKeys } from "./useSubmissions"
 import { areaKeys } from "./useAreas"
 import { dashboardKeys } from "./useDashboard"
+import { storageQuotaKeys } from "./useStorageQuota"
 
 export const archiveKeys = {
   all: ["archives", "all"] as const,
@@ -60,6 +61,7 @@ export function useArchiveDocument() {
       queryClient.invalidateQueries({ queryKey: areaKeys.all })
       queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
       queryClient.invalidateQueries({ queryKey: ["repository"] })
+      queryClient.invalidateQueries({ queryKey: storageQuotaKeys.all })
     }
   })
 }
@@ -101,6 +103,7 @@ export function useRestoreDocument() {
       queryClient.invalidateQueries({ queryKey: areaKeys.all })
       queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
       queryClient.invalidateQueries({ queryKey: ["repository"] })
+      queryClient.invalidateQueries({ queryKey: storageQuotaKeys.all })
     }
   })
 }
@@ -142,6 +145,7 @@ export function usePermanentlyDeleteDocument() {
       queryClient.invalidateQueries({ queryKey: areaKeys.all })
       queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
       queryClient.invalidateQueries({ queryKey: ["repository"] })
+      queryClient.invalidateQueries({ queryKey: storageQuotaKeys.all })
     }
   })
 }

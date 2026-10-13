@@ -84,7 +84,10 @@ export async function uploadDocument(
 
     revalidatePath("/admin/repository")
     revalidatePath("/faculty/submissions")
+    revalidatePath("/faculty/my-areas")
+    revalidatePath("/faculty/dashboard")
     revalidateTag("areas-hierarchy")
+    revalidateTag("dashboard")
 
     return { success: true, data: { documentId: document.id } }
   } catch (error) {
@@ -308,8 +311,12 @@ export async function createEvidenceMappings(
 
     revalidatePath("/admin/repository")
     revalidatePath("/admin/dashboard")
+    revalidatePath("/dean/dashboard")
     revalidatePath("/faculty/submissions")
+    revalidatePath("/faculty/my-areas")
+    revalidatePath("/faculty/dashboard")
     revalidateTag("areas-hierarchy")
+    revalidateTag("dashboard")
 
     return {
       success: true,
@@ -454,7 +461,14 @@ export async function submitAllMappings(
     ]).catch(console.error)
 
     revalidatePath("/admin/submissions")
+    revalidatePath("/dean/submissions")
     revalidatePath("/faculty/submissions")
+    revalidatePath("/faculty/my-areas")
+    revalidatePath("/admin/dashboard")
+    revalidatePath("/dean/dashboard")
+    revalidatePath("/faculty/dashboard")
+    revalidateTag("areas-hierarchy")
+    revalidateTag("dashboard")
 
     return { success: true, data: { submittedCount: result.count } }
   } catch (error) {

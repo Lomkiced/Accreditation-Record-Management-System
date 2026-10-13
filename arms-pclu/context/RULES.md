@@ -326,8 +326,10 @@ Any new compliance-related feature must reference `dashboard.actions.ts` as the 
 - **Pre-Upload Quota Guardrail**:
   - Server actions MUST calculate projected storage consumption before committing file uploads.
   - If `currentUsedBytes + incomingFileBytes > quotaBytes`, reject the operation immediately with a clear error: `"Storage limit exceeded. Available: X MB / Limit: Y MB."`
-- **Visual Meter UI Standards**:
-  - Both Faculty Submissions and Dean/Admin Repository views MUST render dynamic storage progress meters displaying used MB, total quota MB, and percentage.
+- **Visual Meter UI Standards & RBAC Isolation**:
+  - Faculty Submissions renders the faculty personal storage progress meter (100 MB quota).
+  - The Institutional Repository Storage meter (1 GB shared quota) is strictly restricted to Dean and Admin accounts. The Repository Storage meter MUST be completely hidden from Faculty users in the Approved Repository view.
+  - Server action `getRepositoryStorageQuota` enforces strict Dean and Admin RBAC (`requireAdminOrDean`).
   - Standard color thresholds: Normal (<70%) = Blue/Emerald; Warning (70%–89%) = Amber; Critical (≥90%) = Destructive Red.
 
 ---
@@ -343,4 +345,15 @@ Any new compliance-related feature must reference `dashboard.actions.ts` as the 
 - **Lifecycle & Deduplication Integrity**:
   - Deleting a mapping from an indicator does not alter storage consumption as long as the document remains mapped elsewhere.
   - Storage is decremented only upon complete document archival or permanent deletion by the owner.
+
+---
+
+## 24. Document Tagging Routing & Real-Time Area Synchronization Standards
+
+- **Direct Area/Indicator Folder Routing**:
+  - Upon successful tagging of a document (via `DocumentUploadSheet` calling `createEvidenceMappings`), the Faculty portal MUST route the user directly to the assigned Area/Indicator folder (`/faculty/my-areas/[areaId]`), or to the main Areas overview (`/faculty/my-areas`) if multiple areas are targeted, rather than merely appending the document below the current submissions view.
+  - Success notifications must inform the user that the document has been mapped and routed to the assigned Area folder.
+- **Cache Invalidation & Revalidation Invariant**:
+  - All tagging, drafting, batch uploads, archiving, restoring, and submission actions MUST invalidate `storageQuotaKeys.all`, `submissionKeys.mine`, `areaKeys.all`, and `dashboardKeys.all`.
+  - Server actions MUST trigger path revalidations for `/faculty/my-areas`, `/faculty/submissions`, `/faculty/dashboard`, `/dean/dashboard`, `/admin/dashboard`, as well as cache tags `areas-hierarchy` and `dashboard`, ensuring that space limits per exhibit across multiple indicators and the automatic duplication avoidance tool operate with real-time accuracy and zero stale UI blockers.
 
