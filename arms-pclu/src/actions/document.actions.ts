@@ -281,16 +281,80 @@ export async function createEvidenceMappings(
       }
     }
 
-    // Bulk create new mappings
-    await prisma.documentMapping.createMany({
-      data: newIndicatorIds.map((indicatorId) => ({
-        documentId: validated.documentId,
-        indicatorId,
-        userId: currentUser.id,
-        status: "DRAFT",
-        rating: validated.rating ?? null,
-      })),
+    // Fetch indicator hierarchy to resolve Area/Criterion owners
+    const indicatorsWithScope = await prisma.indicator.findMany({
+      where: { id: { in: newIndicatorIds } },
+      select: {
+        id: true,
+        criterionId: true,
+        criterion: {
+          select: {
+            id: true,
+            areaId: true,
+            area: { select: { id: true, name: true } },
+          },
+        },
+      },
     })
+
+    const targetAreaIds = [...new Set(indicatorsWithScope.map((i) => i.criterion.areaId))]
+    const activeAssignments = await prisma.assignment.findMany({
+      where: {
+        areaId: { in: targetAreaIds },
+        user: { isActive: true },
+      },
+      select: {
+        userId: true,
+        areaId: true,
+        criterionId: true,
+      },
+    })
+
+    // Resolve Area Owner: specific criterion assignment takes precedence over whole area assignment
+    const mappingData = indicatorsWithScope.map((ind) => {
+      const specificCriterionAssignment = activeAssignments.find(
+        (a) => a.criterionId === ind.criterionId
+      )
+      const wholeAreaAssignment = activeAssignments.find(
+        (a) => a.areaId === ind.criterion.areaId && a.criterionId === null
+      )
+      const assignedUserId =
+        specificCriterionAssignment?.userId ??
+        wholeAreaAssignment?.userId ??
+        currentUser.id
+
+      return {
+        documentId: validated.documentId,
+        indicatorId: ind.id,
+        userId: assignedUserId,
+        status: "DRAFT" as const,
+        rating: validated.rating ?? null,
+      }
+    })
+
+    // Bulk create new mappings tied to the Area Owner
+    await prisma.documentMapping.createMany({
+      data: mappingData,
+    })
+
+    // Notify Area Owners if evidence was tagged by another faculty member
+    const externalOwnerIds = [
+      ...new Set(
+        mappingData
+          .map((m) => m.userId)
+          .filter((uid) => uid !== currentUser.id)
+      ),
+    ]
+    if (externalOwnerIds.length > 0) {
+      await prisma.notification.createMany({
+        data: externalOwnerIds.map((ownerId) => ({
+          userId: ownerId,
+          message: `${currentUser.name} tagged new evidence "${document.title}" to your assigned accreditation area.`,
+          type: "SUBMISSION",
+          link: "/faculty/my-areas",
+        })),
+      }).catch(console.error)
+    }
 
     // Audit log (concurrent)
     await Promise.allSettled([
@@ -348,11 +412,21 @@ export async function submitMapping(
 
     const mapping = await prisma.documentMapping.findUnique({
       where: { id: mappingId },
-      select: { id: true, userId: true, status: true, documentId: true },
+      select: {
+        id: true,
+        userId: true,
+        status: true,
+        documentId: true,
+        document: { select: { userId: true } },
+      },
     })
 
     if (!mapping) return { error: "Mapping not found." }
-    if (mapping.userId !== currentUser.id && currentUser.role !== "ADMIN") {
+    if (
+      mapping.userId !== currentUser.id &&
+      mapping.document.userId !== currentUser.id &&
+      currentUser.role !== "ADMIN"
+    ) {
       return { error: "You do not have permission to submit this mapping." }
     }
     if (mapping.status !== "DRAFT" && mapping.status !== "RETURNED") {
@@ -418,13 +492,25 @@ export async function submitAllMappings(
     })
 
     if (!document) return { error: "Document not found." }
-    if (document.userId !== currentUser.id && currentUser.role !== "ADMIN") {
+
+    const hasUserMapping = await prisma.documentMapping.findFirst({
+      where: { documentId, userId: currentUser.id },
+    })
+
+    if (
+      document.userId !== currentUser.id &&
+      !hasUserMapping &&
+      currentUser.role !== "ADMIN"
+    ) {
       return { error: "You do not have permission to submit this document." }
     }
 
     const result = await prisma.documentMapping.updateMany({
       where: {
         documentId,
+        ...(currentUser.role === "ADMIN" || document.userId === currentUser.id
+          ? {}
+          : { userId: currentUser.id }),
         status: { in: ["DRAFT", "RETURNED"] },
       },
       data: { status: "SUBMITTED", remarks: null },
@@ -560,13 +646,22 @@ export async function deleteMapping(mappingId: string): Promise<ActionResult> {
 
     const mapping = await prisma.documentMapping.findUnique({
       where: { id: mappingId },
-      select: { id: true, userId: true, status: true },
+      select: {
+        id: true,
+        userId: true,
+        status: true,
+        document: { select: { userId: true } },
+      },
     })
 
     if (!mapping) return { error: "Mapping not found." }
 
-    // Only the owner or an admin can delete; approved mappings are locked
-    if (mapping.userId !== currentUser.id && currentUser.role !== "ADMIN") {
+    // Only the Area Owner, uploader, or an admin can delete; approved mappings are locked
+    if (
+      mapping.userId !== currentUser.id &&
+      mapping.document.userId !== currentUser.id &&
+      currentUser.role !== "ADMIN"
+    ) {
       return { error: "You do not have permission to delete this mapping." }
     }
     if (mapping.status === "APPROVED" && currentUser.role !== "ADMIN") {
@@ -684,10 +779,17 @@ export async function getDocumentsForRepository(opts?: {
   try {
     const currentUser = await requireUser()
 
-    // Faculty can only see their own documents
+    // Faculty can see their own documents or documents mapped to their assigned areas
     const whereClause =
       currentUser.role === "FACULTY"
-        ? { userId: currentUser.id, isArchived: false, isDeletedByFaculty: false }
+        ? {
+            isArchived: false,
+            isDeletedByFaculty: false,
+            OR: [
+              { userId: currentUser.id },
+              { mappings: { some: { userId: currentUser.id } } },
+            ],
+          }
         : opts?.userId
           ? { userId: opts.userId, isArchived: false }
           : { isArchived: false }

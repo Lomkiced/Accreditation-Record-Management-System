@@ -97,7 +97,7 @@ erDiagram
         string id PK
         string document_id FK
         string indicator_id FK
-        string user_id FK
+        string user_id FK "Area Owner / Assigned Faculty"
         MappingStatus status "DRAFT→SUBMITTED→UNDER_REVIEW→APPROVED|RETURNED"
         string remarks
         int rating
@@ -195,6 +195,7 @@ The `DocumentMapping` table is the **heart of the system**. It creates a many-to
 - A single Document can be mapped to 5 different Indicators.
 - Each mapping has its own `DRAFT → APPROVED` lifecycle.
 - A document can be APPROVED for Indicator A and RETURNED for Indicator B simultaneously.
+- **Area Owner Responsibility (`userId`)**: The `userId` foreign key on `DocumentMapping` represents the **assigned Area Owner** responsible for evaluating and submitting evidence for that indicator, distinct from `Document.userId` (which records physical upload ownership and storage quota). When a document is tagged to an indicator, the system resolves the faculty assigned to that indicator's area/criterion and attributes the mapping directly to them.
 
 ### 2. Unique Constraint on DocumentMapping
 ```prisma
@@ -234,7 +235,7 @@ All child relationships use `onDelete: Cascade`:
 ### 7. Storage Accounting & Single-Deduction Multi-Tagging Design
 - Storage is physically defined at the `Document` and `DocumentVersion` entity level (`fileSize` in bytes).
 - **Single Deduction Multi-Tagging Invariant**: `DocumentMapping` acts as a logical reference pointer. Tagging a 15 MB document to 5 indicators creates 5 mapping rows but consumes only 15 MB against the document owner's quota (`SUM(Document.fileSize)`).
-- **Cross-Faculty Tagging Attribution**: Storage is always attributed to `Document.userId` (the document creator/uploader). Collaborating faculty members who map or view the evidence incur 0 MB deduction.
+- **Cross-Faculty Tagging Attribution**: Storage is always attributed to `Document.userId` (the document creator/uploader). Collaborating faculty members who are assigned as Area Owners (`DocumentMapping.userId`) incur 0 MB deduction.
 - **Repository Isolation & RBAC Governance**:
   - Faculty Repository Storage = Aggregated file sizes of non-deleted documents and version snapshots owned by that specific faculty user (default quota: 100 MB). Rendered in Faculty Submissions.
   - Dean/Admin Repository Storage = Aggregated file sizes of verified accreditation documents actively present in the central repository (`isArchivedFromRepo: false` and at least one `APPROVED` mapping) (default quota: 1 GB). Rendered strictly in Dean/Admin Repository; completely hidden from Faculty users. Server action `getRepositoryStorageQuota` enforces `requireAdminOrDean` RBAC.

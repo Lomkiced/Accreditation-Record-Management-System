@@ -343,11 +343,18 @@ Accreditation evidence frequently satisfies multiple requirements across areas a
   - Un-mapping a document from one indicator leaves the underlying `Document` and other indicator mappings intact; storage remains 15 MB.
   - Storage is only decremented when the document owner permanently deletes the document or when an admin purges an archived file from physical storage.
 
-### Document Tagging Routing Architecture
+### Document Tagging Routing & Area Owner Visibility Architecture
+- **Area-Owner Centric Mapping Resolution**:
+  - When evidence is tagged (in `createEvidenceMappings`, `uploadAndMapDocument`, `uploadAndMapBatchDocuments`, `saveDocumentAsDraft`), the server resolves the active Area Owner for each target indicator via `prisma.assignment`.
+  - Specific criterion assignments take precedence over whole-area assignments. The resulting `DocumentMapping.userId` is bound to the resolved Area Owner.
+- **Assigned Area Scoping on Data Fetching**:
+  - `getMySubmissions()` dynamically scopes queries to indicators belonging to the user's active assigned areas or criteria in `prisma.assignment`.
+  - Mapped documents appear directly in the assigned Area Owner's area folder (`/faculty/my-areas/[areaId]`), even if uploaded by peer faculty.
+  - Documents mapped to areas not assigned to the uploader are excluded from the uploader's area view.
 - **Direct Folder Routing on Tagging Completion**:
-  - In `DocumentUploadSheet`, upon successful execution of `createEvidenceMappings`, the client identifies all target area IDs associated with the selected indicators.
-  - If indicators belong to a single area, the client immediately routes the user to `/faculty/my-areas/[areaId]`. If indicators span multiple areas, it navigates to `/faculty/my-areas`.
-  - The client invalidates `submissionKeys.mine`, `areaKeys.all`, `storageQuotaKeys.all`, and `dashboardKeys.all`, ensuring immediate rendering of newly mapped evidence in the assigned area hierarchy with zero stale UI blockers.
+  - In `DocumentUploadSheet`, upon successful execution of `createEvidenceMappings`, the client identifies whether the target areas are assigned to the current user.
+  - If the user owns the target area, the client immediately routes to `/faculty/my-areas/[areaId]` (or `/faculty/my-areas`). If the target area belongs to a peer faculty member, the uploader stays on `/faculty/submissions` with a confirmation toast that evidence routed to the assigned Area Owner.
+  - The client invalidates `submissionKeys.mine`, `areaKeys.all`, `storageQuotaKeys.all`, and `dashboardKeys.all`.
   - Server actions trigger path revalidations for `/faculty/my-areas`, `/faculty/submissions`, `/faculty/dashboard`, `/dean/dashboard`, `/admin/dashboard`, as well as cache tags `areas-hierarchy` and `dashboard`.
 
 ### Categorized Navigation & Role Avatar System Architecture

@@ -357,3 +357,21 @@ Any new compliance-related feature must reference `dashboard.actions.ts` as the 
   - All tagging, drafting, batch uploads, archiving, restoring, and submission actions MUST invalidate `storageQuotaKeys.all`, `submissionKeys.mine`, `areaKeys.all`, and `dashboardKeys.all`.
   - Server actions MUST trigger path revalidations for `/faculty/my-areas`, `/faculty/submissions`, `/faculty/dashboard`, `/dean/dashboard`, `/admin/dashboard`, as well as cache tags `areas-hierarchy` and `dashboard`, ensuring that space limits per exhibit across multiple indicators and the automatic duplication avoidance tool operate with real-time accuracy and zero stale UI blockers.
 
+---
+
+## 25. Area-Owner Centric Evidence Mapping & Visibility Invariant
+
+- **Area Owner Assignment Invariant**:
+  - When evidence is mapped or tagged to an indicator (via `createEvidenceMappings`, `uploadAndMapDocument`, `uploadAndMapBatchDocuments`, or `saveDocumentAsDraft`), the `DocumentMapping.userId` MUST be dynamically resolved and assigned to the active **Area Owner** (the faculty member assigned to that Criterion or Area via `Assignment`), NOT merely the uploader (`Document.userId`).
+  - Specific criterion assignments strictly take precedence over whole-area assignments when resolving the Area Owner.
+- **Assigned Area View Scoping & Visibility**:
+  - In the Faculty portal, Area views (`/faculty/my-areas`, `/faculty/my-areas/[id]`, and Faculty Dashboard progress metrics) fetch all documents mapped to the user's assigned Area/Criterion hierarchy, regardless of who originally uploaded or tagged the physical file.
+  - An original uploader MUST NOT see mapped evidence in their Area view for areas or criteria that are not assigned to them.
+- **Cross-Faculty Tagging Routing & Portfolio Preservation**:
+  - When Faculty A tags evidence into an Area assigned to Faculty B:
+    1. The evidence mapping routes automatically to Faculty B's account and appears under Faculty B's assigned indicator folder in `/faculty/my-areas/[areaId]`.
+    2. Faculty A does not see the document in their Area view (`/faculty/my-areas`), as they are not assigned to that Area.
+    3. Faculty A retains the physical document in their personal uploads portfolio (`/faculty/submissions`).
+    4. Storage quota is strictly deducted from Faculty A (`Document.userId`), ensuring Faculty B incurs 0 MB storage charge.
+
+

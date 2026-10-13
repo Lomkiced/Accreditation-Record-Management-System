@@ -64,6 +64,48 @@ const saveDraftSchema = z.object({
   rating: z.number().int().min(1).max(10).optional(),
 })
 
+// ─── Helper: Resolve Area Owner for an Indicator ──────────────────────────────
+async function resolveAreaOwnerForIndicator(
+  indicatorId: string,
+  fallbackUserId: string
+): Promise<string> {
+  const indicator = await prisma.indicator.findUnique({
+    where: { id: indicatorId },
+    select: {
+      id: true,
+      criterionId: true,
+      criterion: {
+        select: {
+          id: true,
+          areaId: true,
+        },
+      },
+    },
+  })
+  if (!indicator) return fallbackUserId
+
+  const specificAssignment = await prisma.assignment.findFirst({
+    where: {
+      criterionId: indicator.criterionId,
+      user: { isActive: true },
+    },
+    select: { userId: true },
+  })
+
+  if (specificAssignment) return specificAssignment.userId
+
+  const wholeAreaAssignment = await prisma.assignment.findFirst({
+    where: {
+      areaId: indicator.criterion.areaId,
+      criterionId: null,
+      user: { isActive: true },
+    },
+    select: { userId: true },
+  })
+
+  return wholeAreaAssignment?.userId ?? fallbackUserId
+}
+
 // ─── UPLOAD AND MAP DOCUMENT (atomic) ────────────────────────────────────────
 //
 // Wraps document creation + mapping creation in a single Prisma $transaction.
@@ -169,11 +211,18 @@ export async function uploadAndMapDocument(
           (m) => m.indicatorId === validated.indicatorId
         )
 
+        // Resolve Area Owner for indicator assignment
+        const assignedUserId = await resolveAreaOwnerForIndicator(
+          validated.indicatorId,
+          currentUser.id
+        )
+
         let m
         if (existingMapping) {
           m = await tx.documentMapping.update({
             where: { id: existingMapping.id },
             data: {
+              userId: assignedUserId,
               status: "SUBMITTED",
               rating: validated.rating ?? null,
               remarks: null,
@@ -184,7 +233,7 @@ export async function uploadAndMapDocument(
             data: {
               documentId: d.id,
               indicatorId: validated.indicatorId,
-              userId: currentUser.id,
+              userId: assignedUserId,
               status: "SUBMITTED",
               rating: validated.rating ?? null,
             },
@@ -356,11 +405,16 @@ export async function uploadAndMapDocument(
           },
         })
 
+        const assignedUserId = await resolveAreaOwnerForIndicator(
+          validated.indicatorId,
+          currentUser.id
+        )
+
         const m = await tx.documentMapping.create({
           data: {
             documentId: d.id,
             indicatorId: validated.indicatorId,
-            userId: currentUser.id,
+            userId: assignedUserId,
             status: "SUBMITTED",
             rating: validated.rating ?? null,
           },
@@ -486,6 +540,11 @@ export async function uploadAndMapBatchDocuments(
       return { error: quotaCheck.error! }
     }
 
+    const assignedUserId = await resolveAreaOwnerForIndicator(
+      validated.indicatorId,
+      currentUser.id
+    )
+
     const createdDocs = await prisma.$transaction(async (tx) => {
       const results: string[] = []
       for (const item of validated.files) {
@@ -506,7 +565,7 @@ export async function uploadAndMapBatchDocuments(
           data: {
             documentId: doc.id,
             indicatorId: validated.indicatorId,
-            userId: currentUser.id,
+            userId: assignedUserId,
             status: "SUBMITTED",
           },
         })
@@ -620,6 +679,11 @@ export async function saveDocumentAsDraft(
       }
     }
 
+    const assignedUserId = await resolveAreaOwnerForIndicator(
+      validated.indicatorId,
+      currentUser.id
+    )
+
     const [document, mapping] = await prisma.$transaction(async (tx) => {
       const doc = await tx.document.create({
         data: {
@@ -638,7 +702,7 @@ export async function saveDocumentAsDraft(
         data: {
           documentId: doc.id,
           indicatorId: validated.indicatorId,
-          userId: currentUser.id,
+          userId: assignedUserId,
           status: "DRAFT",
           rating: validated.rating ?? null,
         },
@@ -909,11 +973,57 @@ export async function getArchivedDocuments() {
 export async function getMySubmissions() {
   try {
     const currentUser = await requireUser()
-    const mappings = await prisma.documentMapping.findMany({
-      where: {
+
+    let whereClause: any = {
+      document: { isArchived: false, isDeletedByFaculty: false },
+    }
+
+    if (currentUser.role === "FACULTY") {
+      const userAssignments = await prisma.assignment.findMany({
+        where: { userId: currentUser.id, user: { isActive: true } },
+        select: { areaId: true, criterionId: true },
+      })
+
+      const assignedAreaIds = userAssignments
+        .filter((a) => a.criterionId === null)
+        .map((a) => a.areaId)
+
+      const assignedCriterionIds = userAssignments
+        .filter((a) => a.criterionId !== null)
+        .map((a) => a.criterionId as string)
+
+      const assignedScopeConditions = [
+        ...(assignedAreaIds.length > 0
+          ? [{ criterion: { areaId: { in: assignedAreaIds } } }]
+          : []),
+        ...(assignedCriterionIds.length > 0
+          ? [{ criterionId: { in: assignedCriterionIds } }]
+          : []),
+      ]
+
+      // If faculty member has no active assignments, their assigned area scope is empty
+      if (assignedScopeConditions.length === 0) {
+        return { success: true as const, data: [] }
+      }
+
+      // Tie visibility strictly to indicators within the user's assigned area/criterion scope.
+      // 1. User B sees all documents tagged to their assigned areas, even if uploaded by User A.
+      // 2. User A does not see documents tagged to areas not assigned to them.
+      whereClause = {
+        document: { isArchived: false, isDeletedByFaculty: false },
+        indicator: {
+          OR: assignedScopeConditions,
+        },
+      }
+    } else {
+      whereClause = {
         userId: currentUser.id,
         document: { isArchived: false, isDeletedByFaculty: false },
-      },
+      }
+    }
+
+    const mappings = await prisma.documentMapping.findMany({
+      where: whereClause,
       orderBy: { updatedAt: "desc" },
       select: {
         id: true,
