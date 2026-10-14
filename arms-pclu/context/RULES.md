@@ -394,4 +394,18 @@ Any new compliance-related feature must reference `dashboard.actions.ts` as the 
 - **Single-Deduction Storage Invariant**:
   - The physical file size is deducted solely from the original uploader's quota (`Document.originalUploaderId ?? Document.userId`). Area Owners incur 0 MB deduction.
 
+---
+
+## 27. Server Action Signature & Export Invariant (`use server` Boundary)
+
+- **Mandatory Async Export Rule**:
+  - In Next.js App Router, every module annotated with `"use server"` treats all top-level exports as Server Actions.
+  - Next.js Webpack and SWC compilers strictly mandate that **every exported function in a `"use server"` file must be an `async` function returning a `Promise`**.
+  - Synchronous functions exported from `"use server"` files will trigger fatal build errors (`Server actions must be async functions`) during `next build` / Vercel deployment.
+- **Utility Extraction to Shared Libraries**:
+  - Synchronous helpers, string parsers (e.g., `extractStoragePath`), mathematical routines, and data formatters must NEVER be exported from `"use server"` action files.
+  - If a utility is private to an action file, keep it unexported (`function helper(...)`).
+  - If a utility is shared across actions or components, extract it to a dedicated non-`"use server"` library in `src/lib/` (e.g., `src/lib/storage-utils.ts` or `src/lib/utils.ts`), allowing both server and client modules to consume it synchronously without triggering Server Action endpoint compilation.
+
+
 
