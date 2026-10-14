@@ -18,6 +18,7 @@ import type {
 import {
   checkIndicatorDuplicateTitle,
   verifyStorageQuotaPreflight,
+  deleteStorageFileIfOrphaned,
 } from "@/actions/storage.actions"
 
 // ─── Shared result type ───────────────────────────────────────────────────────
@@ -57,6 +58,7 @@ export async function uploadDocument(
     const document = await prisma.document.create({
       data: {
         userId: currentUser.id,
+        originalUploaderId: currentUser.id,
         title: validated.title,
         description: validated.description ?? null,
         documentDate: validated.documentDate
@@ -121,11 +123,44 @@ export async function uploadNewVersion(
 
     const document = await prisma.document.findUnique({
       where: { id: documentId },
-      include: { mappings: true },
+      include: {
+        mappings: {
+          include: {
+            indicator: {
+              include: {
+                criterion: true,
+              },
+            },
+          },
+        },
+      },
     })
 
     if (!document) return { error: "Document not found." }
-    if (document.userId !== currentUser.id) {
+
+    let isAuthorized =
+      currentUser.role === "ADMIN" ||
+      document.userId === currentUser.id ||
+      document.mappings.some((m) => m.userId === currentUser.id)
+
+    if (!isAuthorized && currentUser.role === "FACULTY") {
+      const areaIds = document.mappings.map((m) => m.indicator.criterion.areaId)
+      const criterionIds = document.mappings.map((m) => m.indicator.criterionId)
+
+      const activeAssignment = await prisma.assignment.findFirst({
+        where: {
+          userId: currentUser.id,
+          user: { isActive: true },
+          OR: [
+            { criterionId: { in: criterionIds } },
+            { areaId: { in: areaIds }, criterionId: null },
+          ],
+        },
+      })
+      if (activeAssignment) isAuthorized = true
+    }
+
+    if (!isAuthorized) {
       return { error: "You do not have permission to modify this document." }
     }
 
@@ -134,6 +169,20 @@ export async function uploadNewVersion(
     }
 
     const [updatedDoc] = await prisma.$transaction(async (tx) => {
+      // 0. Snapshot previous version into DocumentVersion
+      if (document.fileUrl) {
+        await tx.documentVersion.create({
+          data: {
+            documentId: document.id,
+            fileUrl: document.fileUrl,
+            fileName: document.fileName ?? "Previous version",
+            fileSize: document.fileSize,
+            version: document.version,
+            remarks: "Updated with new version",
+          },
+        })
+      }
+
       // 1. Update the document with new file and increment version
       const doc = await tx.document.update({
         where: { id: documentId },
@@ -223,7 +272,24 @@ export async function createEvidenceMappings(
     // Verify document belongs to this user (or user is admin)
     const document = await prisma.document.findUnique({
       where: { id: validated.documentId },
-      select: { id: true, userId: true, title: true },
+      select: {
+        id: true,
+        userId: true,
+        originalUploaderId: true,
+        title: true,
+        description: true,
+        documentDate: true,
+        fileUrl: true,
+        fileName: true,
+        fileSize: true,
+        mappings: {
+          select: {
+            id: true,
+            indicatorId: true,
+            userId: true,
+          },
+        },
+      },
     })
 
     if (!document) return { error: "Document not found." }
@@ -310,44 +376,75 @@ export async function createEvidenceMappings(
       },
     })
 
-    // Resolve Area Owner: specific criterion assignment takes precedence over whole area assignment
-    const mappingData = indicatorsWithScope.map((ind) => {
-      const specificCriterionAssignment = activeAssignments.find(
-        (a) => a.criterionId === ind.criterionId
-      )
-      const wholeAreaAssignment = activeAssignments.find(
-        (a) => a.areaId === ind.criterion.areaId && a.criterionId === null
-      )
-      const assignedUserId =
-        specificCriterionAssignment?.userId ??
-        wholeAreaAssignment?.userId ??
-        currentUser.id
+    // Create decoupled independent Document records for each tagged Area/Indicator
+    const externalOwnerIds: string[] = []
+    let primaryAssigned = document.mappings.length > 0
 
-      return {
-        documentId: validated.documentId,
-        indicatorId: ind.id,
-        userId: assignedUserId,
-        status: "DRAFT" as const,
-        rating: validated.rating ?? null,
+    await prisma.$transaction(async (tx) => {
+      for (const ind of indicatorsWithScope) {
+        const specificCriterionAssignment = activeAssignments.find(
+          (a) => a.criterionId === ind.criterionId
+        )
+        const wholeAreaAssignment = activeAssignments.find(
+          (a) => a.areaId === ind.criterion.areaId && a.criterionId === null
+        )
+        const assignedUserId =
+          specificCriterionAssignment?.userId ??
+          wholeAreaAssignment?.userId ??
+          currentUser.id
+
+        if (assignedUserId !== currentUser.id) {
+          externalOwnerIds.push(assignedUserId)
+        }
+
+        // If this is the first mapping on the newly uploaded document and matches the owner:
+        if (!primaryAssigned && assignedUserId === document.userId) {
+          await tx.documentMapping.create({
+            data: {
+              documentId: document.id,
+              indicatorId: ind.id,
+              userId: assignedUserId,
+              status: "DRAFT",
+              rating: validated.rating ?? null,
+            },
+          })
+          primaryAssigned = true
+        } else {
+          // Create an independent decoupled Document record so lifecycle (archive/delete/update) is fully independent
+          const copyDoc = await tx.document.create({
+            data: {
+              userId: assignedUserId,
+              originalUploaderId: document.originalUploaderId ?? document.userId,
+              title: document.title,
+              description: document.description,
+              documentDate: document.documentDate,
+              fileUrl: document.fileUrl,
+              fileName: document.fileName,
+              fileSize: document.fileSize,
+              version: 1,
+              isArchived: false,
+              isDeletedByFaculty: false,
+            },
+          })
+
+          await tx.documentMapping.create({
+            data: {
+              documentId: copyDoc.id,
+              indicatorId: ind.id,
+              userId: assignedUserId,
+              status: "DRAFT",
+              rating: validated.rating ?? null,
+            },
+          })
+        }
       }
     })
 
-    // Bulk create new mappings tied to the Area Owner
-    await prisma.documentMapping.createMany({
-      data: mappingData,
-    })
-
     // Notify Area Owners if evidence was tagged by another faculty member
-    const externalOwnerIds = [
-      ...new Set(
-        mappingData
-          .map((m) => m.userId)
-          .filter((uid) => uid !== currentUser.id)
-      ),
-    ]
-    if (externalOwnerIds.length > 0) {
+    const uniqueExternalOwnerIds = [...new Set(externalOwnerIds)]
+    if (uniqueExternalOwnerIds.length > 0) {
       await prisma.notification.createMany({
-        data: externalOwnerIds.map((ownerId) => ({
+        data: uniqueExternalOwnerIds.map((ownerId) => ({
           userId: ownerId,
           message: `${currentUser.name} tagged new evidence "${document.title}" to your assigned accreditation area.`,
           type: "SUBMISSION",
@@ -417,16 +514,41 @@ export async function submitMapping(
         userId: true,
         status: true,
         documentId: true,
-        document: { select: { userId: true } },
+        document: { select: { userId: true, title: true } },
+        indicator: {
+          select: {
+            name: true,
+            criterionId: true,
+            criterion: { select: { areaId: true } },
+          },
+        },
       },
     })
 
     if (!mapping) return { error: "Mapping not found." }
-    if (
-      mapping.userId !== currentUser.id &&
-      mapping.document.userId !== currentUser.id &&
-      currentUser.role !== "ADMIN"
-    ) {
+
+    let isAssigned = false
+    if (currentUser.role === "FACULTY") {
+      const activeAssignment = await prisma.assignment.findFirst({
+        where: {
+          userId: currentUser.id,
+          user: { isActive: true },
+          OR: [
+            { areaId: mapping.indicator.criterion.areaId, criterionId: null },
+            { criterionId: mapping.indicator.criterionId },
+          ],
+        },
+      })
+      isAssigned = !!activeAssignment
+    }
+
+    const isAuthorized =
+      mapping.userId === currentUser.id ||
+      mapping.document.userId === currentUser.id ||
+      isAssigned ||
+      currentUser.role === "ADMIN"
+
+    if (!isAuthorized) {
       return { error: "You do not have permission to submit this mapping." }
     }
     if (mapping.status !== "DRAFT" && mapping.status !== "RETURNED") {
@@ -488,30 +610,65 @@ export async function submitAllMappings(
 
     const document = await prisma.document.findUnique({
       where: { id: documentId },
-      select: { id: true, userId: true, title: true },
+      select: {
+        id: true,
+        userId: true,
+        title: true,
+        mappings: {
+          select: {
+            id: true,
+            userId: true,
+            status: true,
+            indicator: {
+              select: {
+                criterionId: true,
+                criterion: { select: { areaId: true } },
+              },
+            },
+          },
+        },
+      },
     })
 
     if (!document) return { error: "Document not found." }
 
-    const hasUserMapping = await prisma.documentMapping.findFirst({
-      where: { documentId, userId: currentUser.id },
-    })
+    let isAssigned = false
+    if (currentUser.role === "FACULTY") {
+      const activeAssignments = await prisma.assignment.findMany({
+        where: { userId: currentUser.id, user: { isActive: true } },
+        select: { areaId: true, criterionId: true },
+      })
+      isAssigned = document.mappings.some((m) =>
+        activeAssignments.some(
+          (a) =>
+            (a.areaId === m.indicator.criterion.areaId && a.criterionId === null) ||
+            a.criterionId === m.indicator.criterionId
+        )
+      )
+    }
+
+    const hasUserMapping = document.mappings.some((m) => m.userId === currentUser.id)
 
     if (
       document.userId !== currentUser.id &&
       !hasUserMapping &&
+      !isAssigned &&
       currentUser.role !== "ADMIN"
     ) {
       return { error: "You do not have permission to submit this document." }
     }
 
+    const targetMappingIds = document.mappings
+      .filter((m) => m.status === "DRAFT" || m.status === "RETURNED")
+      .map((m) => m.id)
+
+    if (targetMappingIds.length === 0) {
+      return { success: true, data: { submittedCount: 0 } }
+    }
+
     const result = await prisma.documentMapping.updateMany({
       where: {
-        documentId,
-        ...(currentUser.role === "ADMIN" || document.userId === currentUser.id
-          ? {}
-          : { userId: currentUser.id }),
-        status: { in: ["DRAFT", "RETURNED"] },
+        id: { in: targetMappingIds },
       },
       data: { status: "SUBMITTED", remarks: null },
     })
@@ -780,19 +937,46 @@ export async function getDocumentsForRepository(opts?: {
     const currentUser = await requireUser()
 
     // Faculty can see their own documents or documents mapped to their assigned areas
-    const whereClause =
-      currentUser.role === "FACULTY"
-        ? {
-            isArchived: false,
-            isDeletedByFaculty: false,
-            OR: [
-              { userId: currentUser.id },
-              { mappings: { some: { userId: currentUser.id } } },
-            ],
-          }
-        : opts?.userId
-          ? { userId: opts.userId, isArchived: false }
-          : { isArchived: false }
+    let whereClause: any
+    if (currentUser.role === "FACULTY") {
+      const userAssignments = await prisma.assignment.findMany({
+        where: { userId: currentUser.id, user: { isActive: true } },
+        select: { areaId: true, criterionId: true },
+      })
+
+      const assignedAreaIds = userAssignments
+        .filter((a) => a.criterionId === null)
+        .map((a) => a.areaId)
+
+      const assignedCriterionIds = userAssignments
+        .filter((a) => a.criterionId !== null)
+        .map((a) => a.criterionId as string)
+
+      const assignedScopeConditions = [
+        ...(assignedAreaIds.length > 0
+          ? [{ criterion: { areaId: { in: assignedAreaIds } } }]
+          : []),
+        ...(assignedCriterionIds.length > 0
+          ? [{ criterionId: { in: assignedCriterionIds } }]
+          : []),
+      ]
+
+      whereClause = {
+        isArchived: false,
+        isDeletedByFaculty: false,
+        OR: [
+          { userId: currentUser.id },
+          { mappings: { some: { userId: currentUser.id } } },
+          ...(assignedScopeConditions.length > 0
+            ? [{ mappings: { some: { indicator: { OR: assignedScopeConditions } } } }]
+            : []),
+        ],
+      }
+    } else {
+      whereClause = opts?.userId
+        ? { userId: opts.userId, isArchived: false }
+        : { isArchived: false }
+    }
 
     const documents = await prisma.document.findMany({
       where: whereClause,
@@ -1083,20 +1267,51 @@ export async function deleteDocument(documentId: string): Promise<ActionResult> 
 
     const document = await prisma.document.findUnique({
       where: { id: documentId },
-      select: { id: true, userId: true, title: true },
+      select: {
+        id: true,
+        userId: true,
+        title: true,
+        fileUrl: true,
+        versions: { select: { fileUrl: true } },
+        mappings: {
+          select: {
+            id: true,
+            status: true,
+            indicator: {
+              select: {
+                criterionId: true,
+                criterion: { select: { areaId: true } },
+              },
+            },
+          },
+        },
+      },
     })
 
     if (!document) return { error: "Document not found." }
 
-    // Only the owner or an admin can delete
-    if (document.userId !== currentUser.id && currentUser.role !== "ADMIN") {
+    let isAssigned = false
+    if (currentUser.role === "FACULTY") {
+      const activeAssignments = await prisma.assignment.findMany({
+        where: { userId: currentUser.id, user: { isActive: true } },
+        select: { areaId: true, criterionId: true },
+      })
+      isAssigned = document.mappings.some((m) =>
+        activeAssignments.some(
+          (a) =>
+            (a.areaId === m.indicator.criterion.areaId && a.criterionId === null) ||
+            a.criterionId === m.indicator.criterionId
+        )
+      )
+    }
+
+    // Only the owner, an assigned Area Owner, or an admin can delete/archive
+    if (document.userId !== currentUser.id && !isAssigned && currentUser.role !== "ADMIN") {
       return { error: "You do not have permission to delete this document." }
     }
 
     // Protect approved accreditation evidence from accidental permanent destruction by non-admins
-    const hasApproved = await prisma.documentMapping.findFirst({
-      where: { documentId, status: "APPROVED" },
-    })
+    const hasApproved = document.mappings.some((m) => m.status === "APPROVED")
 
     if (hasApproved && currentUser.role !== "ADMIN") {
       // Soft-archive and mark deleted for faculty so it leaves the faculty's view completely but remains in institutional repository
@@ -1131,7 +1346,18 @@ export async function deleteDocument(documentId: string): Promise<ActionResult> 
         },
       })
     } else {
+      const fileUrlsToCleanup: (string | null)[] = [
+        document.fileUrl,
+        ...document.versions.map((v) => v.fileUrl),
+      ]
+
       await prisma.document.delete({ where: { id: documentId } })
+
+      for (const url of fileUrlsToCleanup) {
+        if (url) {
+          await deleteStorageFileIfOrphaned(url).catch(console.error)
+        }
+      }
 
       await prisma.auditLog.create({
         data: {

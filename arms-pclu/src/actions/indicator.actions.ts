@@ -39,6 +39,9 @@ export async function getIndicatorsByCriterion(criterionId: string) {
       orderBy: { order: "asc" },
       include: {
         mappings: {
+          where: {
+            document: { isArchived: false, isDeletedByFaculty: false },
+          },
           select: {
             id: true,
             status: true,

@@ -208,6 +208,7 @@ export async function getFacultyApprovedEvidence(facultyId: string): Promise<{ s
       where: {
         userId: facultyId,
         status: "APPROVED",
+        document: { isArchived: false, isDeletedByFaculty: false },
       },
       orderBy: { createdAt: "desc" },
       select: {

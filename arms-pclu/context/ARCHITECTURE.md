@@ -357,6 +357,28 @@ Accreditation evidence frequently satisfies multiple requirements across areas a
   - The client invalidates `submissionKeys.mine`, `areaKeys.all`, `storageQuotaKeys.all`, and `dashboardKeys.all`.
   - Server actions trigger path revalidations for `/faculty/my-areas`, `/faculty/submissions`, `/faculty/dashboard`, `/dean/dashboard`, `/admin/dashboard`, as well as cache tags `areas-hierarchy` and `dashboard`.
 
+### Decoupled Cross-Area Document Tagging & Reference-Counted Storage Deletion Lifecycle
+ARMS implements a decoupled, autonomous evidence lifecycle across accreditation areas:
+- **Decoupled Document Record Lifecycle**:
+  - When an uploader (e.g., User A) uploads an exhibit in Area 1 and tags it to secondary Areas assigned to peer faculty (e.g., Area 3 assigned to User B, Area VII assigned to User C), ARMS creates **independent, decoupled `Document` and `DocumentMapping` records** for each target Area/Indicator in Prisma.
+  - The decoupled records share the underlying `fileUrl` and physical Supabase Storage asset, recording `originalUploaderId: User A` while assigning ownership of the copy (`userId: User B`) to the Area Owner.
+  - Secondary tagged records initialize with status `DRAFT`.
+- **Strictly Scoped Archiving & Deletion**:
+  - Archiving or deleting Document X from `My Submissions` (`/faculty/submissions`) or `Archives` (`/faculty/archives`) strictly modifies User A's document row (`isArchived: true` or `prisma.document.delete`).
+  - Sibling records and tagged copies in peer areas (Area 3, Area VII) remain 100% active, intact, downloadable, and visible in `DRAFT` status in the respective Area Owners' portals (`/faculty/my-areas/[id]`).
+- **Reference-Counted Physical Storage Purging**:
+  - When a user or administrator permanently deletes a document record, ARMS queries Prisma to count how many other `Document` or `DocumentVersion` records in the database still reference the target `fileUrl`:
+    `referenceCount = prisma.document.count({ where: { fileUrl } }) + prisma.documentVersion.count({ where: { fileUrl } })`.
+  - **If `referenceCount > 0`**: The database record is deleted, but the physical file in the Supabase Storage bucket is preserved so tagged copies or historical versions continue to function without data loss.
+  - **If `referenceCount === 0`**: The last remaining reference was removed; ARMS immediately purges the physical file from the Supabase Storage bucket.
+- **Autonomous Area Owner Review Submission**:
+  - The assigned Area Owner holds full autonomous permission to edit metadata, upload new versions, and submit their tagged `DRAFT` copy directly to the Dean for review (`SUBMITTED`).
+  - Authorization guards in Server Actions verify that the user either directly owns the record (`userId === currentUser.id`) OR holds an active Area/Criterion assignment (`prisma.assignment`) for the mapped indicator.
+  - Actions taken by the original uploader (such as archiving or deleting their personal copy) have zero impact on the Area Owner's ability to review, edit, or submit their tagged copy.
+- **Single-Deduction Storage Accounting**:
+  - Storage consumption is computed strictly for the original physical uploader (`OR: [{ originalUploaderId: userId }, { userId, originalUploaderId: null }]`) and deduplicated by `fileUrl`.
+  - Tagged Area Owners incur 0 MB deduction from their personal quota.
+
 ### Categorized Navigation & Role Avatar System Architecture
 The application layout infrastructure uses structured, role-specific layouts and components (`src/components/layout/`):
 - **Layout Inner Pattern**:

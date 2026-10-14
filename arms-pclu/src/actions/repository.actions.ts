@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { requireAdmin, requireAdminOrDean } from "@/lib/auth/getUser"
 import { revalidatePath, revalidateTag } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { deleteStorageFileIfOrphaned } from "@/actions/storage.actions"
 
 type ActionResult<T = undefined> =
   | { success: true; data?: T; error?: never }
@@ -234,49 +235,23 @@ export async function permanentlyDeleteDocumentFromRepository(
     })
     if (!doc) return { error: "Document not found." }
 
-    // 1. Clean up physical files from Supabase Storage
-    try {
-      const bucket = process.env.NEXT_PUBLIC_SUPABASE_BUCKET ?? "documents"
-      const adminSupabase = createAdminClient()
-
-      const fileUrlsToDelete: string[] = []
-      if (doc.fileUrl) fileUrlsToDelete.push(doc.fileUrl)
-      doc.versions.forEach((v) => {
-        if (v.fileUrl && !fileUrlsToDelete.includes(v.fileUrl)) {
-          fileUrlsToDelete.push(v.fileUrl)
-        }
-      })
-
-      const storagePaths: string[] = []
-      for (const url of fileUrlsToDelete) {
-        const path = extractStoragePath(url, bucket)
-        if (path && !storagePaths.includes(path)) {
-          storagePaths.push(path)
-        }
+    const fileUrlsToDelete: string[] = []
+    if (doc.fileUrl) fileUrlsToDelete.push(doc.fileUrl)
+    doc.versions.forEach((v) => {
+      if (v.fileUrl && !fileUrlsToDelete.includes(v.fileUrl)) {
+        fileUrlsToDelete.push(v.fileUrl)
       }
+    })
 
-      if (storagePaths.length > 0) {
-        const { error: storageError } = await adminSupabase.storage
-          .from(bucket)
-          .remove(storagePaths)
-        if (storageError) {
-          console.warn(
-            "[permanentlyDeleteDocumentFromRepository] Storage removal warning:",
-            storageError.message
-          )
-        }
-      }
-    } catch (storageErr) {
-      console.error(
-        "[permanentlyDeleteDocumentFromRepository] Storage cleanup error (proceeding with DB deletion):",
-        storageErr
-      )
-    }
-
-    // 2. Cascade delete from Prisma (cascades to mappings, versions, tags)
+    // 1. Cascade delete from Prisma (cascades to mappings, versions, tags)
     await prisma.document.delete({
       where: { id: documentId },
     })
+
+    // 2. Reference-counted cleanup from Supabase Storage
+    for (const url of fileUrlsToDelete) {
+      await deleteStorageFileIfOrphaned(url).catch(console.error)
+    }
 
     // 3. Log audit event
     await prisma.auditLog.create({

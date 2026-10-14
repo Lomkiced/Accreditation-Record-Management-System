@@ -79,6 +79,7 @@ erDiagram
     Document {
         string id PK
         string user_id FK
+        string original_uploader_id FK "Original physical file uploader ID for decoupled records"
         string title
         string description
         string file_url
@@ -240,6 +241,12 @@ All child relationships use `onDelete: Cascade`:
   - Faculty Repository Storage = Aggregated file sizes of non-deleted documents and version snapshots owned by that specific faculty user (default quota: 100 MB). Rendered in Faculty Submissions.
   - Dean/Admin Repository Storage = Aggregated file sizes of verified accreditation documents actively present in the central repository (`isArchivedFromRepo: false` and at least one `APPROVED` mapping) (default quota: 1 GB). Rendered strictly in Dean/Admin Repository; completely hidden from Faculty users. Server action `getRepositoryStorageQuota` enforces `requireAdminOrDean` RBAC.
 
+### 8. Decoupled Cross-Area Document Tagging & Reference-Counted Storage Deletion Design
+- **Decoupled Records**: Tagging an exhibit to multiple areas creates independent `Document` and `DocumentMapping` records for secondary Area Owners with `status: DRAFT` and `originalUploaderId` set to the primary physical uploader.
+- **Independent Lifecycle**: Archiving or deleting a submission in `My Submissions` affects only the executing user's database record. Peer copies in other areas persist untouched in `DRAFT` status.
+- **Reference-Counted Storage Deletion**: Physical removal from Supabase Storage occurs only when `referenceCount === 0` across all `Document.fileUrl` and `DocumentVersion.fileUrl` references in the database.
+- **Area Owner Review Autonomy**: Area Owners have full authorization to edit metadata, upload new versions, and submit their tagged `DRAFT` copies to the Dean for review without dependency on the original uploader.
+
 ---
 
 ## Database Indexes
@@ -260,6 +267,8 @@ All child relationships use `onDelete: Cascade`:
 
 | Table              | Column                       | Purpose                               |
 | ------------------ | ---------------------------- | ------------------------------------- |
+| `documents`        | `fileUrl`                    | Fast reference-count lookups for storage cleanup |
+| `documents`        | `originalUploaderId`         | Fast storage quota attribution queries |
 | `criteria`         | `areaId`                     | Fetch criteria by area                |
 | `indicators`       | `criterionId`                | Fetch indicators by criterion         |
 | `document_mappings`| `indicatorId`                | Compliance aggregation queries        |

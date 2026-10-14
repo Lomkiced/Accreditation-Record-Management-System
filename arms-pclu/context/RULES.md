@@ -374,4 +374,24 @@ Any new compliance-related feature must reference `dashboard.actions.ts` as the 
     3. Faculty A retains the physical document in their personal uploads portfolio (`/faculty/submissions`).
     4. Storage quota is strictly deducted from Faculty A (`Document.userId`), ensuring Faculty B incurs 0 MB storage charge.
 
+---
+
+## 26. Independent Submission Lifecycle & Cross-Area Persistence Standards
+
+- **Strict User-Scoped Archiving and Deletion**:
+  - Archiving or deleting a document from `My Submissions` (`/faculty/submissions`) or `Archives` (`/faculty/archives`) MUST strictly affect ONLY the executing user's own submission record.
+  - Sibling records and tagged copies in peer areas (e.g., Area 3, Area VII) MUST remain 100% active, intact, downloadable, and visible in `DRAFT` status in the respective Area Owners' views (`/faculty/my-areas/[id]`).
+- **Decoupled Cross-Area Record Persistence**:
+  - Multi-area tagging initializes independent `Document` and `DocumentMapping` records for secondary areas with `status: DRAFT` and `originalUploaderId` bound to the primary uploader.
+  - Cascading deletes that would wipe out cross-area tagged submissions when an uploader deletes their primary record are strictly prohibited.
+- **Reference-Counted Physical Storage Purging**:
+  - Permanent record deletions must verify the database reference count across all `Document` and `DocumentVersion` rows referencing the underlying `fileUrl`.
+  - If `referenceCount > 1`, only the user's database record is deleted; the physical file in Supabase Storage is preserved.
+  - If `referenceCount === 1` (last remaining reference), the physical asset is removed from the storage bucket.
+- **Autonomous Area Owner Review Permissions**:
+  - The assigned Area Owner holds full autonomous permission to edit metadata, upload new versions, and submit their tagged `DRAFT` copy directly to the Dean for review (`SUBMITTED`).
+  - Authorization guards MUST permit submission and editing if the user is the direct owner OR holds an active assignment for the target Area or Criterion. Server actions MUST NEVER block submission on grounds that `originalUploaderId !== currentUser.id` or because the original uploader archived their copy.
+- **Single-Deduction Storage Invariant**:
+  - The physical file size is deducted solely from the original uploader's quota (`Document.originalUploaderId ?? Document.userId`). Area Owners incur 0 MB deduction.
+
 

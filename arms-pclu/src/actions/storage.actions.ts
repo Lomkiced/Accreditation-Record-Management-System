@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { requireUser, requireAdminOrDean } from "@/lib/auth/getUser"
+import { createAdminClient } from "@/lib/supabase/admin"
 import {
   FACULTY_STORAGE_QUOTA_BYTES,
   DEAN_ADMIN_STORAGE_QUOTA_BYTES,
@@ -14,21 +15,95 @@ type ActionResult<T> =
   | { success: true; data: T; error?: never }
   | { success?: false; error: string; data?: never }
 
+// ─── Storage Path Extraction Helper ──────────────────────────────────────────
+export function extractStoragePath(fileUrl: string, bucket = "documents"): string | null {
+  try {
+    const url = new URL(fileUrl)
+    const marker = `/storage/v1/object/public/${bucket}/`
+    const idx = url.pathname.indexOf(marker)
+    if (idx !== -1) {
+      return decodeURIComponent(url.pathname.substring(idx + marker.length))
+    }
+    const altMarker = `/${bucket}/`
+    const altIdx = url.pathname.indexOf(altMarker)
+    if (altIdx !== -1) {
+      return decodeURIComponent(url.pathname.substring(altIdx + altMarker.length))
+    }
+    return null
+  } catch {
+    const clean = fileUrl.split("?")[0]
+    const marker = `/${bucket}/`
+    const idx = clean.indexOf(marker)
+    if (idx !== -1) {
+      return decodeURIComponent(clean.substring(idx + marker.length))
+    }
+    const bucketPrefix = `${bucket}/`
+    if (clean.startsWith(bucketPrefix)) {
+      return decodeURIComponent(clean.substring(bucketPrefix.length))
+    }
+    return clean || null
+  }
+}
+
+// ─── Reference-Counted Physical Storage Purging Helper ────────────────────────
+export async function deleteStorageFileIfOrphaned(
+  fileUrl: string | null | undefined
+): Promise<{ deleted: boolean; remainingReferences: number }> {
+  if (!fileUrl) return { deleted: false, remainingReferences: 0 }
+
+  const [docCount, verCount] = await Promise.all([
+    prisma.document.count({ where: { fileUrl } }),
+    prisma.documentVersion.count({ where: { fileUrl } }),
+  ])
+
+  const remainingReferences = docCount + verCount
+  if (remainingReferences > 0) {
+    // Other records or tagged copies still reference this file in Supabase Storage!
+    return { deleted: false, remainingReferences }
+  }
+
+  // Reference count === 0: last remaining reference in the database was deleted.
+  try {
+    const bucket = process.env.NEXT_PUBLIC_SUPABASE_BUCKET ?? "documents"
+    const storagePath = extractStoragePath(fileUrl, bucket)
+    if (storagePath) {
+      const adminSupabase = createAdminClient()
+      const { error } = await adminSupabase.storage
+        .from(bucket)
+        .remove([storagePath])
+      if (error) {
+        console.warn("[deleteStorageFileIfOrphaned] Storage removal warning:", error.message)
+      } else {
+        return { deleted: true, remainingReferences: 0 }
+      }
+    }
+  } catch (err) {
+    console.error("[deleteStorageFileIfOrphaned] Error removing file from storage:", err)
+  }
+
+  return { deleted: false, remainingReferences: 0 }
+}
+
 // ─── Helper: Compute Faculty Storage Consumption ─────────────────────────────
-// Zero-Multiplication Invariant: Each distinct Document record is summed once.
-// Cross-Faculty Invariant: Deducted strictly from Document.userId.
+// Zero-Multiplication Invariant: Each distinct exhibit file is summed once.
+// Cross-Faculty Invariant: Deducted strictly from original uploader; Area Owners incur 0 MB.
 export async function calculateFacultyStorageUsage(
   userId: string
 ): Promise<StorageQuotaInfo> {
-  // 1. Fetch all active, non-deleted documents created by this faculty member
+  // 1. Fetch all active, non-deleted documents uploaded by this faculty member
+  // (Excludes copies tagged to this user by peer faculty; includes primary uploads)
   const activeDocs = await prisma.document.findMany({
     where: {
-      userId,
+      OR: [
+        { originalUploaderId: userId },
+        { userId, originalUploaderId: null },
+      ],
       isArchived: false,
       isDeletedByFaculty: false,
     },
     select: {
       id: true,
+      fileUrl: true,
       fileSize: true,
     },
   })
@@ -37,24 +112,41 @@ export async function calculateFacultyStorageUsage(
   const versionSnapshots = await prisma.documentVersion.findMany({
     where: {
       document: {
-        userId,
+        OR: [
+          { originalUploaderId: userId },
+          { userId, originalUploaderId: null },
+        ],
         isArchived: false,
         isDeletedByFaculty: false,
       },
     },
     select: {
+      id: true,
+      fileUrl: true,
       fileSize: true,
     },
   })
 
-  const docBytes = activeDocs.reduce(
-    (acc, doc) => acc + (doc.fileSize ?? 0),
-    0
-  )
-  const versionBytes = versionSnapshots.reduce(
-    (acc, ver) => acc + (ver.fileSize ?? 0),
-    0
-  )
+  // Deduplicate exhibits by fileUrl so multi-tagging copies consume storage only ONCE
+  const seenFileUrls = new Set<string>()
+  let docBytes = 0
+  for (const doc of activeDocs) {
+    const key = doc.fileUrl || doc.id
+    if (!seenFileUrls.has(key)) {
+      seenFileUrls.add(key)
+      docBytes += doc.fileSize ?? 0
+    }
+  }
+
+  let versionBytes = 0
+  for (const ver of versionSnapshots) {
+    const key = ver.fileUrl || ver.id
+    if (!seenFileUrls.has(key)) {
+      seenFileUrls.add(key)
+      versionBytes += ver.fileSize ?? 0
+    }
+  }
+
   const totalUsedBytes = docBytes + versionBytes
   const quotaBytes = FACULTY_STORAGE_QUOTA_BYTES
 
@@ -79,7 +171,7 @@ export async function calculateFacultyStorageUsage(
     isLimitExceeded: totalUsedBytes >= quotaBytes,
     isWarning: usagePercentage >= 70 && usagePercentage < 90,
     isCritical: usagePercentage >= 90,
-    totalDocumentsCount: activeDocs.length,
+    totalDocumentsCount: seenFileUrls.size,
   }
 }
 

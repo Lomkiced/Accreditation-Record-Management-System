@@ -8,6 +8,7 @@ import { sanitizeString } from "@/lib/sanitize"
 import {
   checkIndicatorDuplicateTitle,
   verifyStorageQuotaPreflight,
+  deleteStorageFileIfOrphaned,
 } from "@/actions/storage.actions"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -152,8 +153,20 @@ export async function uploadAndMapDocument(
       })
 
       if (!existingDoc) return { error: "Document to update not found." }
-      if (existingDoc.userId !== currentUser.id) {
-        return { error: "You do not have permission to update this document." }
+      if (existingDoc.userId !== currentUser.id && currentUser.role !== "ADMIN") {
+        const isAssigned = await prisma.assignment.findFirst({
+          where: {
+            userId: currentUser.id,
+            user: { isActive: true },
+            OR: [
+              { criterion: { indicators: { some: { id: validated.indicatorId } } } },
+              { area: { criteria: { some: { indicators: { some: { id: validated.indicatorId } } } } }, criterionId: null },
+            ],
+          },
+        })
+        if (!isAssigned) {
+          return { error: "You do not have permission to update this document." }
+        }
       }
 
       // Indicator-scoped duplicate check (excluding current document)
@@ -395,6 +408,7 @@ export async function uploadAndMapDocument(
         const d = await tx.document.create({
           data: {
             userId: currentUser.id,
+            originalUploaderId: currentUser.id,
             title: validated.title,
             description: validated.description ?? null,
             documentDate: new Date(validated.documentDate),
@@ -551,6 +565,7 @@ export async function uploadAndMapBatchDocuments(
         const doc = await tx.document.create({
           data: {
             userId: currentUser.id,
+            originalUploaderId: currentUser.id,
             title: sanitizeString(item.title),
             description: item.description ? sanitizeString(item.description) : null,
             documentDate: new Date(validated.documentDate),
@@ -688,6 +703,7 @@ export async function saveDocumentAsDraft(
       const doc = await tx.document.create({
         data: {
           userId: currentUser.id,
+          originalUploaderId: currentUser.id,
           title: validated.title,
           description: validated.description ?? null,
           documentDate: new Date(validated.documentDate),
@@ -755,17 +771,54 @@ export async function archiveDocument(documentId: string): Promise<ActionResult>
 
     const doc = await prisma.document.findUnique({
       where: { id: documentId },
+      include: {
+        mappings: {
+          include: {
+            indicator: {
+              include: {
+                criterion: true,
+              },
+            },
+          },
+        },
+      },
     })
 
     if (!doc) return { error: "Document not found." }
-    if (doc.userId !== currentUser.id && currentUser.role !== "ADMIN") {
-      return { error: "Unauthorized. Only the owner or an admin can archive this document." }
+
+    let isAssigned = false
+    if (currentUser.role === "FACULTY") {
+      const activeAssignments = await prisma.assignment.findMany({
+        where: { userId: currentUser.id, user: { isActive: true } },
+        select: { areaId: true, criterionId: true },
+      })
+      isAssigned = doc.mappings.some((m) =>
+        activeAssignments.some(
+          (a) =>
+            (a.areaId === m.indicator.criterion.areaId && a.criterionId === null) ||
+            a.criterionId === m.indicator.criterionId
+        )
+      )
+    }
+
+    if (doc.userId !== currentUser.id && !isAssigned && currentUser.role !== "ADMIN") {
+      return { error: "Unauthorized. Only the owner or an assigned area faculty can archive this document." }
     }
 
     await prisma.document.update({
       where: { id: documentId },
       data: { isArchived: true },
     })
+
+    await prisma.auditLog.create({
+      data: {
+        userId: currentUser.id,
+        action: "ARCHIVE_DOCUMENT",
+        module: "DOCUMENT",
+        targetId: documentId,
+        details: { title: doc.title },
+      },
+    }).catch(console.error)
 
     revalidatePath("/faculty/dashboard")
     revalidatePath("/faculty/submissions")
@@ -793,17 +846,54 @@ export async function restoreDocument(documentId: string): Promise<ActionResult>
 
     const doc = await prisma.document.findUnique({
       where: { id: documentId },
+      include: {
+        mappings: {
+          include: {
+            indicator: {
+              include: {
+                criterion: true,
+              },
+            },
+          },
+        },
+      },
     })
 
     if (!doc) return { error: "Document not found." }
-    if (doc.userId !== currentUser.id && currentUser.role !== "ADMIN") {
-      return { error: "Unauthorized. Only the owner or an admin can restore this document." }
+
+    let isAssigned = false
+    if (currentUser.role === "FACULTY") {
+      const activeAssignments = await prisma.assignment.findMany({
+        where: { userId: currentUser.id, user: { isActive: true } },
+        select: { areaId: true, criterionId: true },
+      })
+      isAssigned = doc.mappings.some((m) =>
+        activeAssignments.some(
+          (a) =>
+            (a.areaId === m.indicator.criterion.areaId && a.criterionId === null) ||
+            a.criterionId === m.indicator.criterionId
+        )
+      )
+    }
+
+    if (doc.userId !== currentUser.id && !isAssigned && currentUser.role !== "ADMIN") {
+      return { error: "Unauthorized. Only the owner or an assigned area faculty can restore this document." }
     }
 
     await prisma.document.update({
       where: { id: documentId },
       data: { isArchived: false },
     })
+
+    await prisma.auditLog.create({
+      data: {
+        userId: currentUser.id,
+        action: "RESTORE_DOCUMENT",
+        module: "DOCUMENT",
+        targetId: documentId,
+        details: { title: doc.title },
+      },
+    }).catch(console.error)
 
     revalidatePath("/faculty/dashboard")
     revalidatePath("/faculty/submissions")
@@ -831,17 +921,43 @@ export async function permanentlyDeleteDocument(documentId: string): Promise<Act
 
     const doc = await prisma.document.findUnique({
       where: { id: documentId },
+      include: {
+        versions: { select: { fileUrl: true } },
+        mappings: {
+          include: {
+            indicator: {
+              include: {
+                criterion: true,
+              },
+            },
+          },
+        },
+      },
     })
 
     if (!doc) return { error: "Document not found." }
-    if (doc.userId !== currentUser.id && currentUser.role !== "ADMIN") {
-      return { error: "Unauthorized. Only the owner or an admin can permanently delete this document." }
+
+    let isAssigned = false
+    if (currentUser.role === "FACULTY") {
+      const activeAssignments = await prisma.assignment.findMany({
+        where: { userId: currentUser.id, user: { isActive: true } },
+        select: { areaId: true, criterionId: true },
+      })
+      isAssigned = doc.mappings.some((m) =>
+        activeAssignments.some(
+          (a) =>
+            (a.areaId === m.indicator.criterion.areaId && a.criterionId === null) ||
+            a.criterionId === m.indicator.criterionId
+        )
+      )
+    }
+
+    if (doc.userId !== currentUser.id && !isAssigned && currentUser.role !== "ADMIN") {
+      return { error: "Unauthorized. Only the owner or an assigned area faculty can permanently delete this document." }
     }
 
     // Protect approved accreditation evidence from accidental permanent destruction by faculty
-    const hasApproved = await prisma.documentMapping.findFirst({
-      where: { documentId, status: "APPROVED" },
-    })
+    const hasApproved = doc.mappings.some((m) => m.status === "APPROVED")
     if (hasApproved && currentUser.role !== "ADMIN") {
       await prisma.document.update({
         where: { id: documentId },
@@ -868,11 +984,21 @@ export async function permanentlyDeleteDocument(documentId: string): Promise<Act
       return { success: true }
     }
 
-    // In a full implementation, you would also delete the file from Supabase Storage here using `doc.fileUrl`
-    
+    const fileUrlsToCleanup: (string | null)[] = [
+      doc.fileUrl,
+      ...doc.versions.map((v) => v.fileUrl),
+    ]
+
     await prisma.document.delete({
       where: { id: documentId },
     })
+
+    // Reference-counted storage cleanup:
+    for (const url of fileUrlsToCleanup) {
+      if (url) {
+        await deleteStorageFileIfOrphaned(url).catch(console.error)
+      }
+    }
 
     revalidatePath("/faculty/archives")
     revalidatePath("/faculty/submissions")

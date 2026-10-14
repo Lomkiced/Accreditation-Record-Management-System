@@ -80,6 +80,7 @@ model Indicator {
 model Document {
   id                 String            @id @default(uuid())
   userId             String            @map("user_id")
+  originalUploaderId String?           @map("original_uploader_id")
   title              String
   description        String?
   fileUrl            String?           @map("file_url")
@@ -100,6 +101,8 @@ model Document {
   @@index([userId])
   // Composite index for archive/submission filters
   @@index([isArchived, userId])      // getArchivedDocuments + getDocumentsForRepository
+  @@index([fileUrl])
+  @@index([originalUploaderId])
   @@map("documents")
 }
 

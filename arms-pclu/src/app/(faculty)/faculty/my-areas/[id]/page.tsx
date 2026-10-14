@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Upload, FileText, CheckCircle, AlertCircle, ChevronLeft, ChevronDown, Eye, Plus, Edit } from "lucide-react"
+import { Upload, FileText, CheckCircle, AlertCircle, ChevronLeft, ChevronDown, Eye, Plus, Edit, Send, Loader2 } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/shared/StatusBadge"
@@ -11,10 +11,20 @@ import { IndicatorFormModal } from "@/components/areas/IndicatorFormModal"
 import type { IndicatorWithMappings } from "@/actions/indicator.actions"
 import { useAreas } from "@/hooks/useAreas"
 import { useAssignments } from "@/hooks/useAssignments"
-import { useMySubmissions } from "@/hooks/useSubmissions"
+import { useMySubmissions, useSubmitAllMappings } from "@/hooks/useSubmissions"
 import { useAuthStore } from "@/store/authStore"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export default function MyAreaDetailPage({ params }: { params: { id: string } }) {
   const areaId = params.id
@@ -26,6 +36,13 @@ export default function MyAreaDetailPage({ params }: { params: { id: string } })
   const { data: submissions = [], isLoading: loadingSubmissions } = useMySubmissions()
 
   const isLoading = loadingAreas || loadingAssignments || loadingSubmissions
+
+  // State for Submitting Draft to Dean
+  const [confirmSubmitDoc, setConfirmSubmitDoc] = React.useState<{
+    docId: string
+    title: string
+  } | null>(null)
+  const submitAllMappings = useSubmitAllMappings()
 
   // State for Upload Modal
   const [uploadModalData, setUploadModalData] = React.useState<{
@@ -332,33 +349,53 @@ export default function MyAreaDetailPage({ params }: { params: { id: string } })
                                         <CheckCircle className="w-3.5 h-3.5" />
                                       </div>
                                     ) : (
-                                      <Button 
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-xs h-7 px-2 text-slate-500 hover:text-blue-600 shrink-0"
-                                        onClick={() => setUploadModalData({
-                                          indicator: ind,
-                                          areaName: area.name,
-                                          criterionName: criterion.name,
-                                          existingSubmission: {
-                                            id: submission.documentId,
-                                            title: submission.document.title,
-                                            description: submission.document.description,
-                                            status: submission.status,
-                                            version: submission.document.version,
-                                            versions: (submission.document.versions || []).map((v: any) => ({
-                                              version: v.version,
-                                              fileUrl: v.fileUrl,
-                                              fileName: v.fileName,
-                                              createdAt: v.createdAt.toString(),
+                                      <div className="flex items-center gap-1.5 shrink-0">
+                                        {(submission.status === "DRAFT" || submission.status === "RETURNED") && (
+                                          <Button
+                                            size="sm"
+                                            disabled={submitAllMappings.isPending}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-7 px-2.5 shadow-xs"
+                                            onClick={() => setConfirmSubmitDoc({
+                                              docId: submission.documentId,
+                                              title: submission.document.title,
+                                            })}
+                                          >
+                                            {submitAllMappings.isPending ? (
+                                              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                            ) : (
+                                              <Send className="w-3 h-3 mr-1" />
+                                            )}
+                                            Submit
+                                          </Button>
+                                        )}
+                                        <Button 
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-xs h-7 px-2 text-slate-500 hover:text-blue-600 shrink-0"
+                                          onClick={() => setUploadModalData({
+                                            indicator: ind,
+                                            areaName: area.name,
+                                            criterionName: criterion.name,
+                                            existingSubmission: {
+                                              id: submission.documentId,
+                                              title: submission.document.title,
+                                              description: submission.document.description,
                                               status: submission.status,
-                                              remarks: v.remarks
-                                            }))
-                                          }
-                                        })}
-                                      >
-                                        {submission.status === "DRAFT" ? "Continue" : "Update"}
-                                      </Button>
+                                              version: submission.document.version,
+                                              versions: (submission.document.versions || []).map((v: any) => ({
+                                                version: v.version,
+                                                fileUrl: v.fileUrl,
+                                                fileName: v.fileName,
+                                                createdAt: v.createdAt.toString(),
+                                                status: submission.status,
+                                                remarks: v.remarks
+                                              }))
+                                            }
+                                          })}
+                                        >
+                                          {submission.status === "DRAFT" ? "Continue" : "Update"}
+                                        </Button>
+                                      </div>
                                     )}
                                   </div>
 
@@ -440,6 +477,35 @@ export default function MyAreaDetailPage({ params }: { params: { id: string } })
           indicator={editModal.indicator}
         />
       )}
+
+      {/* Submit for Review Confirmation Modal */}
+      <AlertDialog
+        open={!!confirmSubmitDoc}
+        onOpenChange={(open) => !open && setConfirmSubmitDoc(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Submit for Review</AlertDialogTitle>
+            <AlertDialogDescription>
+              Submit draft evidence for &quot;{confirmSubmitDoc?.title}&quot; to the Dean for evaluation? Once submitted, the Dean can review and verify your evidence.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => {
+                if (confirmSubmitDoc) {
+                  submitAllMappings.mutate(confirmSubmitDoc.docId)
+                  setConfirmSubmitDoc(null)
+                }
+              }}
+            >
+              Submit
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
