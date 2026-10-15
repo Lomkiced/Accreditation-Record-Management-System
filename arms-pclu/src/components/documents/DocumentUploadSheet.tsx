@@ -159,22 +159,12 @@ interface DocumentUploadSheetProps {
   existingSubmission?: any | null
 }
 
-export function DocumentUploadSheet(props: DocumentUploadSheetProps) {
-  // If invoked with a specific indicator (Assigned Areas upload mode), delegate directly:
-  if (props.indicator) {
-    return (
-      <SubmissionUploadForm
-        open={props.open}
-        onClose={props.onClose}
-        indicator={props.indicator}
-        areaName={props.areaName ?? ""}
-        criterionName={props.criterionName ?? ""}
-        existingSubmission={props.existingSubmission}
-      />
-    )
-  }
-
-  const { open, onClose, onSuccess, initialDocument } = props
+function DocumentUploadSheetContent({
+  open,
+  onClose,
+  onSuccess,
+  initialDocument,
+}: DocumentUploadSheetProps) {
   const [step, setStep] = React.useState<1 | 2 | 3>(1)
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null)
   const [uploadedDocumentId, setUploadedDocumentId] = React.useState<string | null>(null)
@@ -881,4 +871,22 @@ export function DocumentUploadSheet(props: DocumentUploadSheetProps) {
   )
 }
 
+export function DocumentUploadSheet(props: DocumentUploadSheetProps) {
+  if (props.indicator) {
+    return (
+      <SubmissionUploadForm
+        open={props.open}
+        onClose={props.onClose}
+        indicator={props.indicator}
+        areaName={props.areaName ?? ""}
+        criterionName={props.criterionName ?? ""}
+        existingSubmission={props.existingSubmission}
+      />
+    )
+  }
+
+  return <DocumentUploadSheetContent {...props} />
+}
+
 export { SubmissionUploadForm }
+
