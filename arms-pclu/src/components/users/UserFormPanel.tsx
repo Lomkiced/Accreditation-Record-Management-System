@@ -165,7 +165,7 @@ export function UserFormPanel({ open, onClose, user, allowedRoles = ["ADMIN", "D
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent side="right" className="w-[420px] sm:max-w-[420px] overflow-y-auto bg-[#F8FAFC]">
+      <SheetContent side="right" className="w-full sm:max-w-[420px] overflow-y-auto bg-[#F8FAFC]">
         <SheetHeader className="mb-6">
           <SheetTitle className="text-xl font-bold text-slate-900">
             {isEdit ? "Edit Account" : "Add New Account"}

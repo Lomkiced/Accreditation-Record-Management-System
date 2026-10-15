@@ -71,16 +71,16 @@ export function SubmissionReviewPanel({ open, onClose, submission }: SubmissionR
 
   return (
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <SheetContent side="right" className="w-[600px] sm:max-w-[600px] overflow-y-auto bg-[#F8FAFC]">
-        <SheetHeader className="mb-6">
-          <div className="flex items-start justify-between pr-6">
-            <SheetTitle className="text-xl font-bold text-slate-900 leading-tight">
+      <SheetContent side="right" className="w-full sm:max-w-[560px] md:max-w-[600px] overflow-y-auto overflow-x-hidden box-border bg-[#F8FAFC]">
+        <SheetHeader className="mb-6 w-full max-w-full overflow-hidden box-border">
+          <div className="flex items-start justify-between pr-8 min-w-0">
+            <SheetTitle className="text-xl font-bold text-slate-900 leading-tight break-words text-left">
               {submission.document.title}
             </SheetTitle>
           </div>
-          <div className="mt-2 flex items-center gap-2">
+          <div className="mt-2 flex items-center gap-2 flex-wrap min-w-0">
             <StatusBadge status={submission.status} />
-            <span className="text-xs text-slate-400 bg-white border px-2 py-0.5 rounded-full">
+            <span className="text-xs text-slate-400 bg-white border px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">
               v{submission.document.version}
             </span>
           </div>
@@ -138,15 +138,15 @@ export function SubmissionReviewPanel({ open, onClose, submission }: SubmissionR
 
           {/* Section 4: Document Preview */}
           {submission.document.fileUrl ? (
-            <div className="bg-white rounded-xl border border-slate-200 p-8 flex flex-col items-center justify-center text-center space-y-4 bg-slate-50 shadow-sm">
-              <div className="w-16 h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mb-2">
+            <div className="bg-white rounded-xl border border-slate-200 p-8 flex flex-col items-center justify-center text-center space-y-4 bg-slate-50 shadow-sm w-full max-w-full overflow-hidden box-border">
+              <div className="w-16 h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mb-2 shrink-0">
                 <FileText className="w-8 h-8" />
               </div>
-              <div>
-                <p className="text-base font-semibold text-slate-800">{submission.document.fileName || 'Attached Document'}</p>
+              <div className="w-full min-w-0">
+                <p className="text-base font-semibold text-slate-800 break-words">{submission.document.fileName || 'Attached Document'}</p>
                 <p className="text-sm text-slate-500 mt-1">Please view or download the file to verify its contents.</p>
               </div>
-              <div className="flex items-center gap-3 mt-4">
+              <div className="flex items-center gap-3 mt-4 flex-wrap justify-center">
                 <a href={submission.document.fileUrl} target="_blank" rel="noreferrer">
                   <Button variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50">
                     <Eye className="w-4 h-4 mr-2" />
