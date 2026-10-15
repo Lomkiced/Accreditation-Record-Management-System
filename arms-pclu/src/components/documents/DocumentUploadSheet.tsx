@@ -138,6 +138,8 @@ function StepBar({ current }: { current: 1 | 2 | 3 }) {
   )
 }
 
+import { SubmissionUploadForm } from "@/components/submissions/SubmissionUploadForm"
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 interface DocumentUploadSheetProps {
@@ -145,14 +147,34 @@ interface DocumentUploadSheetProps {
   onClose: () => void
   onSuccess?: (documentId: string) => void
   initialDocument?: DocumentWithMappings | null
+  // Optional Assigned Areas props when invoked for a specific indicator
+  indicator?: {
+    id: string
+    name: string
+    requiredDocs: string | null
+    ratingScale: number
+  } | null
+  areaName?: string
+  criterionName?: string
+  existingSubmission?: any | null
 }
 
-export function DocumentUploadSheet({
-  open,
-  onClose,
-  onSuccess,
-  initialDocument,
-}: DocumentUploadSheetProps) {
+export function DocumentUploadSheet(props: DocumentUploadSheetProps) {
+  // If invoked with a specific indicator (Assigned Areas upload mode), delegate directly:
+  if (props.indicator) {
+    return (
+      <SubmissionUploadForm
+        open={props.open}
+        onClose={props.onClose}
+        indicator={props.indicator}
+        areaName={props.areaName ?? ""}
+        criterionName={props.criterionName ?? ""}
+        existingSubmission={props.existingSubmission}
+      />
+    )
+  }
+
+  const { open, onClose, onSuccess, initialDocument } = props
   const [step, setStep] = React.useState<1 | 2 | 3>(1)
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null)
   const [uploadedDocumentId, setUploadedDocumentId] = React.useState<string | null>(null)
@@ -858,3 +880,5 @@ export function DocumentUploadSheet({
     </Sheet>
   )
 }
+
+export { SubmissionUploadForm }

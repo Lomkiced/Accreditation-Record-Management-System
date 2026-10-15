@@ -10,6 +10,7 @@ import {
   verifyStorageQuotaPreflight,
   deleteStorageFileIfOrphaned,
 } from "@/actions/storage.actions"
+import { createEvidenceMappings } from "@/actions/document.actions"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,6 +33,7 @@ const uploadAndMapSchema = z.object({
     .refine((name) => name.toLowerCase().endsWith(".pdf"), "Only PDF files (.pdf) are allowed"),
   fileSize: z.number().positive("File size must be positive"),
   rating: z.number().int().min(1).max(10).optional(),
+  additionalIndicatorIds: z.array(z.string().uuid()).optional(),
 })
 
 const uploadAndMapBatchSchema = z.object({
@@ -49,6 +51,7 @@ const uploadAndMapBatchSchema = z.object({
       fileSize: z.number().positive("File size must be positive"),
     })
   ).min(1, "At least one file is required"),
+  additionalIndicatorIds: z.array(z.string().uuid()).optional(),
 })
 
 const saveDraftSchema = z.object({
@@ -63,6 +66,7 @@ const saveDraftSchema = z.object({
     .optional(),
   fileSize: z.number().positive().optional(),
   rating: z.number().int().min(1).max(10).optional(),
+  additionalIndicatorIds: z.array(z.string().uuid()).optional(),
 })
 
 // ─── Helper: Resolve Area Owner for an Indicator ──────────────────────────────
@@ -144,6 +148,20 @@ export async function uploadAndMapDocument(
       },
     })
     if (!indicator) return { error: "Indicator not found." }
+
+    const extraIndicatorIds = (validated.additionalIndicatorIds || []).filter(
+      (id) => id !== validated.indicatorId
+    )
+    for (const extraId of extraIndicatorIds) {
+      const isDup = await checkIndicatorDuplicateTitle(
+        extraId,
+        validated.title,
+        validated.documentId
+      )
+      if (isDup) {
+        return { error: `Duplicate file detected. "${validated.title}" already exists in one of the linked indicators.` }
+      }
+    }
 
     // Case 1: Updating an explicit existing document in-place
     if (validated.documentId) {
@@ -296,6 +314,13 @@ export async function uploadAndMapDocument(
       revalidatePath("/dean/dashboard")
       revalidateTag("areas-hierarchy")
       revalidateTag("dashboard")
+
+      if (extraIndicatorIds.length > 0) {
+        await createEvidenceMappings({
+          documentId: updatedDoc.id,
+          indicatorIds: extraIndicatorIds,
+        })
+      }
 
       return {
         success: true,
@@ -481,6 +506,13 @@ export async function uploadAndMapDocument(
     revalidateTag("areas-hierarchy")
     revalidateTag("dashboard")
 
+    if (extraIndicatorIds.length > 0) {
+      await createEvidenceMappings({
+        documentId: documentId,
+        indicatorIds: extraIndicatorIds,
+      })
+    }
+
     return {
       success: true,
       data: { documentId: documentId, mappingId: mappingId },
@@ -538,6 +570,22 @@ export async function uploadAndMapBatchDocuments(
       )
       if (isDup) {
         return { error: "Duplicate file detected. This document already exists." }
+      }
+    }
+
+    const extraIndicatorIds = (validated.additionalIndicatorIds || []).filter(
+      (id) => id !== validated.indicatorId
+    )
+    if (extraIndicatorIds.length > 0) {
+      for (const item of validated.files) {
+        for (const extraId of extraIndicatorIds) {
+          const isDup = await checkIndicatorDuplicateTitle(extraId, item.title)
+          if (isDup) {
+            return {
+              error: `Duplicate file detected for additional indicator. "${item.title}" already exists in one of the linked indicators.`,
+            }
+          }
+        }
       }
     }
 
@@ -632,6 +680,15 @@ export async function uploadAndMapBatchDocuments(
     revalidateTag("areas-hierarchy")
     revalidateTag("dashboard")
 
+    if (extraIndicatorIds.length > 0) {
+      for (const docId of createdDocs) {
+        await createEvidenceMappings({
+          documentId: docId,
+          indicatorIds: extraIndicatorIds,
+        })
+      }
+    }
+
     return {
       success: true,
       data: { count: createdDocs.length, documentIds: createdDocs },
@@ -681,6 +738,20 @@ export async function saveDocumentAsDraft(
     )
     if (isDup) {
       return { error: "Duplicate file detected. This document already exists." }
+    }
+
+    const extraIndicatorIds = (validated.additionalIndicatorIds || []).filter(
+      (id) => id !== validated.indicatorId
+    )
+    if (extraIndicatorIds.length > 0) {
+      for (const extraId of extraIndicatorIds) {
+        const isDup = await checkIndicatorDuplicateTitle(extraId, validated.title)
+        if (isDup) {
+          return {
+            error: `Duplicate file detected for additional indicator. "${validated.title}" already exists in one of the linked indicators.`,
+          }
+        }
+      }
     }
 
     // Storage quota preflight guardrail if file attached
@@ -746,6 +817,13 @@ export async function saveDocumentAsDraft(
     revalidatePath("/faculty/dashboard")
     revalidateTag("areas-hierarchy")
     revalidateTag("dashboard")
+
+    if (extraIndicatorIds.length > 0) {
+      await createEvidenceMappings({
+        documentId: document.id,
+        indicatorIds: extraIndicatorIds,
+      })
+    }
 
     return {
       success: true,

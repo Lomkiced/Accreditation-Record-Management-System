@@ -397,6 +397,11 @@ Any new compliance-related feature must reference `dashboard.actions.ts` as the 
   - Authorization guards MUST permit submission and editing if the user is the direct owner OR holds an active assignment for the target Area or Criterion. Server actions MUST NEVER block submission on grounds that `originalUploaderId !== currentUser.id` or because the original uploader archived their copy.
 - **Single-Deduction Storage Invariant**:
   - The physical file size is deducted solely from the original uploader's quota (`Document.originalUploaderId ?? Document.userId`). Area Owners incur 0 MB deduction.
+- **Assigned Areas Direct Cross-Area Tagging Standard**:
+  - The Assigned Areas upload drawer (`DocumentUploadSheet.tsx` / `SubmissionUploadForm.tsx`) MUST support cross-area indicator tagging directly at upload time, locking the primary target indicator and providing hierarchical multi-selection across institutional areas.
+  - Multi-file uploads MUST link every uploaded document in the batch to all selected additional indicators without duplicate key collisions.
+  - Secondary tagged records MUST initialize as `DRAFT` for their respective Area Owners, consuming 0 MB from the Area Owners' quota (single-deduction invariant).
+
 
 ---
 

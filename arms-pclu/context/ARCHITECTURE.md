@@ -379,6 +379,11 @@ ARMS implements a decoupled, autonomous evidence lifecycle across accreditation 
 - **Single-Deduction Storage Accounting**:
   - Storage consumption is computed strictly for the original physical uploader (`OR: [{ originalUploaderId: userId }, { userId, originalUploaderId: null }]`) and deduplicated by `fileUrl`.
   - Tagged Area Owners incur 0 MB deduction from their personal quota.
+- **Direct Cross-Area Tagging Architecture in Assigned Areas Drawer**:
+  - The Assigned Areas upload drawer (`DocumentUploadSheet.tsx` / `SubmissionUploadForm.tsx`) enables faculty to link an exhibit across multiple Areas and Indicators directly at upload time, mirroring the capabilities of My Submissions.
+  - The drawer locks the current indicator as the primary target and fetches the institutional Area/Criterion/Indicator hierarchy via `getIndicatorsForSelector()`, filtering out unassigned areas.
+  - When the faculty member submits (or saves as draft) via `uploadAndMapDocument`, `uploadAndMapBatchDocuments`, or `saveDocumentAsDraft`, the system passes `additionalIndicatorIds` to `createEvidenceMappings`, which checks indicator-scoped duplicate titles and provisions decoupled `DRAFT` copies for external Area Owners while preserving single-deduction storage quota.
+
 
 ### Categorized Navigation & Role Avatar System Architecture
 The application layout infrastructure uses structured, role-specific layouts and components (`src/components/layout/`):
