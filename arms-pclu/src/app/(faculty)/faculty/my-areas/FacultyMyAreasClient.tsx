@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { SubmissionUploadForm } from "@/components/submissions/SubmissionUploadForm"
+import { DocumentUploadSheet } from "@/components/documents/DocumentUploadSheet"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 
@@ -424,7 +424,7 @@ export function FacultyMyAreasClient({ initialData, userId }: FacultyMyAreasClie
       </Dialog>
 
       {/* Upload Form Sheet */}
-      <SubmissionUploadForm 
+      <DocumentUploadSheet 
         open={!!uploadModalData}
         onClose={() => setUploadModalData(null)}
         indicator={uploadModalData?.indicator || null}

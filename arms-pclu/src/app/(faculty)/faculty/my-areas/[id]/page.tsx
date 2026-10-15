@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/shared/PageHeader"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { SubmissionUploadForm } from "@/components/submissions/SubmissionUploadForm"
+import { DocumentUploadSheet } from "@/components/documents/DocumentUploadSheet"
 import { IndicatorFormModal } from "@/components/areas/IndicatorFormModal"
 import type { IndicatorWithMappings } from "@/actions/indicator.actions"
 import { useAreas } from "@/hooks/useAreas"
@@ -452,7 +452,7 @@ export default function MyAreaDetailPage({ params }: { params: { id: string } })
         )}
       </div>
 
-      <SubmissionUploadForm 
+      <DocumentUploadSheet 
         open={!!uploadModalData}
         onClose={() => setUploadModalData(null)}
         indicator={uploadModalData?.indicator || null}
