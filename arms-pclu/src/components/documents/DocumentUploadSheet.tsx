@@ -50,7 +50,6 @@ import { useQueryClient } from "@tanstack/react-query"
 import { submissionKeys } from "@/hooks/useSubmissions"
 import { areaKeys } from "@/hooks/useAreas"
 import { dashboardKeys } from "@/hooks/useDashboard"
-import { useAssignments } from "@/hooks/useAssignments"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -170,7 +169,6 @@ export function DocumentUploadSheet({
   const queryClient = useQueryClient()
 
   const { user } = useAuth()
-  const { data: myAssignments = [] } = useAssignments(user?.id ?? "")
 
   const form = useForm<Step1Values>({
     resolver: zodResolver(step1Schema),
@@ -319,42 +317,13 @@ export function DocumentUploadSheet({
       queryClient.invalidateQueries({ queryKey: storageQuotaKeys.all })
       queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
 
-      // Determine assigned Area(s) from selected indicators
-      const targetAreaIds = Array.from(
-        new Set(
-          areaTree
-            .filter((area) =>
-              area.criteria.some((crit) =>
-                crit.indicators.some((ind) => selectedIndicatorIds.has(ind.id))
-              )
-            )
-            .map((area) => area.id)
-        )
-      )
-
-      // Identify which target areas are assigned to the current user
-      const myAssignedAreaIds = new Set(myAssignments.map((a) => a.areaId))
-      const myTargetAreaIds = targetAreaIds.filter((id) => myAssignedAreaIds.has(id))
-
       onSuccess?.(uploadedDocumentId)
       handleClose()
 
-      // Route directly if the current user owns the target area; otherwise confirm routing to Area Owner
-      if (myTargetAreaIds.length === 1) {
-        toast.success(
-          `Document tagged to ${result.data!.createdCount} indicator(s) and saved as Draft. Routed to your assigned Area folder.`
-        )
-        router.push(`/faculty/my-areas/${myTargetAreaIds[0]}`)
-      } else if (myTargetAreaIds.length > 1) {
-        toast.success(
-          `Document tagged to ${result.data!.createdCount} indicator(s) and saved as Draft. Routed to your assigned Area folders.`
-        )
-        router.push("/faculty/my-areas")
-      } else {
-        toast.success(
-          `Document tagged to ${result.data!.createdCount} indicator(s) and successfully routed to the assigned Area Owner.`
-        )
-      }
+      toast.success(
+        `Document tagged to ${result.data!.createdCount} indicator(s) and saved as Draft.`
+      )
+      router.push("/faculty/submissions")
       router.refresh()
     } finally {
       setIsSubmitting(false)

@@ -348,11 +348,15 @@ Any new compliance-related feature must reference `dashboard.actions.ts` as the 
 
 ---
 
-## 24. Document Tagging Routing & Real-Time Area Synchronization Standards
+## 24. Document Tagging Workflow & Draft Persistence Standards
 
-- **Direct Area/Indicator Folder Routing**:
-  - Upon successful tagging of a document (via `DocumentUploadSheet` calling `createEvidenceMappings`), the Faculty portal MUST route the user directly to the assigned Area/Indicator folder (`/faculty/my-areas/[areaId]`), or to the main Areas overview (`/faculty/my-areas`) if multiple areas are targeted, rather than merely appending the document below the current submissions view.
-  - Success notifications must inform the user that the document has been mapped and routed to the assigned Area folder.
+- **Draft Retention in My Submissions (Zero Unwanted Redirects)**:
+  - Upon successful tagging and saving of a document (via `DocumentUploadSheet` calling `createEvidenceMappings`), all created mappings (both primary and cross-tagged) MUST be initialized strictly in `DRAFT` status.
+  - The Faculty portal MUST NOT automatically redirect or switch sidebar navigation to Assigned Areas (`/faculty/my-areas/[id]` or `/faculty/my-areas`). The upload sheet closes cleanly and the user remains in **My Submissions** (`/faculty/submissions`), allowing them to review, manage, and explicitly submit their drafts for admin/dean review when ready.
+  - Success notifications inform the user that the document has been mapped to the target indicators and saved as Draft.
+- **Assigned Areas Evidence Row Action Integrity**:
+  - In Faculty Assigned Areas detail views (`/faculty/my-areas/[id]`), document rows in `DRAFT` status MUST display only the `Draft` status badge and the primary blue **Submit** action button (with paper-plane icon). Redundant or duplicate actions such as `"Continue"` text buttons are strictly forbidden.
+  - Rows in non-draft statuses (`SUBMITTED`, `UNDER_REVIEW`, `RETURNED`) retain the **Update** action button to permit evidence modifications and version updates.
 - **Cache Invalidation & Revalidation Invariant**:
   - All tagging, drafting, batch uploads, archiving, restoring, and submission actions MUST invalidate `storageQuotaKeys.all`, `submissionKeys.mine`, `areaKeys.all`, and `dashboardKeys.all`.
   - Server actions MUST trigger path revalidations for `/faculty/my-areas`, `/faculty/submissions`, `/faculty/dashboard`, `/dean/dashboard`, `/admin/dashboard`, as well as cache tags `areas-hierarchy` and `dashboard`, ensuring that space limits per exhibit across multiple indicators and the automatic duplication avoidance tool operate with real-time accuracy and zero stale UI blockers.

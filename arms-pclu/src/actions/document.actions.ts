@@ -378,7 +378,6 @@ export async function createEvidenceMappings(
 
     // Create decoupled independent Document records for each tagged Area/Indicator
     const externalOwnerIds: string[] = []
-    let primaryAssigned = document.mappings.length > 0
 
     await prisma.$transaction(async (tx) => {
       for (const ind of indicatorsWithScope) {
@@ -397,8 +396,8 @@ export async function createEvidenceMappings(
           externalOwnerIds.push(assignedUserId)
         }
 
-        // If this is the first mapping on the newly uploaded document and matches the owner:
-        if (!primaryAssigned && assignedUserId === document.userId) {
+        // If assigned to the document owner, map directly to the primary document:
+        if (assignedUserId === document.userId) {
           await tx.documentMapping.create({
             data: {
               documentId: document.id,
@@ -408,7 +407,6 @@ export async function createEvidenceMappings(
               rating: validated.rating ?? null,
             },
           })
-          primaryAssigned = true
         } else {
           // Create an independent decoupled Document record so lifecycle (archive/delete/update) is fully independent
           const copyDoc = await tx.document.create({

@@ -53,6 +53,7 @@ export function useSubmitDocument() {
         return
       }
       queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
+      queryClient.invalidateQueries({ queryKey: areaKeys.all })
       queryClient.invalidateQueries({ queryKey: storageQuotaKeys.all })
       toast.success("Document submitted for review.")
     },
@@ -75,6 +76,7 @@ export function useSubmitBatchDocuments() {
         return
       }
       queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
+      queryClient.invalidateQueries({ queryKey: areaKeys.all })
       queryClient.invalidateQueries({ queryKey: storageQuotaKeys.all })
       toast.success(`${res.data?.count ?? "Files"} documents submitted for review.`)
     },
@@ -97,6 +99,7 @@ export function useSaveDraft() {
         return
       }
       queryClient.invalidateQueries({ queryKey: submissionKeys.mine })
+      queryClient.invalidateQueries({ queryKey: areaKeys.all })
       queryClient.invalidateQueries({ queryKey: storageQuotaKeys.all })
       toast.success("Draft saved successfully.")
     },

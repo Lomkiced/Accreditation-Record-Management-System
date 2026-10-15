@@ -368,33 +368,35 @@ export default function MyAreaDetailPage({ params }: { params: { id: string } })
                                             Submit
                                           </Button>
                                         )}
-                                        <Button 
-                                          variant="ghost"
-                                          size="sm"
-                                          className="text-xs h-7 px-2 text-slate-500 hover:text-blue-600 shrink-0"
-                                          onClick={() => setUploadModalData({
-                                            indicator: ind,
-                                            areaName: area.name,
-                                            criterionName: criterion.name,
-                                            existingSubmission: {
-                                              id: submission.documentId,
-                                              title: submission.document.title,
-                                              description: submission.document.description,
-                                              status: submission.status,
-                                              version: submission.document.version,
-                                              versions: (submission.document.versions || []).map((v: any) => ({
-                                                version: v.version,
-                                                fileUrl: v.fileUrl,
-                                                fileName: v.fileName,
-                                                createdAt: v.createdAt.toString(),
+                                        {submission.status !== "DRAFT" && (
+                                          <Button 
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-xs h-7 px-2 text-slate-500 hover:text-blue-600 shrink-0"
+                                            onClick={() => setUploadModalData({
+                                              indicator: ind,
+                                              areaName: area.name,
+                                              criterionName: criterion.name,
+                                              existingSubmission: {
+                                                id: submission.documentId,
+                                                title: submission.document.title,
+                                                description: submission.document.description,
                                                 status: submission.status,
-                                                remarks: v.remarks
-                                              }))
-                                            }
-                                          })}
-                                        >
-                                          {submission.status === "DRAFT" ? "Continue" : "Update"}
-                                        </Button>
+                                                version: submission.document.version,
+                                                versions: (submission.document.versions || []).map((v: any) => ({
+                                                  version: v.version,
+                                                  fileUrl: v.fileUrl,
+                                                  fileName: v.fileName,
+                                                  createdAt: v.createdAt.toString(),
+                                                  status: submission.status,
+                                                  remarks: v.remarks
+                                                }))
+                                              }
+                                            })}
+                                          >
+                                            Update
+                                          </Button>
+                                        )}
                                       </div>
                                     )}
                                   </div>

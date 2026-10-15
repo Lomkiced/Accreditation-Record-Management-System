@@ -351,9 +351,10 @@ Accreditation evidence frequently satisfies multiple requirements across areas a
   - `getMySubmissions()` dynamically scopes queries to indicators belonging to the user's active assigned areas or criteria in `prisma.assignment`.
   - Mapped documents appear directly in the assigned Area Owner's area folder (`/faculty/my-areas/[areaId]`), even if uploaded by peer faculty.
   - Documents mapped to areas not assigned to the uploader are excluded from the uploader's area view.
-- **Direct Folder Routing on Tagging Completion**:
-  - In `DocumentUploadSheet`, upon successful execution of `createEvidenceMappings`, the client identifies whether the target areas are assigned to the current user.
-  - If the user owns the target area, the client immediately routes to `/faculty/my-areas/[areaId]` (or `/faculty/my-areas`). If the target area belongs to a peer faculty member, the uploader stays on `/faculty/submissions` with a confirmation toast that evidence routed to the assigned Area Owner.
+- **Draft Retention in Submissions Workflow**:
+  - In `DocumentUploadSheet`, upon clicking "Save as Draft", `createEvidenceMappings` creates all indicator mappings in `DRAFT` status (including decoupled records for peer areas).
+  - The client modal closes cleanly and keeps the user on `/faculty/submissions` rather than auto-redirecting to `/faculty/my-areas/[areaId]`.
+  - Evidence rows in `/faculty/my-areas/[id]` in `DRAFT` state display only the `Draft` status badge and the blue **Submit** button (calling `submitAllMappings`), with redundant "Continue" buttons eliminated. Rows in non-draft states (`SUBMITTED`, `UNDER_REVIEW`, `RETURNED`) retain the **Update** action.
   - The client invalidates `submissionKeys.mine`, `areaKeys.all`, `storageQuotaKeys.all`, and `dashboardKeys.all`.
   - Server actions trigger path revalidations for `/faculty/my-areas`, `/faculty/submissions`, `/faculty/dashboard`, `/dean/dashboard`, `/admin/dashboard`, as well as cache tags `areas-hierarchy` and `dashboard`.
 
